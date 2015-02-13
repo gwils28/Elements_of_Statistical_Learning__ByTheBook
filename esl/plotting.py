@@ -71,3 +71,13 @@ def set_style():
             mpl.colormaps.register(cmap)
         except ValueError:  # déjà enregistrée
             pass
+
+
+def decision_grid(xlim, ylim, n=200):
+    """Grille régulière pour tracer des frontières de décision.
+
+    Retourne ``(xx, yy, grid)`` où ``grid`` est un tableau (n*n, 2).
+    """
+    import numpy as np
+    xx, yy = np.meshgrid(np.linspace(*xlim, n), np.linspace(*ylim, n))
+    return xx, yy, np.c_[xx.ravel(), yy.ravel()]
