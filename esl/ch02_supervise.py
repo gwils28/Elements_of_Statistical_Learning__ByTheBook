@@ -73,3 +73,24 @@ def least_squares_predict(X, beta, intercept=True):
     """Prédictions :math:`\\hat y = x^T \\hat\\beta` (éq. (2.2))."""
     A = add_intercept(X) if intercept else np.asarray(X, dtype=float)
     return A @ beta
+
+
+def linear_classifier_fit(X, g):
+    """Régression linéaire d'un codage 0/1 de la classe (section 2.3.1).
+
+    Parameters
+    ----------
+    X : ndarray, shape (n, p)
+    g : ndarray, shape (n,)
+        Étiquettes 0/1.
+
+    Returns
+    -------
+    beta : ndarray, shape (p + 1,)
+    """
+    return least_squares_fit(X, np.asarray(g, dtype=float))
+
+
+def linear_classifier_predict(X, beta, threshold=0.5):
+    """Classe prédite : 1 si :math:`x^T\\hat\\beta > 0.5`, sinon 0 (éq. (2.7))."""
+    return (least_squares_predict(X, beta) > threshold).astype(int)
