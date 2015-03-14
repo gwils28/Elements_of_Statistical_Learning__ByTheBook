@@ -94,3 +94,28 @@ def linear_classifier_fit(X, g):
 def linear_classifier_predict(X, beta, threshold=0.5):
     """Classe prédite : 1 si :math:`x^T\\hat\\beta > 0.5`, sinon 0 (éq. (2.7))."""
     return (least_squares_predict(X, beta) > threshold).astype(int)
+
+
+# ---------------------------------------------------------------------------
+# k plus proches voisins
+# ---------------------------------------------------------------------------
+
+
+def squared_distances(A, B):
+    """Matrice des distances euclidiennes au carré entre les lignes de A et B.
+
+    Utilise :math:`\\|a-b\\|^2 = \\|a\\|^2 + \\|b\\|^2 - 2 a^T b` ; les petites
+    valeurs négatives dues aux arrondis sont ramenées à 0.
+
+    Returns
+    -------
+    ndarray, shape (len(A), len(B))
+    """
+    A = np.asarray(A, dtype=float)
+    B = np.asarray(B, dtype=float)
+    if A.ndim == 1:
+        A = A[:, None]
+    if B.ndim == 1:
+        B = B[:, None]
+    D = (A ** 2).sum(1)[:, None] + (B ** 2).sum(1)[None, :] - 2 * A @ B.T
+    return np.maximum(D, 0.0)
