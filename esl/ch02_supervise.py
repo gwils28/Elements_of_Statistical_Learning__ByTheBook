@@ -67,3 +67,9 @@ def least_squares_fit(X, y, intercept=True, weights=None):
     # lstsq (décomposition SVD) est numériquement plus sûr que l'inverse explicite
     beta, *_ = np.linalg.lstsq(A, y, rcond=None)
     return beta
+
+
+def least_squares_predict(X, beta, intercept=True):
+    """Prédictions :math:`\\hat y = x^T \\hat\\beta` (éq. (2.2))."""
+    A = add_intercept(X) if intercept else np.asarray(X, dtype=float)
+    return A @ beta
