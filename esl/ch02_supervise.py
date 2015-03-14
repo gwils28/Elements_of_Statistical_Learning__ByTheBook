@@ -119,3 +119,23 @@ def squared_distances(A, B):
         B = B[:, None]
     D = (A ** 2).sum(1)[:, None] + (B ** 2).sum(1)[None, :] - 2 * A @ B.T
     return np.maximum(D, 0.0)
+
+
+def knn_indices(X_train, X_test, k, chunk=2000):
+    """Indices des k plus proches voisins (dans X_train) de chaque point de X_test.
+
+    Les ex-aequo de distance sont départagés par l'ordre des observations
+    (tri stable), ce qui rend le résultat déterministe.
+
+    Returns
+    -------
+    ndarray d'entiers, shape (len(X_test), k)
+    """
+    X_test = np.asarray(X_test, dtype=float)
+    if X_test.ndim == 1:
+        X_test = X_test[:, None]
+    out = np.empty((X_test.shape[0], k), dtype=int)
+    for start in range(0, X_test.shape[0], chunk):
+        D = squared_distances(X_test[start:start + chunk], X_train)
+        out[start:start + chunk] = np.argsort(D, axis=1, kind="stable")[:, :k]
+    return out
