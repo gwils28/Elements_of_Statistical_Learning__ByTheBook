@@ -157,3 +157,22 @@ def knn_regress(X_train, y_train, X_test, k):
     """
     idx = knn_indices(X_train, X_test, k)
     return np.asarray(y_train, dtype=float)[idx].mean(axis=1)
+
+
+def knn_classify(X_train, g_train, X_test, k):
+    """Vote majoritaire parmi les k plus proches voisins.
+
+    En cas d'égalité des votes, la plus petite étiquette l'emporte.
+
+    Returns
+    -------
+    ndarray, shape (m,)
+        Étiquettes prédites (mêmes valeurs que ``g_train``).
+    """
+    g_train = np.asarray(g_train)
+    classes, codes = np.unique(g_train, return_inverse=True)
+    idx = knn_indices(X_train, X_test, k)
+    votes = np.zeros((idx.shape[0], len(classes)))
+    rows = np.repeat(np.arange(idx.shape[0]), k)
+    np.add.at(votes, (rows, codes[idx].ravel()), 1)
+    return classes[votes.argmax(axis=1)]
