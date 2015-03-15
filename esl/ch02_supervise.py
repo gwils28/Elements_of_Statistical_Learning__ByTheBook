@@ -139,3 +139,21 @@ def knn_indices(X_train, X_test, k, chunk=2000):
         D = squared_distances(X_test[start:start + chunk], X_train)
         out[start:start + chunk] = np.argsort(D, axis=1, kind="stable")[:, :k]
     return out
+
+
+def knn_regress(X_train, y_train, X_test, k):
+    """Moyenne des réponses des k plus proches voisins (éq. (2.8)).
+
+    Parameters
+    ----------
+    X_train : ndarray, shape (n, p)
+    y_train : ndarray, shape (n,)
+    X_test : ndarray, shape (m, p)
+    k : int
+
+    Returns
+    -------
+    ndarray, shape (m,)
+    """
+    idx = knn_indices(X_train, X_test, k)
+    return np.asarray(y_train, dtype=float)[idx].mean(axis=1)
