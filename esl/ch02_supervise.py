@@ -176,3 +176,8 @@ def knn_classify(X_train, g_train, X_test, k):
     rows = np.repeat(np.arange(idx.shape[0]), k)
     np.add.at(votes, (rows, codes[idx].ravel()), 1)
     return classes[votes.argmax(axis=1)]
+
+
+def error_rate(g_true, g_pred):
+    """Taux de mauvais classement :math:`\\frac1n\\sum_i 1(g_i \\ne \\hat g_i)`."""
+    return float(np.mean(np.asarray(g_true) != np.asarray(g_pred)))
