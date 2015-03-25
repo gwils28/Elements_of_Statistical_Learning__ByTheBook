@@ -202,3 +202,40 @@ def mixture_centers(rng, n_centers=10):
     blue = rng.normal(size=(n_centers, 2)) + np.array([1.0, 0.0])
     orange = rng.normal(size=(n_centers, 2)) + np.array([0.0, 1.0])
     return np.vstack([blue, orange])
+
+
+def sample_mixture(means, n_per_class, rng, sigma2=0.2):
+    """Simule des observations des deux classes du mélange.
+
+    Pour chaque observation de la classe :math:`c`, on choisit un centre
+    :math:`m_k` de cette classe avec probabilité uniforme, puis on tire
+    :math:`x \\sim N(m_k, \\sigma^2 I)` avec :math:`\\sigma^2 = 1/5`.
+
+    Parameters
+    ----------
+    means : ndarray, shape (2 * K, 2)
+        Centres (les K premiers pour la classe 0).
+    n_per_class : int
+    rng : numpy.random.RandomState
+    sigma2 : float
+
+    Returns
+    -------
+    X : ndarray, shape (2 * n_per_class, 2)
+    g : ndarray, shape (2 * n_per_class,)
+    """
+    means = np.asarray(means, dtype=float)
+    K = means.shape[0] // 2
+    X, g = [], []
+    for c in (0, 1):
+        k = rng.randint(0, K, size=n_per_class)
+        X.append(means[c * K + k] + np.sqrt(sigma2) * rng.normal(size=(n_per_class, 2)))
+        g.append(np.full(n_per_class, c))
+    return np.vstack(X), np.concatenate(g)
+
+
+def mixture_density(X, centers, sigma2=0.2):
+    """Densité d'un mélange équipondéré de gaussiennes :math:`N(m_k, \\sigma^2 I_2)`."""
+    X = np.atleast_2d(np.asarray(X, dtype=float))
+    D = squared_distances(X, centers)
+    return np.exp(-D / (2 * sigma2)).mean(axis=1) / (2 * np.pi * sigma2)
