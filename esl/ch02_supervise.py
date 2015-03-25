@@ -181,3 +181,24 @@ def knn_classify(X_train, g_train, X_test, k):
 def error_rate(g_true, g_pred):
     """Taux de mauvais classement :math:`\\frac1n\\sum_i 1(g_i \\ne \\hat g_i)`."""
     return float(np.mean(np.asarray(g_true) != np.asarray(g_pred)))
+
+
+# ---------------------------------------------------------------------------
+# Simulation « mixture » (section 2.3.3) et classifieur de Bayes
+# ---------------------------------------------------------------------------
+
+
+def mixture_centers(rng, n_centers=10):
+    """Tire les centres des deux mélanges comme dans le livre.
+
+    Classe 0 (BLEU) : centres :math:`m_k \\sim N((1,0)^T, I)` ;
+    classe 1 (ORANGE) : centres :math:`m_k \\sim N((0,1)^T, I)`.
+
+    Returns
+    -------
+    ndarray, shape (2 * n_centers, 2)
+        Les ``n_centers`` premières lignes sont les centres de la classe 0.
+    """
+    blue = rng.normal(size=(n_centers, 2)) + np.array([1.0, 0.0])
+    orange = rng.normal(size=(n_centers, 2)) + np.array([0.0, 1.0])
+    return np.vstack([blue, orange])
