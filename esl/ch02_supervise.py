@@ -239,3 +239,16 @@ def mixture_density(X, centers, sigma2=0.2):
     X = np.atleast_2d(np.asarray(X, dtype=float))
     D = squared_distances(X, centers)
     return np.exp(-D / (2 * sigma2)).mean(axis=1) / (2 * np.pi * sigma2)
+
+
+def bayes_posterior(X, means, sigma2=0.2):
+    """Probabilité a posteriori :math:`P(G = 1 \\mid X = x)` (classe ORANGE).
+
+    Les deux classes ont la même probabilité a priori 1/2, donc par la formule
+    de Bayes :math:`P(G=1\\mid x) = p_1(x) / (p_0(x) + p_1(x))`.
+    """
+    means = np.asarray(means, dtype=float)
+    K = means.shape[0] // 2
+    p0 = mixture_density(X, means[:K], sigma2)
+    p1 = mixture_density(X, means[K:], sigma2)
+    return p1 / (p0 + p1)
