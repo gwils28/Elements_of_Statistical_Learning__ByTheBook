@@ -274,3 +274,15 @@ def median_nn_distance(p, N):
     dans la boule unité de dimension p (éq. (2.24)) :
     :math:`d(p, N) = (1 - (1/2)^{1/N})^{1/p}`."""
     return (1.0 - 0.5 ** (1.0 / N)) ** (1.0 / p)
+
+
+def sample_unit_ball(n, p, rng):
+    """Tire n points uniformément dans la boule unité de :math:`\\mathbb R^p`.
+
+    Direction : gaussienne normalisée ; rayon : :math:`U^{1/p}` avec
+    :math:`U` uniforme sur [0, 1] (car :math:`P(\\|X\\|\\le r) = r^p`).
+    """
+    Z = rng.normal(size=(n, p))
+    Z /= np.linalg.norm(Z, axis=1, keepdims=True)
+    R = rng.uniform(size=(n, 1)) ** (1.0 / p)
+    return Z * R
