@@ -257,3 +257,13 @@ def bayes_posterior(X, means, sigma2=0.2):
 def bayes_classify(X, means, sigma2=0.2):
     """Classifieur de Bayes (éq. (2.23)) pour la simulation mixture."""
     return (bayes_posterior(X, means, sigma2) > 0.5).astype(int)
+
+
+# ---------------------------------------------------------------------------
+# Fléau de la dimension (section 2.5)
+# ---------------------------------------------------------------------------
+
+
+def edge_length(r, p):
+    """Côté :math:`e_p(r) = r^{1/p}` d'un sous-cube contenant une fraction r du volume."""
+    return np.asarray(r, dtype=float) ** (1.0 / p)
