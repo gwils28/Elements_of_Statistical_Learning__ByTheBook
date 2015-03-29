@@ -252,3 +252,8 @@ def bayes_posterior(X, means, sigma2=0.2):
     p0 = mixture_density(X, means[:K], sigma2)
     p1 = mixture_density(X, means[K:], sigma2)
     return p1 / (p0 + p1)
+
+
+def bayes_classify(X, means, sigma2=0.2):
+    """Classifieur de Bayes (éq. (2.23)) pour la simulation mixture."""
+    return (bayes_posterior(X, means, sigma2) > 0.5).astype(int)
