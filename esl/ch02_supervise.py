@@ -267,3 +267,10 @@ def bayes_classify(X, means, sigma2=0.2):
 def edge_length(r, p):
     """Côté :math:`e_p(r) = r^{1/p}` d'un sous-cube contenant une fraction r du volume."""
     return np.asarray(r, dtype=float) ** (1.0 / p)
+
+
+def median_nn_distance(p, N):
+    """Distance médiane entre l'origine et le plus proche de N points uniformes
+    dans la boule unité de dimension p (éq. (2.24)) :
+    :math:`d(p, N) = (1 - (1/2)^{1/N})^{1/p}`."""
+    return (1.0 - 0.5 ** (1.0 / N)) ** (1.0 / p)
