@@ -286,3 +286,23 @@ def sample_unit_ball(n, p, rng):
     Z /= np.linalg.norm(Z, axis=1, keepdims=True)
     R = rng.uniform(size=(n, 1)) ** (1.0 / p)
     return Z * R
+
+
+# ---------------------------------------------------------------------------
+# Exercices 2.6 et 2.7
+# ---------------------------------------------------------------------------
+
+
+def ols_weights(X, x0, intercept=True):
+    """Poids :math:`\\ell_i(x_0; \\mathcal X)` de la régression linéaire.
+
+    :math:`\\hat f(x_0) = x_0^T (X^TX)^{-1} X^T y = \\sum_i \\ell_i(x_0) y_i`
+    avec :math:`\\ell(x_0) = X (X^TX)^{-1} x_0`.
+
+    Returns
+    -------
+    ndarray, shape (n,)
+    """
+    A = add_intercept(X) if intercept else np.asarray(X, dtype=float)
+    a0 = np.concatenate([[1.0], np.atleast_1d(x0)]) if intercept else np.atleast_1d(x0)
+    return A @ np.linalg.solve(A.T @ A, a0)
