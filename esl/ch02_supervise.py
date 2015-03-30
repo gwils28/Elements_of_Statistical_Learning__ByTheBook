@@ -306,3 +306,36 @@ def ols_weights(X, x0, intercept=True):
     A = add_intercept(X) if intercept else np.asarray(X, dtype=float)
     a0 = np.concatenate([[1.0], np.atleast_1d(x0)]) if intercept else np.atleast_1d(x0)
     return A @ np.linalg.solve(A.T @ A, a0)
+
+
+def knn_weights(X, x0, k):
+    """Poids :math:`\\ell_i(x_0;\\mathcal X) = 1/k` si :math:`x_i \\in N_k(x_0)`, 0 sinon."""
+    X = np.asarray(X, dtype=float)
+    if X.ndim == 1:
+        X = X[:, None]
+    idx = knn_indices(X, np.atleast_2d(np.asarray(x0, dtype=float)).reshape(1, -1), k)[0]
+    w = np.zeros(X.shape[0])
+    w[idx] = 1.0 / k
+    return w
+
+
+def reduce_ties(X, y):
+    """Regroupe les observations ayant la même entrée (exercice 2.6).
+
+    Returns
+    -------
+    X_unique : ndarray, shape (m, p)
+        Valeurs distinctes de x.
+    y_bar : ndarray, shape (m,)
+        Moyenne des réponses pour chaque valeur distincte.
+    counts : ndarray, shape (m,)
+        Nombre d'observations :math:`N_j` partageant cette valeur (poids).
+    """
+    X = np.asarray(X, dtype=float)
+    if X.ndim == 1:
+        X = X[:, None]
+    X_unique, inverse, counts = np.unique(X, axis=0, return_inverse=True,
+                                          return_counts=True)
+    inverse = np.ravel(inverse)
+    y_bar = np.bincount(inverse, weights=np.asarray(y, dtype=float)) / counts
+    return X_unique, y_bar, counts
