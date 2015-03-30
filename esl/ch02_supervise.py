@@ -339,3 +339,28 @@ def reduce_ties(X, y):
     inverse = np.ravel(inverse)
     y_bar = np.bincount(inverse, weights=np.asarray(y, dtype=float)) / counts
     return X_unique, y_bar, counts
+
+
+# ---------------------------------------------------------------------------
+# Estimateurs « restreints » de la section 2.8
+# ---------------------------------------------------------------------------
+
+
+def gaussian_kernel(x0, x, lam):
+    """Noyau gaussien :math:`K_\\lambda(x_0, x) = \\frac{1}{\\lambda}\\exp(-\\|x-x_0\\|^2 / (2\\lambda))`
+    (éq. (2.40) du livre).
+
+    Parameters
+    ----------
+    x0 : ndarray, shape (m, p) ou (m,)
+        Points cibles.
+    x : ndarray, shape (n, p) ou (n,)
+        Points d'apprentissage.
+    lam : float
+        Largeur (variance) du noyau.
+
+    Returns
+    -------
+    ndarray, shape (m, n)
+    """
+    return np.exp(-squared_distances(x0, x) / (2 * lam)) / lam
