@@ -371,3 +371,12 @@ def nadaraya_watson(x_train, y_train, x0, lam):
     :math:`\\hat f(x_0) = \\sum_i K_\\lambda(x_0,x_i) y_i / \\sum_i K_\\lambda(x_0,x_i)`."""
     K = gaussian_kernel(x0, x_train, lam)
     return K @ np.asarray(y_train, dtype=float) / K.sum(axis=1)
+
+
+def second_difference_matrix(n):
+    """Matrice :math:`D` de taille (n-2, n) des différences secondes :
+    :math:`(Df)_i = f_i - 2 f_{i+1} + f_{i+2}`."""
+    D = np.zeros((n - 2, n))
+    for i in range(n - 2):
+        D[i, i:i + 3] = [1.0, -2.0, 1.0]
+    return D
