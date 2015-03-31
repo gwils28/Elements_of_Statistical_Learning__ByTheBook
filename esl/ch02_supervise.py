@@ -380,3 +380,16 @@ def second_difference_matrix(n):
     for i in range(n - 2):
         D[i, i:i + 3] = [1.0, -2.0, 1.0]
     return D
+
+
+def penalized_smoother(y, lam):
+    """Lisseur à pénalité de rugosité, version discrète de l'éq. (2.39).
+
+    Pour des abscisses régulièrement espacées et triées, on minimise
+    :math:`\\|y - f\\|^2 + \\lambda \\|D f\\|^2` où :math:`D` est la matrice des
+    différences secondes (analogue discret de :math:`\\int f''^2`). La solution
+    est :math:`\\hat f = (I + \\lambda D^TD)^{-1} y`.
+    """
+    y = np.asarray(y, dtype=float)
+    D = second_difference_matrix(len(y))
+    return np.linalg.solve(np.eye(len(y)) + lam * D.T @ D, y)
