@@ -364,3 +364,10 @@ def gaussian_kernel(x0, x, lam):
     ndarray, shape (m, n)
     """
     return np.exp(-squared_distances(x0, x) / (2 * lam)) / lam
+
+
+def nadaraya_watson(x_train, y_train, x0, lam):
+    """Moyenne pondérée par un noyau gaussien (éq. (2.41)) :
+    :math:`\\hat f(x_0) = \\sum_i K_\\lambda(x_0,x_i) y_i / \\sum_i K_\\lambda(x_0,x_i)`."""
+    K = gaussian_kernel(x0, x_train, lam)
+    return K @ np.asarray(y_train, dtype=float) / K.sum(axis=1)
