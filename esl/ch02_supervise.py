@@ -393,3 +393,35 @@ def penalized_smoother(y, lam):
     y = np.asarray(y, dtype=float)
     D = second_difference_matrix(len(y))
     return np.linalg.solve(np.eye(len(y)) + lam * D.T @ D, y)
+
+
+# ---------------------------------------------------------------------------
+# Graphique : frontière de décision à deux classes
+# ---------------------------------------------------------------------------
+
+
+def plot_two_class(ax, X, g, xx, yy, score, level=0.5, colors=("#2a78d6", "#eb6834"),
+                   boundary_color="#0b0b0b", title=None):
+    """Trace les points de deux classes, les régions prédites et la frontière.
+
+    Parameters
+    ----------
+    ax : matplotlib Axes
+    X, g : données (n, 2) et étiquettes 0/1
+    xx, yy : grilles (meshgrid)
+    score : ndarray de même forme que ``xx``
+        Score dont la ligne de niveau ``level`` est la frontière (classe 1 au-dessus).
+    """
+    from matplotlib.colors import ListedColormap
+    ax.contourf(xx, yy, (score > level).astype(float), levels=[-0.5, 0.5, 1.5],
+                cmap=ListedColormap(list(colors)), alpha=0.12)
+    ax.contour(xx, yy, score, levels=[level], colors=boundary_color, linewidths=1.5)
+    for c, col, name in zip((0, 1), colors, ("BLEU (0)", "ORANGE (1)")):
+        ax.scatter(X[g == c, 0], X[g == c, 1], s=14, facecolors="none",
+                   edgecolors=col, linewidths=1.1, label=name)
+    ax.set_xlabel("$X_1$")
+    ax.set_ylabel("$X_2$")
+    ax.grid(False)
+    if title:
+        ax.set_title(title)
+    return ax
