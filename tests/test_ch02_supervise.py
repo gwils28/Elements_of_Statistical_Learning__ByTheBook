@@ -35,3 +35,14 @@ def test_knn_regress_limits():
     np.testing.assert_allclose(c2.knn_regress(X, y, X, 1), y)
     # k = N : moyenne globale
     np.testing.assert_allclose(c2.knn_regress(X, y, X[:5], 40), np.full(5, y.mean()))
+
+
+def test_knn_classify_matches_sklearn():
+    from sklearn.neighbors import KNeighborsClassifier
+    rng = np.random.RandomState(3)
+    X = rng.normal(size=(100, 3))
+    g = rng.randint(0, 3, size=100)
+    Xt = rng.normal(size=(60, 3))
+    for k in (1, 5, 15):
+        ref = KNeighborsClassifier(n_neighbors=k).fit(X, g).predict(Xt)
+        np.testing.assert_array_equal(c2.knn_classify(X, g, Xt, k), ref)
