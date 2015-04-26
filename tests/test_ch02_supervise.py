@@ -46,3 +46,9 @@ def test_knn_classify_matches_sklearn():
     for k in (1, 5, 15):
         ref = KNeighborsClassifier(n_neighbors=k).fit(X, g).predict(Xt)
         np.testing.assert_array_equal(c2.knn_classify(X, g, Xt, k), ref)
+
+
+def test_bayes_posterior_matches_book_data():
+    m = datasets.load_mixture_example()
+    p = c2.bayes_posterior(m["xnew"], m["means"])
+    np.testing.assert_allclose(p, m["prob"], atol=1e-10)
