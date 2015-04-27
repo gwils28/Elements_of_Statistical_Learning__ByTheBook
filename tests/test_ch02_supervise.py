@@ -52,3 +52,11 @@ def test_bayes_posterior_matches_book_data():
     m = datasets.load_mixture_example()
     p = c2.bayes_posterior(m["xnew"], m["means"])
     np.testing.assert_allclose(p, m["prob"], atol=1e-10)
+
+
+def test_sample_mixture_shapes():
+    rng = np.random.RandomState(0)
+    means = c2.mixture_centers(rng)
+    X, g = c2.sample_mixture(means, 100, rng)
+    assert X.shape == (200, 2)
+    assert (g[:100] == 0).all() and (g[100:] == 1).all()
