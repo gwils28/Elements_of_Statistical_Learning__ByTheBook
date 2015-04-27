@@ -60,3 +60,17 @@ def test_sample_mixture_shapes():
     X, g = c2.sample_mixture(means, 100, rng)
     assert X.shape == (200, 2)
     assert (g[:100] == 0).all() and (g[100:] == 1).all()
+
+
+def test_median_nn_distance_formula_and_simulation():
+    assert c2.median_nn_distance(10, 500) == pytest.approx(0.518, abs=1e-3)
+    rng = np.random.RandomState(0)
+    p, N = 3, 20
+    d = np.array([np.linalg.norm(c2.sample_unit_ball(N, p, rng), axis=1).min()
+                  for _ in range(4000)])
+    assert np.median(d) == pytest.approx(c2.median_nn_distance(p, N), abs=0.01)
+
+
+def test_edge_length():
+    assert c2.edge_length(0.01, 10) == pytest.approx(0.631, abs=1e-3)
+    assert c2.edge_length(0.1, 10) == pytest.approx(0.794, abs=1e-3)
