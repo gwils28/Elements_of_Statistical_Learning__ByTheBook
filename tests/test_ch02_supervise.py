@@ -88,3 +88,13 @@ def test_smoother_weights():
     w = c2.knn_weights(X, x0, 7)
     assert w.sum() == pytest.approx(1.0)
     assert w @ y == pytest.approx(c2.knn_regress(X, y, x0[None, :], 7)[0])
+
+
+def test_reduce_ties_gives_same_fit():
+    rng = np.random.RandomState(5)
+    x = rng.randint(0, 6, size=80).astype(float)
+    y = 2 - x + rng.normal(size=80)
+    xu, yb, n = c2.reduce_ties(x, y)
+    assert n.sum() == 80 and len(xu) == len(np.unique(x))
+    np.testing.assert_allclose(c2.least_squares_fit(xu, yb, weights=n),
+                               c2.least_squares_fit(x, y))
