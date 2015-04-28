@@ -74,3 +74,17 @@ def test_median_nn_distance_formula_and_simulation():
 def test_edge_length():
     assert c2.edge_length(0.01, 10) == pytest.approx(0.631, abs=1e-3)
     assert c2.edge_length(0.1, 10) == pytest.approx(0.794, abs=1e-3)
+
+
+def test_smoother_weights():
+    rng = np.random.RandomState(4)
+    X = rng.normal(size=(30, 2))
+    y = rng.normal(size=30)
+    x0 = np.array([0.3, -0.2])
+    l = c2.ols_weights(X, x0)
+    beta = c2.least_squares_fit(X, y)
+    assert l @ y == pytest.approx(c2.least_squares_predict(x0[None, :], beta)[0])
+    assert l.sum() == pytest.approx(1.0)  # avec constante, les poids somment à 1
+    w = c2.knn_weights(X, x0, 7)
+    assert w.sum() == pytest.approx(1.0)
+    assert w @ y == pytest.approx(c2.knn_regress(X, y, x0[None, :], 7)[0])
