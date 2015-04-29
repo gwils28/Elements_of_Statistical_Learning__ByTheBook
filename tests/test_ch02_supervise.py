@@ -98,3 +98,13 @@ def test_reduce_ties_gives_same_fit():
     assert n.sum() == 80 and len(xu) == len(np.unique(x))
     np.testing.assert_allclose(c2.least_squares_fit(xu, yb, weights=n),
                                c2.least_squares_fit(x, y))
+
+
+def test_nadaraya_watson_constant_and_limits():
+    rng = np.random.RandomState(6)
+    x = rng.uniform(size=50)
+    # une fonction constante est reproduite exactement
+    np.testing.assert_allclose(c2.nadaraya_watson(x, np.full(50, 3.0), x[:5], 0.01), 3.0)
+    # noyau très large : moyenne globale
+    y = rng.normal(size=50)
+    np.testing.assert_allclose(c2.nadaraya_watson(x, y, x[:3], 1e6), y.mean(), rtol=1e-6)
