@@ -108,3 +108,16 @@ def test_nadaraya_watson_constant_and_limits():
     # noyau très large : moyenne globale
     y = rng.normal(size=50)
     np.testing.assert_allclose(c2.nadaraya_watson(x, y, x[:3], 1e6), y.mean(), rtol=1e-6)
+
+
+def test_penalized_smoother_reproduces_lines():
+    t = np.linspace(0, 1, 30)
+    line = 2 - 3 * t
+    # les droites ne sont pas pénalisées (différences secondes nulles)
+    np.testing.assert_allclose(c2.penalized_smoother(line, 1e4), line, atol=1e-8)
+    rng = np.random.RandomState(7)
+    y = rng.normal(size=30)
+    f = c2.penalized_smoother(y, 1e8)
+    # lambda -> infini : ajustement par une droite des moindres carrés
+    beta = c2.least_squares_fit(t, y)
+    np.testing.assert_allclose(f, c2.least_squares_predict(t, beta), atol=1e-4)
