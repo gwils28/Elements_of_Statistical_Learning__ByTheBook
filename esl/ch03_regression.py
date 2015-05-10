@@ -55,3 +55,11 @@ def load_prostate_standardized():
     X = (X - X.mean(0)) / X.std(0, ddof=1)
     tr = df["train"].to_numpy(bool)
     return X[tr], y[tr], X[~tr], y[~tr], list(PROSTATE_NAMES)
+
+
+def _center(X, y):
+    """Centre ``X`` (colonnes) et ``y`` ; renvoie aussi les moyennes."""
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    xm, ym = X.mean(0), y.mean()
+    return X - xm, y - ym, xm, ym
