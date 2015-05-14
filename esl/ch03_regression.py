@@ -121,3 +121,31 @@ def ols_qr(X, y):
     """
     Q, R = gram_schmidt_qr(X)
     return back_substitution(R, Q.T @ y)
+
+
+def successive_orthogonalization(X):
+    """Algorithme 3.1 : régression par orthogonalisations successives.
+
+    Parameters
+    ----------
+    X : ndarray (N, p+1) dont la première colonne vaut 1.
+
+    Returns
+    -------
+    Z : ndarray (N, p+1)
+        Résidus orthogonaux ``z_0 = 1, z_1, ..., z_p`` (non normés).
+    Gamma : ndarray (p+1, p+1)
+        Triangulaire supérieure à diagonale unité, ``X = Z Gamma`` (éq. 3.30),
+        ``Gamma[l, j] = <z_l, x_j> / <z_l, z_l>``.
+    """
+    X = np.asarray(X, float)
+    q = X.shape[1]
+    Z = np.zeros_like(X)
+    G = np.eye(q)
+    for j in range(q):
+        z = X[:, j].copy()
+        for l in range(j):
+            G[l, j] = (Z[:, l] @ X[:, j]) / (Z[:, l] @ Z[:, l])
+            z -= G[l, j] * Z[:, l]
+        Z[:, j] = z
+    return Z, G
