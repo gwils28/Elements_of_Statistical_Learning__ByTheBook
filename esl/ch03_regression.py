@@ -63,3 +63,9 @@ def _center(X, y):
     y = np.asarray(y, float)
     xm, ym = X.mean(0), y.mean()
     return X - xm, y - ym, xm, ym
+
+
+def add_intercept(X):
+    """Ajoute une première colonne de uns à ``X``."""
+    X = np.asarray(X, float)
+    return np.column_stack([np.ones(X.shape[0]), X])
