@@ -69,3 +69,34 @@ def add_intercept(X):
     """Ajoute une première colonne de uns à ``X``."""
     X = np.asarray(X, float)
     return np.column_stack([np.ones(X.shape[0]), X])
+
+
+# ---------------------------------------------------------------------------
+# Moindres carrés, QR, Gram–Schmidt
+# ---------------------------------------------------------------------------
+
+def gram_schmidt_qr(X):
+    """Décomposition QR « réduite » par Gram–Schmidt (version modifiée).
+
+    Parameters
+    ----------
+    X : ndarray (N, q), de rang plein q.
+
+    Returns
+    -------
+    Q : ndarray (N, q)
+        Colonnes orthonormées.
+    R : ndarray (q, q)
+        Triangulaire supérieure à diagonale > 0, avec ``X = Q R``.
+    """
+    X = np.asarray(X, float)
+    N, q = X.shape
+    Q = X.copy()
+    R = np.zeros((q, q))
+    for j in range(q):
+        for k in range(j):
+            R[k, j] = Q[:, k] @ Q[:, j]
+            Q[:, j] -= R[k, j] * Q[:, k]
+        R[j, j] = np.linalg.norm(Q[:, j])
+        Q[:, j] /= R[j, j]
+    return Q, R
