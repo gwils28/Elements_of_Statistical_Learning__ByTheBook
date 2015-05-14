@@ -100,3 +100,24 @@ def gram_schmidt_qr(X):
         R[j, j] = np.linalg.norm(Q[:, j])
         Q[:, j] /= R[j, j]
     return Q, R
+
+
+def back_substitution(R, b):
+    """Résout ``R x = b`` pour ``R`` triangulaire supérieure (remontée)."""
+    R = np.asarray(R, float)
+    b = np.asarray(b, float)
+    n = len(b)
+    x = np.zeros(n)
+    for i in range(n - 1, -1, -1):
+        x[i] = (b[i] - R[i, i + 1:] @ x[i + 1:]) / R[i, i]
+    return x
+
+
+def ols_qr(X, y):
+    """Moindres carrés via QR : ``beta = R^{-1} Q^T y`` (éq. 3.32).
+
+    ``X`` doit déjà contenir la colonne de uns si l'on veut une ordonnée à
+    l'origine.
+    """
+    Q, R = gram_schmidt_qr(X)
+    return back_substitution(R, Q.T @ y)
