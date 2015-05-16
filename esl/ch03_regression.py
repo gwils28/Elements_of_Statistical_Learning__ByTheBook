@@ -182,3 +182,28 @@ def ols_fit(X, y, intercept=True):
     se = np.sqrt(sigma2 * np.diag(XtX_inv))
     return {"coef": coef, "se": se, "z": coef / se, "sigma2": sigma2,
             "rss": rss, "df_resid": df, "fitted": fitted, "XtX_inv": XtX_inv}
+
+
+def f_test(rss0, rss1, p0, p1, N):
+    """Statistique F (éq. 3.13) pour comparer deux modèles emboîtés.
+
+    Parameters
+    ----------
+    rss0, rss1 : float
+        RSS du petit modèle (p0 + 1 paramètres) et du gros (p1 + 1).
+    p0, p1 : int
+        Nombres de prédicteurs (hors constante), ``p1 > p0``.
+    N : int
+
+    Returns
+    -------
+    F, pvalue : float
+    """
+    F = ((rss0 - rss1) / (p1 - p0)) / (rss1 / (N - p1 - 1))
+    return F, stats.f.sf(F, p1 - p0, N - p1 - 1)
+
+
+def hat_matrix(X):
+    """Matrice chapeau ``H = X (X^T X)^{-1} X^T`` (éq. 3.7), via QR."""
+    Q, _ = gram_schmidt_qr(X)
+    return Q @ Q.T
