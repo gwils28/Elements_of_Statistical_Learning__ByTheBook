@@ -149,3 +149,36 @@ def successive_orthogonalization(X):
             z -= G[l, j] * Z[:, l]
         Z[:, j] = z
     return Z, G
+
+
+def ols_fit(X, y, intercept=True):
+    """Ajustement par moindres carrés et inférence classique (section 3.2).
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+    y : ndarray (N,)
+    intercept : bool
+        Ajouter une colonne de uns.
+
+    Returns
+    -------
+    dict avec les clés ``coef`` (p+1 ou p), ``se`` (erreurs standard),
+    ``z`` (scores Z, éq. 3.12), ``sigma2`` (estimateur sans biais, éq. 3.8),
+    ``rss``, ``df_resid`` = N - (nombre de paramètres), ``fitted``,
+    ``XtX_inv``.
+    """
+    A = add_intercept(X) if intercept else np.asarray(X, float)
+    y = np.asarray(y, float)
+    N, q = A.shape
+    Q, R = gram_schmidt_qr(A)
+    coef = back_substitution(R, Q.T @ y)
+    fitted = A @ coef
+    rss = float(np.sum((y - fitted) ** 2))
+    df = N - q
+    sigma2 = rss / df
+    Rinv = np.linalg.solve(R, np.eye(q))
+    XtX_inv = Rinv @ Rinv.T          # (R^T R)^{-1} = R^{-1} R^{-T}
+    se = np.sqrt(sigma2 * np.diag(XtX_inv))
+    return {"coef": coef, "se": se, "z": coef / se, "sigma2": sigma2,
+            "rss": rss, "df_resid": df, "fitted": fitted, "XtX_inv": XtX_inv}
