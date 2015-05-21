@@ -258,3 +258,40 @@ def best_subset(X, y):
         if r < rss[k]:
             rss[k], best[k] = r, S
     return best, rss
+
+
+def forward_stepwise(X, y, max_steps=None):
+    """Sélection pas à pas ascendante, mise à jour efficace par QR (ex. 3.9).
+
+    À chaque étape, on a une base orthonormée ``Q`` des variables retenues
+    (constante comprise) et le résidu courant ``r``. Pour une candidate
+    ``x_j``, sa partie orthogonale ``e_j = x_j - Q Q^T x_j`` fait baisser le
+    RSS de ``(e_j^T r)^2 / ||e_j||^2`` : on retient la plus forte baisse.
+
+    Returns
+    -------
+    order : list of int
+        Ordre d'entrée des variables.
+    rss : ndarray
+        RSS après 0, 1, 2, ... variables.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    N, p = X.shape
+    max_steps = p if max_steps is None else max_steps
+    Q = np.ones((N, 1)) / np.sqrt(N)
+    r = y - Q @ (Q.T @ y)
+    order, rss = [], [float(r @ r)]
+    remaining = list(range(p))
+    for _ in range(max_steps):
+        E = X[:, remaining] - Q @ (Q.T @ X[:, remaining])
+        nrm2 = np.sum(E ** 2, axis=0)
+        gain = (E.T @ r) ** 2 / nrm2
+        i = int(np.argmax(gain))
+        j = remaining.pop(i)
+        q = E[:, i] / np.sqrt(nrm2[i])
+        Q = np.column_stack([Q, q])
+        r = r - q * (q @ r)
+        order.append(j)
+        rss.append(float(r @ r))
+    return order, np.array(rss)
