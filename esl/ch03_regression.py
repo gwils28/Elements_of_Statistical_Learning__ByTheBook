@@ -207,3 +207,18 @@ def hat_matrix(X):
     """Matrice chapeau ``H = X (X^T X)^{-1} X^T`` (éq. 3.7), via QR."""
     Q, _ = gram_schmidt_qr(X)
     return Q @ Q.T
+
+
+# ---------------------------------------------------------------------------
+# Sélection de sous-ensembles
+# ---------------------------------------------------------------------------
+
+def _rss_subset(Xc, yc, subset):
+    """RSS de la régression (avec constante) de y sur les colonnes ``subset``
+    (``Xc``, ``yc`` centrés)."""
+    if len(subset) == 0:
+        return float(yc @ yc)
+    A = Xc[:, list(subset)]
+    b = np.linalg.lstsq(A, yc, rcond=None)[0]
+    r = yc - A @ b
+    return float(r @ r)
