@@ -222,3 +222,39 @@ def _rss_subset(Xc, yc, subset):
     b = np.linalg.lstsq(A, yc, rcond=None)[0]
     r = yc - A @ b
     return float(r @ r)
+
+
+def all_subsets_rss(X, y):
+    """RSS de tous les sous-ensembles de prédicteurs (figure 3.5).
+
+    Returns
+    -------
+    list of (subset, rss) pour les 2^p sous-ensembles (constante toujours
+    incluse).
+    """
+    Xc, yc, _, _ = _center(X, y)
+    p = Xc.shape[1]
+    out = []
+    for k in range(p + 1):
+        for S in combinations(range(p), k):
+            out.append((S, _rss_subset(Xc, yc, S)))
+    return out
+
+
+def best_subset(X, y):
+    """Meilleur sous-ensemble de chaque taille k = 0..p (recherche exhaustive).
+
+    Returns
+    -------
+    subsets : list of tuple
+        ``subsets[k]`` = meilleur sous-ensemble de taille k.
+    rss : ndarray (p+1,)
+    """
+    p = np.asarray(X).shape[1]
+    best = [None] * (p + 1)
+    rss = np.full(p + 1, np.inf)
+    for S, r in all_subsets_rss(X, y):
+        k = len(S)
+        if r < rss[k]:
+            rss[k], best[k] = r, S
+    return best, rss
