@@ -326,3 +326,13 @@ def backward_stepwise(X, y):
             yc = np.asarray(y) - np.mean(y)
             rss.append(float(yc @ yc))
     return removed, np.array(rss)
+
+
+def subset_fit(X, y, subset):
+    """Moindres carrés sur un sous-ensemble ; renvoie ``(b0, beta)`` complet."""
+    Xc, yc, xm, ym = _center(X, y)
+    beta = np.zeros(Xc.shape[1])
+    if len(subset):
+        S = list(subset)
+        beta[S] = np.linalg.lstsq(Xc[:, S], yc, rcond=None)[0]
+    return ym - xm @ beta, beta
