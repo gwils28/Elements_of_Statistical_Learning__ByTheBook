@@ -295,3 +295,34 @@ def forward_stepwise(X, y, max_steps=None):
         order.append(j)
         rss.append(float(r @ r))
     return order, np.array(rss)
+
+
+def backward_stepwise(X, y):
+    """Sélection pas à pas descendante (ex. 3.10).
+
+    À chaque étape on retire la variable de plus petit |Z| : la hausse du RSS
+    causée par le retrait de la variable j vaut ``z_j^2 * sigma2_hat``.
+
+    Returns
+    -------
+    removed : list of int
+        Ordre de retrait.
+    rss : ndarray
+        RSS avec p, p-1, ..., 0 variables.
+    """
+    X = np.asarray(X, float)
+    active = list(range(X.shape[1]))
+    removed = []
+    fit = ols_fit(X[:, active], y)
+    rss = [fit["rss"]]
+    while active:
+        z = fit["z"][1:]
+        i = int(np.argmin(np.abs(z)))
+        removed.append(active.pop(i))
+        if active:
+            fit = ols_fit(X[:, active], y)
+            rss.append(fit["rss"])
+        else:
+            yc = np.asarray(y) - np.mean(y)
+            rss.append(float(yc @ yc))
+    return removed, np.array(rss)
