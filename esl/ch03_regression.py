@@ -336,3 +336,37 @@ def subset_fit(X, y, subset):
         S = list(subset)
         beta[S] = np.linalg.lstsq(Xc[:, S], yc, rcond=None)[0]
     return ym - xm @ beta, beta
+
+
+def forward_stagewise(X, y, eps=None, n_steps=1000, tol=1e-10):
+    """Régression « stagewise » ascendante (sections 3.3.3 et 3.8.1).
+
+    Les prédicteurs sont centrés (et supposés de même échelle). À chaque
+    étape on choisit la variable la plus corrélée au résidu ``r`` puis :
+
+    * ``eps=None`` (FS « complet », §3.3.3) : on ajoute à son coefficient le
+      coefficient de la régression simple de ``r`` sur ``x_j`` ;
+    * ``eps>0`` (FS_eps, algorithme 3.4) : on ajoute ``eps * sign(<x_j, r>)``.
+
+    Returns
+    -------
+    path : ndarray (n_steps+1, p)
+        Coefficients après chaque étape (la première ligne est nulle).
+    """
+    Xc, yc, _, _ = _center(X, y)
+    N, p = Xc.shape
+    nrm2 = np.sum(Xc ** 2, axis=0)
+    beta = np.zeros(p)
+    r = yc.copy()
+    path = [beta.copy()]
+    for _ in range(n_steps):
+        c = Xc.T @ r
+        corr = c / np.sqrt(nrm2)
+        j = int(np.argmax(np.abs(corr)))
+        if abs(corr[j]) < tol:
+            break
+        delta = c[j] / nrm2[j] if eps is None else eps * np.sign(c[j])
+        beta[j] += delta
+        r -= delta * Xc[:, j]
+        path.append(beta.copy())
+    return np.array(path)
