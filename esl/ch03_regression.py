@@ -370,3 +370,22 @@ def forward_stagewise(X, y, eps=None, n_steps=1000, tol=1e-10):
         r -= delta * Xc[:, j]
         path.append(beta.copy())
     return np.array(path)
+
+
+# ---------------------------------------------------------------------------
+# Ridge
+# ---------------------------------------------------------------------------
+
+def ridge_fit(X, y, lam):
+    """Régression ridge (éq. 3.41–3.44) calculée par la SVD de X centrée.
+
+    ``beta = V diag(d_j / (d_j^2 + lam)) U^T y`` (cf. éq. 3.47).
+
+    Returns
+    -------
+    b0, beta
+    """
+    Xc, yc, xm, ym = _center(X, y)
+    U, d, Vt = np.linalg.svd(Xc, full_matrices=False)
+    beta = Vt.T @ (d / (d ** 2 + lam) * (U.T @ yc))
+    return ym - xm @ beta, beta
