@@ -389,3 +389,9 @@ def ridge_fit(X, y, lam):
     U, d, Vt = np.linalg.svd(Xc, full_matrices=False)
     beta = Vt.T @ (d / (d ** 2 + lam) * (U.T @ yc))
     return ym - xm @ beta, beta
+
+
+def ridge_df(d, lam):
+    """Degrés de liberté effectifs ``sum d_j^2 / (d_j^2 + lam)`` (éq. 3.50)."""
+    d = np.asarray(d, float)
+    return float(np.sum(d ** 2 / (d ** 2 + lam)))
