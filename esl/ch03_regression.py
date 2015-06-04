@@ -395,3 +395,15 @@ def ridge_df(d, lam):
     """Degrés de liberté effectifs ``sum d_j^2 / (d_j^2 + lam)`` (éq. 3.50)."""
     d = np.asarray(d, float)
     return float(np.sum(d ** 2 / (d ** 2 + lam)))
+
+
+def ridge_lambda_for_df(X, df):
+    """Valeur de lambda telle que df(lambda) = ``df`` (0 < df < p)."""
+    Xc = np.asarray(X, float) - np.mean(X, axis=0)
+    d = np.linalg.svd(Xc, compute_uv=False)
+    p = len(d)
+    if df >= p:
+        return 0.0
+    if df <= 0:
+        return np.inf
+    return brentq(lambda l: ridge_df(d, l) - df, 1e-12, 1e12, xtol=1e-12)
