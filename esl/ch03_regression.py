@@ -416,3 +416,40 @@ def ridge_lambda_for_df(X, df):
 def soft_threshold(z, gamma):
     """Seuillage doux ``sign(z) (|z| - gamma)_+`` (tableau 3.4, éq. 3.84)."""
     return np.sign(z) * np.maximum(np.abs(z) - gamma, 0.0)
+
+
+def lasso_cd(X, y, lam, beta0=None, max_iter=10000, tol=1e-10):
+    """Lasso par descente de coordonnées (section 3.8.6).
+
+    Minimise ``1/2 ||y - b0 - X beta||^2 + lam * ||beta||_1`` (éq. 3.52 à un
+    facteur 1/2 près). La mise à jour cyclique de la coordonnée j est
+    ``beta_j <- S(<x_j, r_(j)>, lam) / ||x_j||^2`` où ``r_(j)`` est le résidu
+    partiel sans la variable j.
+
+    Parameters
+    ----------
+    beta0 : ndarray, optionnel
+        Point de départ (« démarrage à chaud »).
+
+    Returns
+    -------
+    b0, beta
+    """
+    Xc, yc, xm, ym = _center(X, y)
+    p = Xc.shape[1]
+    beta = np.zeros(p) if beta0 is None else np.array(beta0, float)
+    nrm2 = np.sum(Xc ** 2, axis=0)
+    r = yc - Xc @ beta
+    for _ in range(max_iter):
+        max_change = 0.0
+        for j in range(p):
+            old = beta[j]
+            rho = Xc[:, j] @ r + nrm2[j] * old
+            new = soft_threshold(rho, lam) / nrm2[j]
+            if new != old:
+                r -= (new - old) * Xc[:, j]
+                beta[j] = new
+                max_change = max(max_change, abs(new - old))
+        if max_change < tol:
+            break
+    return ym - xm @ beta, beta
