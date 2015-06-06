@@ -407,3 +407,12 @@ def ridge_lambda_for_df(X, df):
     if df <= 0:
         return np.inf
     return brentq(lambda l: ridge_df(d, l) - df, 1e-12, 1e12, xtol=1e-12)
+
+
+# ---------------------------------------------------------------------------
+# Lasso
+# ---------------------------------------------------------------------------
+
+def soft_threshold(z, gamma):
+    """Seuillage doux ``sign(z) (|z| - gamma)_+`` (tableau 3.4, éq. 3.84)."""
+    return np.sign(z) * np.maximum(np.abs(z) - gamma, 0.0)
