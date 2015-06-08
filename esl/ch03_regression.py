@@ -453,3 +453,10 @@ def lasso_cd(X, y, lam, beta0=None, max_iter=10000, tol=1e-10):
         if max_change < tol:
             break
     return ym - xm @ beta, beta
+
+
+def lasso_lambda_max(X, y):
+    """Plus petite valeur de lambda pour laquelle tous les coefficients sont
+    nuls : ``max_j |<x_j, y - ybar>|``."""
+    Xc, yc, _, _ = _center(X, y)
+    return float(np.max(np.abs(Xc.T @ yc)))
