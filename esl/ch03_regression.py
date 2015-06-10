@@ -565,3 +565,11 @@ def lars(X, y, method="lar", max_steps=None, eps=1e-12):
         if new_j is None and drop is None:
             break                       # solution des moindres carrés atteinte
     return np.array(coefs), np.array(corr), actions
+
+
+def interpolate_path(knots_s, knots_coefs, s):
+    """Interpole linéairement un chemin linéaire par morceaux aux abscisses
+    ``s`` (par ex. le facteur de rétrécissement ``||beta||_1/||beta_ls||_1``)."""
+    knots_s = np.asarray(knots_s)
+    return np.column_stack([np.interp(s, knots_s, knots_coefs[:, j])
+                            for j in range(knots_coefs.shape[1])])
