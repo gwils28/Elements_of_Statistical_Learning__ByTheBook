@@ -477,3 +477,91 @@ def lasso_path_cd(X, y, lambdas):
         b0s.append(b0)
         coefs.append(beta.copy())
     return np.array(b0s), np.array(coefs)
+
+
+# ---------------------------------------------------------------------------
+# LAR
+# ---------------------------------------------------------------------------
+
+def lars(X, y, method="lar", max_steps=None, eps=1e-12):
+    """Least Angle Regression (algorithme 3.2) et modification lasso (3.2a).
+
+    Les variables sont centrées (la constante est gérée à part). On suit la
+    formulation d'Efron et al. (2004) : à chaque étape la direction ``u`` est
+    équiangulaire aux variables actives (signées), et on avance jusqu'à ce
+    qu'une nouvelle variable atteigne la même corrélation absolue (ou, pour
+    le lasso, jusqu'à ce qu'un coefficient actif s'annule).
+
+    Parameters
+    ----------
+    method : {"lar", "lasso"}
+
+    Returns
+    -------
+    coefs : ndarray (n_knots, p)
+        Coefficients aux nœuds du chemin (linéaire par morceaux), le premier
+        étant nul.
+    corr : ndarray (n_knots,)
+        Corrélation absolue commune ``max_j |<x_j, r>|`` à chaque nœud.
+    actions : list of int
+        Variable entrante (j >= 0) ou sortante (codée ``-(j+1)``) à chaque
+        étape.
+    """
+    Xc, yc, _, _ = _center(X, y)
+    N, p = Xc.shape
+    beta = np.zeros(p)
+    mu = np.zeros(N)
+    active, actions = [], []
+    coefs, corr = [beta.copy()], []
+    c = Xc.T @ yc
+    j = int(np.argmax(np.abs(c)))
+    active.append(j)
+    actions.append(j)
+    corr.append(np.abs(c[j]))
+    if max_steps is None:
+        max_steps = 8 * min(N - 1, p) if method == "lasso" else min(N - 1, p)
+    dropped_var = None
+    for _ in range(max_steps):
+        c = Xc.T @ (yc - mu)
+        C = np.max(np.abs(c[active]))
+        s = np.sign(c[active])
+        XA = Xc[:, active] * s
+        G = XA.T @ XA
+        Ginv1 = np.linalg.solve(G, np.ones(len(active)))
+        AA = 1.0 / np.sqrt(np.sum(Ginv1))
+        w = AA * Ginv1
+        u = XA @ w
+        a = Xc.T @ u
+        inactive = [k for k in range(p) if k not in active]
+        gamma, new_j = C / AA, None
+        drop = None
+        for k in inactive:
+            # une variable qui vient de sortir est à égalité (racine triviale
+            # gamma = 0) : on n'accepte pour elle qu'une racine franchement > 0
+            tol = 1e-9 * C / AA if k == dropped_var else eps
+            for g in ((C - c[k]) / (AA - a[k]), (C + c[k]) / (AA + a[k])):
+                if tol < g < gamma:
+                    gamma, new_j = g, k
+        if method == "lasso":
+            d = s * w
+            for idx, k in enumerate(active):
+                if d[idx] != 0:
+                    g = -beta[k] / d[idx]
+                    if eps < g < gamma:
+                        gamma, drop, new_j = g, idx, None
+        beta[active] += gamma * s * w
+        mu = mu + gamma * u
+        if drop is not None:
+            k = active.pop(drop)
+            beta[k] = 0.0
+            dropped_var = k
+            actions.append(-(k + 1))
+        elif new_j is not None:
+            dropped_var = None
+            active.append(new_j)
+            actions.append(new_j)
+        coefs.append(beta.copy())
+        corr.append(C - gamma * AA)
+        if new_j is None and drop is None:
+            break                       # solution des moindres carrés atteinte
+    return np.array(coefs), np.array(corr), actions
