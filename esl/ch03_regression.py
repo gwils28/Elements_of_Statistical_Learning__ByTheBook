@@ -460,3 +460,20 @@ def lasso_lambda_max(X, y):
     nuls : ``max_j |<x_j, y - ybar>|``."""
     Xc, yc, _, _ = _center(X, y)
     return float(np.max(np.abs(Xc.T @ yc)))
+
+
+def lasso_path_cd(X, y, lambdas):
+    """Chemin du lasso par descente de coordonnées avec démarrages à chaud.
+
+    Returns
+    -------
+    intercepts : ndarray (L,)
+    coefs : ndarray (L, p)
+    """
+    beta = None
+    b0s, coefs = [], []
+    for lam in lambdas:
+        b0, beta = lasso_cd(X, y, lam, beta0=beta)
+        b0s.append(b0)
+        coefs.append(beta.copy())
+    return np.array(b0s), np.array(coefs)
