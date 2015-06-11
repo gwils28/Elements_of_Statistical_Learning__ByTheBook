@@ -573,3 +573,27 @@ def interpolate_path(knots_s, knots_coefs, s):
     knots_s = np.asarray(knots_s)
     return np.column_stack([np.interp(s, knots_s, knots_coefs[:, j])
                             for j in range(knots_coefs.shape[1])])
+
+
+# ---------------------------------------------------------------------------
+# PCR et PLS
+# ---------------------------------------------------------------------------
+
+def pcr_path(X, y):
+    """Régression sur composantes principales pour M = 0..p (éq. 3.61–3.62).
+
+    Returns
+    -------
+    intercepts : ndarray (p+1,)
+    coefs : ndarray (p+1, p)
+        ``coefs[M] = sum_{m<=M} theta_m v_m``.
+    """
+    Xc, yc, xm, ym = _center(X, y)
+    U, d, Vt = np.linalg.svd(Xc, full_matrices=False)
+    Z = Xc @ Vt.T                          # z_m = X v_m = d_m u_m
+    theta = (Z.T @ yc) / np.sum(Z ** 2, axis=0)
+    p = Xc.shape[1]
+    coefs = np.zeros((p + 1, p))
+    for M in range(1, p + 1):
+        coefs[M] = coefs[M - 1] + theta[M - 1] * Vt[M - 1]
+    return ym - coefs @ xm, coefs
