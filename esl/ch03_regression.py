@@ -636,3 +636,15 @@ def pls_path(X, y):
         T = T - np.outer(rvec, proj)
         Xm = Xm - np.outer(z, proj)
     return ym - coefs @ xm, coefs, Z
+
+
+# ---------------------------------------------------------------------------
+# Familles de modèles indexées par un paramètre de complexité
+# (format commun ``(intercepts (L,), coefs (L, p))`` utilisé par cv_error)
+# ---------------------------------------------------------------------------
+
+def best_subset_path(X, y):
+    """Meilleur sous-ensemble de taille k = 0..p, ajusté par moindres carrés."""
+    subsets, _ = best_subset(X, y)
+    fits = [subset_fit(X, y, S) for S in subsets]
+    return np.array([f[0] for f in fits]), np.array([f[1] for f in fits])
