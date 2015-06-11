@@ -597,3 +597,42 @@ def pcr_path(X, y):
     for M in range(1, p + 1):
         coefs[M] = coefs[M - 1] + theta[M - 1] * Vt[M - 1]
     return ym - coefs @ xm, coefs
+
+
+def pls_path(X, y):
+    """Moindres carrés partiels (algorithme 3.3) pour M = 0..p.
+
+    On garde la trace d'une matrice ``T`` (p, p) telle que la matrice
+    orthogonalisée courante vaille ``X^{(m)} = X T`` : ainsi chaque
+    direction ``z_m = X^{(m-1)} phi_m = X (T phi_m)`` s'exprime dans les
+    variables d'origine, ce qui donne les coefficients ``beta^pls(m)``.
+
+    Returns
+    -------
+    intercepts : ndarray (p+1,)
+    coefs : ndarray (p+1, p)
+    Z : ndarray (N, p)
+        Directions PLS ``z_1, ..., z_p`` (une colonne nulle si l'algorithme
+        s'arrête plus tôt).
+    """
+    Xc, yc, xm, ym = _center(X, y)
+    N, p = Xc.shape
+    T = np.eye(p)
+    Xm = Xc.copy()
+    coefs = np.zeros((p + 1, p))
+    Z = np.zeros((N, p))
+    for m in range(1, p + 1):
+        phi = Xm.T @ yc
+        z = Xm @ phi
+        zz = z @ z
+        if zz < 1e-20 * max(1.0, yc @ yc):
+            coefs[m:] = coefs[m - 1]
+            break
+        rvec = T @ phi                       # z = Xc @ rvec
+        theta = (z @ yc) / zz
+        coefs[m] = coefs[m - 1] + theta * rvec
+        Z[:, m - 1] = z
+        proj = (z @ Xm) / zz                 # (p,)
+        T = T - np.outer(rvec, proj)
+        Xm = Xm - np.outer(z, proj)
+    return ym - coefs @ xm, coefs, Z
