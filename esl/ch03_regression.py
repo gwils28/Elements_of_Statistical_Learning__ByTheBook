@@ -648,3 +648,17 @@ def best_subset_path(X, y):
     subsets, _ = best_subset(X, y)
     fits = [subset_fit(X, y, S) for S in subsets]
     return np.array([f[0] for f in fits]), np.array([f[1] for f in fits])
+
+
+def ridge_path_df(X, y, dfs):
+    """Ridge indexée par ses degrés de liberté effectifs ``dfs`` (0 <= df <= p)."""
+    X = np.asarray(X, float)
+    p = X.shape[1]
+    fits = []
+    for d in dfs:
+        lam = ridge_lambda_for_df(X, d)
+        if np.isinf(lam):
+            fits.append((float(np.mean(y)), np.zeros(p)))
+        else:
+            fits.append(ridge_fit(X, y, lam))
+    return np.array([f[0] for f in fits]), np.array([f[1] for f in fits])
