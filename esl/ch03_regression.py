@@ -662,3 +662,14 @@ def ridge_path_df(X, y, dfs):
         else:
             fits.append(ridge_fit(X, y, lam))
     return np.array([f[0] for f in fits]), np.array([f[1] for f in fits])
+
+
+def lasso_path_s(X, y, s_grid):
+    """Lasso indexé par le facteur de rétrécissement
+    ``s = ||beta||_1 / ||beta_ls||_1`` (figure 3.10), via le chemin exact de
+    LAR modifié (le chemin est linéaire par morceaux en s)."""
+    X = np.asarray(X, float)
+    C, _, _ = lars(X, y, method="lasso")
+    s = np.abs(C).sum(1) / np.abs(C[-1]).sum()
+    B = interpolate_path(s, C, s_grid)
+    return np.mean(y) - B @ X.mean(0), B
