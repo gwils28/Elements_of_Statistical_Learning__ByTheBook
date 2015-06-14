@@ -673,3 +673,9 @@ def lasso_path_s(X, y, s_grid):
     s = np.abs(C).sum(1) / np.abs(C[-1]).sum()
     B = interpolate_path(s, C, s_grid)
     return np.mean(y) - B @ X.mean(0), B
+
+
+def pls_path_coefs(X, y):
+    """Comme :func:`pls_path` mais sans les directions (format commun)."""
+    b0, B, _ = pls_path(X, y)
+    return b0, B
