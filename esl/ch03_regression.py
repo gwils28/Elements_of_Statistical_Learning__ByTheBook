@@ -679,3 +679,15 @@ def pls_path_coefs(X, y):
     """Comme :func:`pls_path` mais sans les directions (format commun)."""
     b0, B, _ = pls_path(X, y)
     return b0, B
+
+
+# ---------------------------------------------------------------------------
+# Validation croisée
+# ---------------------------------------------------------------------------
+
+def kfold_indices(N, K=10, rng=None):
+    """Découpe aléatoire de ``range(N)`` en K plis de tailles égales (à 1
+    près). Renvoie une liste de K tableaux d'indices de test."""
+    rng = np.random.RandomState(0) if rng is None else rng
+    perm = rng.permutation(N)
+    return np.array_split(perm, K)
