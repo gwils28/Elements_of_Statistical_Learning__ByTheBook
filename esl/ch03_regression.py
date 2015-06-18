@@ -691,3 +691,36 @@ def kfold_indices(N, K=10, rng=None):
     rng = np.random.RandomState(0) if rng is None else rng
     perm = rng.permutation(N)
     return np.array_split(perm, K)
+
+
+def cv_error(fit_path, X, y, folds):
+    """Erreur de validation croisée pour toute une famille de modèles.
+
+    Parameters
+    ----------
+    fit_path : callable
+        ``fit_path(Xtrain, ytrain) -> (intercepts (L,), coefs (L, p))`` :
+        ajuste les L modèles de la famille (L valeurs du paramètre de
+        complexité, rangées du moins au plus complexe).
+    folds : list of ndarray
+        Indices de test de chaque pli (cf. :func:`kfold_indices`).
+
+    Returns
+    -------
+    mean : ndarray (L,)
+        Erreur quadratique moyenne de validation croisée.
+    se : ndarray (L,)
+        Erreur standard : écart-type des K erreurs par pli divisé par
+        ``sqrt(K)``.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    errs = []
+    for test in folds:
+        train = np.setdiff1d(np.arange(len(y)), test)
+        b0, B = fit_path(X[train], y[train])
+        pred = b0[:, None] + B @ X[test].T          # (L, n_test)
+        errs.append(np.mean((y[test][None, :] - pred) ** 2, axis=1))
+    errs = np.array(errs)                            # (K, L)
+    K = len(folds)
+    return errs.mean(0), errs.std(0, ddof=1) / np.sqrt(K)
