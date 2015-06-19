@@ -724,3 +724,10 @@ def cv_error(fit_path, X, y, folds):
     errs = np.array(errs)                            # (K, L)
     K = len(folds)
     return errs.mean(0), errs.std(0, ddof=1) / np.sqrt(K)
+
+
+def one_se_rule(mean, se):
+    """Règle « un écart-type » : indice du modèle le moins complexe (le plus
+    à gauche) dont l'erreur est inférieure à ``min + se[argmin]``."""
+    i = int(np.argmin(mean))
+    return int(np.argmax(mean <= mean[i] + se[i]))
