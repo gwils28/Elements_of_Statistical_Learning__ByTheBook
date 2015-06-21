@@ -115,3 +115,9 @@ def ridge_svd_path(X, y, lams):
     lams = np.atleast_1d(lams)
     coef = (d[:, None] / (d[:, None] ** 2 + lams[None, :])) * uy[:, None]
     return Vt.T @ coef
+
+
+def ridge_df(d, lam):
+    """Degrés de liberté effectifs ``sum d_j^2 / (d_j^2 + lam)`` (éq. (3.50))."""
+    d = np.asarray(d, float)
+    return np.sum(d ** 2 / (d ** 2 + lam))
