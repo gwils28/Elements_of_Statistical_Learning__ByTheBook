@@ -101,3 +101,17 @@ def ridge(X, y, lam):
     X = np.asarray(X, float)
     p = X.shape[1]
     return np.linalg.solve(X.T @ X + lam * np.eye(p), X.T @ y)
+
+
+def ridge_svd_path(X, y, lams):
+    """Chemin ridge calculé via la SVD ``X = U D V^T`` (éq. (3.47)).
+
+    Returns
+    -------
+    betas : ndarray (p, len(lams))
+    """
+    U, d, Vt = np.linalg.svd(np.asarray(X, float), full_matrices=False)
+    uy = U.T @ y
+    lams = np.atleast_1d(lams)
+    coef = (d[:, None] / (d[:, None] ** 2 + lams[None, :])) * uy[:, None]
+    return Vt.T @ coef
