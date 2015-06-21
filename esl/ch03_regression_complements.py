@@ -86,3 +86,18 @@ def soft_threshold(z, lam):
     """Seuillage doux : ``sign(z) * (|z| - lam)_+`` (solution lasso orthonormale)."""
     z = np.asarray(z, float)
     return np.sign(z) * np.maximum(np.abs(z) - lam, 0.0)
+
+
+# ---------------------------------------------------------------------------
+# Ridge
+# ---------------------------------------------------------------------------
+
+def ridge(X, y, lam):
+    """Coefficients ridge ``(X^T X + lam I)^{-1} X^T y`` (éq. (3.44)).
+
+    ``X`` et ``y`` sont supposés centrés (pas d'ordonnée à l'origine).
+    ``y`` peut être une matrice (N, K) : chaque colonne est traitée.
+    """
+    X = np.asarray(X, float)
+    p = X.shape[1]
+    return np.linalg.solve(X.T @ X + lam * np.eye(p), X.T @ y)
