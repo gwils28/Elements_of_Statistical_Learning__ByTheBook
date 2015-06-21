@@ -61,3 +61,22 @@ def standardize(X, X_other=None, unit_norm=False):
     Xs = Xc / scale
     Xo = None if X_other is None else (np.asarray(X_other, float) - mean) / scale
     return Xs, Xo, mean, scale
+
+
+# ---------------------------------------------------------------------------
+# Cas orthonormal (tableau 3.4)
+# ---------------------------------------------------------------------------
+
+def hard_threshold(beta, M):
+    """Meilleur sous-ensemble de taille ``M`` dans le cas orthonormal.
+
+    Conserve les ``M`` coefficients de plus grande valeur absolue et met
+    les autres à zéro : ``beta_j * 1(|beta_j| >= |beta_(M)|)``.
+    """
+    beta = np.asarray(beta, float)
+    out = np.zeros_like(beta)
+    if M <= 0:
+        return out
+    keep = np.argsort(-np.abs(beta))[:M]
+    out[keep] = beta[keep]
+    return out
