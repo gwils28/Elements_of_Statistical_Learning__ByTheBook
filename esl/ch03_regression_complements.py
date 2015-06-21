@@ -80,3 +80,9 @@ def hard_threshold(beta, M):
     keep = np.argsort(-np.abs(beta))[:M]
     out[keep] = beta[keep]
     return out
+
+
+def soft_threshold(z, lam):
+    """Seuillage doux : ``sign(z) * (|z| - lam)_+`` (solution lasso orthonormale)."""
+    z = np.asarray(z, float)
+    return np.sign(z) * np.maximum(np.abs(z) - lam, 0.0)
