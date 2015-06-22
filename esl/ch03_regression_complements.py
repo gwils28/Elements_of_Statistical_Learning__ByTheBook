@@ -185,3 +185,127 @@ def lasso_cd(X, y, lam, beta0=None, tol=1e-10, max_iter=10000):
         if max_change < tol:
             break
     return beta
+
+
+# ---------------------------------------------------------------------------
+# LAR et LAR-lasso
+# ---------------------------------------------------------------------------
+
+def lars(X, y, method="lar", max_steps=None, tol=1e-10):
+    """Least Angle Regression (algorithme 3.2) et sa variante lasso (3.2a).
+
+    À chaque étape, la direction est le coefficient des moindres carrés du
+    résidu courant sur les variables actives (éq. (3.55)) ; le pas ``alpha``
+    est le plus petit dans ``]0, 1]`` faisant entrer une nouvelle variable
+    (« look-ahead », exercice 3.25) ou, pour ``method="lasso"``, faisant
+    s'annuler un coefficient actif.
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+        Prédicteurs centrés (de préférence de norme 1).
+    y : ndarray (N,)
+        Réponse centrée.
+    method : {"lar", "lasso"}
+    max_steps : int, optionnel
+        Nombre maximal d'étapes.
+
+    Returns
+    -------
+    dict avec les clés
+        ``coefs`` (p, K) : coefficients aux nœuds du chemin (K nœuds) ;
+        ``lambdas`` (K,) : corrélation (produit scalaire) maximale absolue
+        ``max_j |x_j^T r|`` à chaque nœud ;
+        ``actives`` : liste des ensembles actifs après chaque étape ;
+        ``alphas`` : pas ``alpha`` utilisés ;
+        ``events`` : liste de couples (« entrée »/« sortie », indice).
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    N, p = X.shape
+    if max_steps is None:
+        max_steps = 8 * p
+    beta = np.zeros(p)
+    r = y.copy()
+    c = X.T @ r
+    active = [int(np.argmax(np.abs(c)))]
+    coefs = [beta.copy()]
+    lambdas = [np.max(np.abs(c))]
+    actives, alphas, events = [], [], [("entrée", active[0])]
+    max_active = min(N - 1, p)
+    for _ in range(max_steps):
+        A = np.array(active)
+        C = np.max(np.abs(c[A]))
+        XA = X[:, A]
+        delta = np.linalg.lstsq(XA, r, rcond=None)[0]
+        u = XA @ delta
+        a = X.T @ u
+        alpha, enter, drop = 1.0, None, None
+        if len(active) < max_active:
+            inactive = np.setdiff1d(np.arange(p), A)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                g1 = (C - c[inactive]) / (C - a[inactive])
+                g2 = (C + c[inactive]) / (C + a[inactive])
+            for k, v1, v2 in zip(inactive, g1, g2):
+                for v in (v1, v2):
+                    if np.isfinite(v) and tol < v < alpha:
+                        alpha, enter = v, int(k)
+        if method == "lasso":
+            for idx, k in enumerate(A):
+                if delta[idx] != 0:
+                    t = -beta[k] / delta[idx]
+                    if tol < t < alpha:
+                        alpha, enter, drop = t, None, int(k)
+        beta[A] += alpha * delta
+        r -= alpha * u
+        c = X.T @ r
+        if drop is not None:
+            beta[drop] = 0.0
+            active.remove(drop)
+            events.append(("sortie", drop))
+        elif enter is not None:
+            active.append(enter)
+            events.append(("entrée", enter))
+        coefs.append(beta.copy())
+        lambdas.append(np.max(np.abs(c)))
+        actives.append(list(active))
+        alphas.append(alpha)
+        if enter is None and drop is None:
+            break
+    return {"coefs": np.array(coefs).T, "lambdas": np.array(lambdas),
+            "actives": actives, "alphas": np.array(alphas), "events": events}
+
+
+def interpolate_path(coefs, s, norm_ref=None):
+    """Interpole un chemin linéaire par morceaux en fraction de norme L1.
+
+    Parameters
+    ----------
+    coefs : ndarray (p, K)
+        Coefficients aux nœuds (norme L1 croissante, cas du lasso).
+    s : array_like
+        Fractions ``||beta||_1 / norm_ref`` voulues, dans ``[0, 1]``.
+    norm_ref : float, optionnel
+        Norme de référence (par défaut celle du dernier nœud, i.e. des
+        moindres carrés).
+
+    Returns
+    -------
+    ndarray (p, len(s))
+    """
+    l1 = np.abs(coefs).sum(axis=0)
+    if norm_ref is None:
+        norm_ref = l1[-1]
+    l1 = np.maximum.accumulate(l1)
+    target = np.atleast_1d(s) * norm_ref
+    out = np.empty((coefs.shape[0], len(target)))
+    for i, t in enumerate(target):
+        k = np.searchsorted(l1, t)
+        if k == 0:
+            out[:, i] = coefs[:, 0]
+        elif k >= len(l1):
+            out[:, i] = coefs[:, -1]
+        else:
+            w = (t - l1[k - 1]) / max(l1[k] - l1[k - 1], 1e-300)
+            out[:, i] = (1 - w) * coefs[:, k - 1] + w * coefs[:, k]
+    return out
