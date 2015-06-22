@@ -121,3 +121,21 @@ def ridge_df(d, lam):
     """Degrés de liberté effectifs ``sum d_j^2 / (d_j^2 + lam)`` (éq. (3.50))."""
     d = np.asarray(d, float)
     return np.sum(d ** 2 / (d ** 2 + lam))
+
+
+def ridge_lambda_for_df(d, df):
+    """Valeur de ``lam`` donnant ``df`` degrés de liberté effectifs.
+
+    ``df`` doit être dans ``[0, rang]`` ; ``df = rang`` donne ``lam = 0`` et
+    ``df = 0`` donne ``lam = inf``.
+    """
+    d = np.asarray(d, float)
+    rank = np.sum(d > 1e-12 * d.max())
+    if df >= rank - 1e-12:
+        return 0.0
+    if df <= 1e-12:
+        return np.inf
+    hi = 1.0
+    while ridge_df(d, hi) > df:
+        hi *= 10.0
+    return brentq(lambda l: ridge_df(d, l) - df, 0.0, hi, xtol=1e-12 * hi)
