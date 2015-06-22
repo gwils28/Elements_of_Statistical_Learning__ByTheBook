@@ -139,3 +139,49 @@ def ridge_lambda_for_df(d, df):
     while ridge_df(d, hi) > df:
         hi *= 10.0
     return brentq(lambda l: ridge_df(d, l) - df, 0.0, hi, xtol=1e-12 * hi)
+
+
+# ---------------------------------------------------------------------------
+# Lasso par descente de coordonnées
+# ---------------------------------------------------------------------------
+
+def lasso_cd(X, y, lam, beta0=None, tol=1e-10, max_iter=10000):
+    """Lasso ``min 1/2 ||y - X b||^2 + lam ||b||_1`` par descente de coordonnées.
+
+    Chaque coordonnée est mise à jour par seuillage doux (solution exacte du
+    problème à une variable), cycliquement, jusqu'à stabilisation.
+
+    Parameters
+    ----------
+    X : ndarray (N, p), y : ndarray (N,)
+        Données supposées centrées.
+    lam : float
+        Paramètre de pénalité (convention avec le facteur 1/2, éq. (3.52)).
+    beta0 : ndarray (p,), optionnel
+        Point de départ (« démarrage à chaud »).
+
+    Returns
+    -------
+    beta : ndarray (p,)
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    p = X.shape[1]
+    beta = np.zeros(p) if beta0 is None else np.array(beta0, float)
+    col_sq = np.sum(X ** 2, axis=0)
+    r = y - X @ beta
+    for _ in range(max_iter):
+        max_change = 0.0
+        for j in range(p):
+            if col_sq[j] == 0:
+                continue
+            old = beta[j]
+            zj = X[:, j] @ r + col_sq[j] * old
+            new = soft_threshold(zj, lam) / col_sq[j]
+            if new != old:
+                r -= X[:, j] * (new - old)
+                beta[j] = new
+                max_change = max(max_change, abs(new - old) * np.sqrt(col_sq[j]))
+        if max_change < tol:
+            break
+    return beta
