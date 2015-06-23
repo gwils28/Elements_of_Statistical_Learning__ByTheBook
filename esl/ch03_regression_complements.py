@@ -309,3 +309,26 @@ def interpolate_path(coefs, s, norm_ref=None):
             w = (t - l1[k - 1]) / max(l1[k] - l1[k - 1], 1e-300)
             out[:, i] = (1 - w) * coefs[:, k - 1] + w * coefs[:, k]
     return out
+
+
+# ---------------------------------------------------------------------------
+# Directions dérivées : PCR et PLS
+# ---------------------------------------------------------------------------
+
+def pcr(X, y, M=None):
+    """Régression sur composantes principales (section 3.5.1).
+
+    Returns
+    -------
+    betas : ndarray (p, M+1)
+        Colonne ``m`` : coefficients (sur les colonnes de ``X``) de la PCR
+        à ``m`` composantes ; la colonne 0 est nulle.
+    """
+    X = np.asarray(X, float)
+    U, d, Vt = np.linalg.svd(X, full_matrices=False)
+    p = X.shape[1]
+    M = len(d) if M is None else M
+    betas = np.zeros((p, M + 1))
+    for m in range(1, M + 1):
+        betas[:, m] = betas[:, m - 1] + Vt[m - 1] * (U[:, m - 1] @ y) / d[m - 1]
+    return betas
