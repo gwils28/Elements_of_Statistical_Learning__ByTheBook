@@ -332,3 +332,48 @@ def pcr(X, y, M=None):
     for m in range(1, M + 1):
         betas[:, m] = betas[:, m - 1] + Vt[m - 1] * (U[:, m - 1] @ y) / d[m - 1]
     return betas
+
+
+def pls(X, y, M=None):
+    """Moindres carrés partiels (algorithme 3.3).
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+        Prédicteurs centrés-réduits.
+    y : ndarray (N,)
+        Réponse (centrée ou non : seul ``y - ȳ`` intervient).
+    M : int, optionnel
+        Nombre de directions (par défaut ``p``).
+
+    Returns
+    -------
+    dict avec ``betas`` (p, M+1) les coefficients sur les colonnes de ``X``
+    après ``m = 0..M`` directions, ``Z`` (N, M) les directions ``z_m`` et
+    ``theta`` (M,) les coefficients ``theta_m``.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float) - np.mean(y)
+    N, p = X.shape
+    M = p if M is None else M
+    Xm = X.copy()
+    R = np.eye(p)            # X^{(m)} = X R
+    betas = np.zeros((p, M + 1))
+    Z = np.zeros((N, M))
+    theta = np.zeros(M)
+    for m in range(M):
+        phi = Xm.T @ y
+        z = Xm @ phi
+        zz = z @ z
+        if zz < 1e-20:       # plus rien à expliquer
+            betas[:, m + 1:] = betas[:, [m]]
+            Z, theta = Z[:, :m], theta[:m]
+            break
+        w = R @ phi          # z = X w
+        theta[m] = (z @ y) / zz
+        betas[:, m + 1] = betas[:, m] + theta[m] * w
+        Z[:, m] = z
+        proj = (z @ Xm) / zz
+        Xm = Xm - np.outer(z, proj)
+        R = R - np.outer(w, proj)
+    return {"betas": betas, "Z": Z, "theta": theta}
