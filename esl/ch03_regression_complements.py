@@ -377,3 +377,47 @@ def pls(X, y, M=None):
         Xm = Xm - np.outer(z, proj)
         R = R - np.outer(w, proj)
     return {"betas": betas, "Z": Z, "theta": theta}
+
+
+# ---------------------------------------------------------------------------
+# Sélection ascendante et forward stagewise
+# ---------------------------------------------------------------------------
+
+def forward_stepwise(X, y, max_size=None):
+    """Sélection pas à pas ascendante (section 3.3.2).
+
+    À chaque étape on ajoute la variable qui diminue le plus la somme des
+    carrés résiduelle, i.e. qui maximise ``<x_{j.A}, r>^2 / ||x_{j.A}||^2``
+    où ``x_{j.A}`` est ``x_j`` ajusté (orthogonalisé) sur les variables
+    actives (exercice 3.26).
+
+    Returns
+    -------
+    order : list
+        Variables dans l'ordre d'entrée.
+    betas : ndarray (p, max_size+1)
+        Coefficients des moindres carrés de chaque modèle emboîté.
+    rss : ndarray (max_size+1,)
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    N, p = X.shape
+    max_size = min(p, N - 1) if max_size is None else max_size
+    Xr = X.copy()
+    r = y.copy()
+    order = []
+    betas = np.zeros((p, max_size + 1))
+    rss = [r @ r]
+    for k in range(max_size):
+        norms = np.sum(Xr ** 2, axis=0)
+        score = np.where(norms > 1e-10 * np.max(norms), (Xr.T @ r) ** 2 / np.maximum(norms, 1e-300), -np.inf)
+        score[order] = -np.inf
+        j = int(np.argmax(score))
+        order.append(j)
+        q = Xr[:, j] / np.sqrt(norms[j])
+        r = r - q * (q @ r)
+        Xr = Xr - np.outer(q, q @ Xr)
+        coef = np.linalg.lstsq(X[:, order], y, rcond=None)[0]
+        betas[order, k + 1] = coef
+        rss.append(r @ r)
+    return order, betas, np.array(rss)
