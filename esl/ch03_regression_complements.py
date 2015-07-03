@@ -421,3 +421,27 @@ def forward_stepwise(X, y, max_size=None):
         betas[order, k + 1] = coef
         rss.append(r @ r)
     return order, betas, np.array(rss)
+
+
+def forward_stagewise(X, y, eps=0.01, n_steps=1000, record_every=1):
+    """Forward stagewise incrémental FS_eps (algorithme 3.4).
+
+    Returns
+    -------
+    betas : ndarray (p, n_records)
+        Coefficients enregistrés toutes les ``record_every`` itérations.
+    """
+    X = np.asarray(X, float)
+    r = np.asarray(y, float).copy()
+    p = X.shape[1]
+    beta = np.zeros(p)
+    path = [beta.copy()]
+    for it in range(1, n_steps + 1):
+        c = X.T @ r
+        j = int(np.argmax(np.abs(c)))
+        step = eps * np.sign(c[j])
+        beta[j] += step
+        r -= step * X[:, j]
+        if it % record_every == 0:
+            path.append(beta.copy())
+    return np.array(path).T
