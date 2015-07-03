@@ -445,3 +445,37 @@ def forward_stagewise(X, y, eps=0.01, n_steps=1000, record_every=1):
         if it % record_every == 0:
             path.append(beta.copy())
     return np.array(path).T
+
+
+# ---------------------------------------------------------------------------
+# Gradient conjugué
+# ---------------------------------------------------------------------------
+
+def conjugate_gradient(A, b, n_iter=None, x0=None, tol=1e-14):
+    """Gradient conjugué pour ``A x = b`` (``A`` symétrique définie positive).
+
+    Returns
+    -------
+    iterates : ndarray (n, K+1)
+        Itérés ``x_0, x_1, ..., x_K`` (en colonnes).
+    """
+    A = np.asarray(A, float)
+    b = np.asarray(b, float)
+    n = len(b)
+    n_iter = n if n_iter is None else n_iter
+    x = np.zeros(n) if x0 is None else np.array(x0, float)
+    r = b - A @ x
+    d = r.copy()
+    out = [x.copy()]
+    for _ in range(n_iter):
+        rr = r @ r
+        if np.sqrt(rr) < tol * max(1.0, np.linalg.norm(b)):
+            out.append(x.copy())
+            continue
+        Ad = A @ d
+        step = rr / (d @ Ad)
+        x = x + step * d
+        r = r - step * Ad
+        d = r + (r @ r) / rr * d
+        out.append(x.copy())
+    return np.array(out).T
