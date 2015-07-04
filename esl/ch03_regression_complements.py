@@ -508,3 +508,27 @@ def cca(X, Y):
     Ustar, dstar, Vstar_t = np.linalg.svd(Syy_m @ Y.T @ X @ Sxx_m, full_matrices=False)
     M = min(X.shape[1], Y.shape[1])
     return Syy_m @ Ustar[:, :M], Sxx_m @ Vstar_t[:M].T, dstar[:M]
+
+
+def reduced_rank_regression(X, Y, m, Sigma=None):
+    """Régression de rang réduit (éq. (3.68)) par la formule générale.
+
+    Minimise ``sum_i (y_i - B^T x_i)^T Sigma^{-1} (y_i - B^T x_i)`` sous la
+    contrainte ``rang(B) = m`` : ``B = B_ls Sigma^{-1/2} V_m V_m^T Sigma^{1/2}``
+    où ``V_m`` sont les ``m`` premiers vecteurs propres de
+    ``Sigma^{-1/2} Yhat^T Yhat Sigma^{-1/2}``.
+
+    Parameters
+    ----------
+    Sigma : ndarray (K, K), optionnel
+        Par défaut ``Y^T Y / N``.
+    """
+    N = X.shape[0]
+    if Sigma is None:
+        Sigma = Y.T @ Y / N
+    B_ls = np.linalg.lstsq(X, Y, rcond=None)[0]
+    Yhat = X @ B_ls
+    S_mh, S_h = sym_power(Sigma, -0.5), sym_power(Sigma, 0.5)
+    w, Q = np.linalg.eigh(S_mh @ Yhat.T @ Yhat @ S_mh)
+    Vm = Q[:, np.argsort(w)[::-1][:m]]
+    return B_ls @ S_mh @ Vm @ Vm.T @ S_h
