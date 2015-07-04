@@ -479,3 +479,32 @@ def conjugate_gradient(A, b, n_iter=None, x0=None, tol=1e-14):
         d = r + (r @ r) / rr * d
         out.append(x.copy())
     return np.array(out).T
+
+
+# ---------------------------------------------------------------------------
+# Plusieurs réponses : CCA et régression de rang réduit
+# ---------------------------------------------------------------------------
+
+def sym_power(S, power):
+    """Puissance ``S^power`` d'une matrice symétrique définie positive."""
+    w, Q = np.linalg.eigh(S)
+    return (Q * w ** power) @ Q.T
+
+
+def cca(X, Y):
+    """Corrélations canoniques via la SVD généralisée (éq. (3.87)).
+
+    ``X`` (N, p) et ``Y`` (N, K) sont supposés centrés.
+
+    Returns
+    -------
+    U : ndarray (K, M)  vecteurs canoniques à gauche (côté réponses)
+    V : ndarray (p, M)  vecteurs canoniques à droite (côté prédicteurs)
+    corr : ndarray (M,) corrélations canoniques décroissantes
+    Normalisation : ``U^T Y^T Y U = I`` et ``V^T X^T X V = I``.
+    """
+    Syy_m = sym_power(Y.T @ Y, -0.5)
+    Sxx_m = sym_power(X.T @ X, -0.5)
+    Ustar, dstar, Vstar_t = np.linalg.svd(Syy_m @ Y.T @ X @ Sxx_m, full_matrices=False)
+    M = min(X.shape[1], Y.shape[1])
+    return Syy_m @ Ustar[:, :M], Sxx_m @ Vstar_t[:M].T, dstar[:M]
