@@ -532,3 +532,15 @@ def reduced_rank_regression(X, Y, m, Sigma=None):
     w, Q = np.linalg.eigh(S_mh @ Yhat.T @ Yhat @ S_mh)
     Vm = Q[:, np.argsort(w)[::-1][:m]]
     return B_ls @ S_mh @ Vm @ Vm.T @ S_h
+
+
+def reduced_rank_cca(X, Y, m):
+    """Régression de rang réduit par la formule CCA ``B_ls U_m U_m^-`` (éq. (3.69)).
+
+    ``U_m^- = U_m^T (Y^T Y)`` est un inverse généralisé de ``U_m`` lorsque
+    ``U^T Y^T Y U = I``.
+    """
+    B_ls = np.linalg.lstsq(X, Y, rcond=None)[0]
+    U, _, _ = cca(X, Y)
+    Um = U[:, :m]
+    return B_ls @ Um @ (Um.T @ (Y.T @ Y))
