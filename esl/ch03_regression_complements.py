@@ -544,3 +544,34 @@ def reduced_rank_cca(X, Y, m):
     U, _, _ = cca(X, Y)
     Um = U[:, :m]
     return B_ls @ Um @ (Um.T @ (Y.T @ Y))
+
+
+def rrr_criterion(X, Y, B, Sigma):
+    """Critère ``sum_i (y_i - B^T x_i)^T Sigma^{-1} (y_i - B^T x_i)``."""
+    E = Y - X @ B
+    return np.sum((E @ np.linalg.inv(Sigma)) * E)
+
+
+# ---------------------------------------------------------------------------
+# Elastic net
+# ---------------------------------------------------------------------------
+
+def elastic_net_augment(X, y, lam, alpha):
+    """Données augmentées transformant l'elastic net (3.91) en lasso.
+
+    Le problème ``||y - X b||^2 + lam (alpha ||b||_2^2 + (1-alpha) ||b||_1)``
+    équivaut à ``||y* - X* b||^2 + lam (1-alpha) ||b||_1`` avec
+    ``X* = [X ; sqrt(lam alpha) I]`` et ``y* = [y ; 0]``.
+
+    Returns
+    -------
+    X_aug : ndarray (N+p, p)
+    y_aug : ndarray (N+p,)
+    lam1 : float
+        Pénalité L1 ``lam (1-alpha)`` du lasso équivalent (sans facteur 1/2).
+    """
+    X = np.asarray(X, float)
+    p = X.shape[1]
+    X_aug = np.vstack([X, np.sqrt(lam * alpha) * np.eye(p)])
+    y_aug = np.concatenate([np.asarray(y, float), np.zeros(p)])
+    return X_aug, y_aug, lam * (1 - alpha)
