@@ -581,3 +581,14 @@ def elastic_net_objective(X, y, beta, lam, alpha):
     """Valeur du critère elastic net (3.91)."""
     r = y - X @ beta
     return r @ r + lam * (alpha * beta @ beta + (1 - alpha) * np.abs(beta).sum())
+
+
+# ---------------------------------------------------------------------------
+# Validation croisée
+# ---------------------------------------------------------------------------
+
+def kfold_indices(N, K=10, rng=None):
+    """Découpe aléatoire de ``range(N)`` en ``K`` plis de tailles égales (à 1 près)."""
+    rng = np.random.RandomState(0) if rng is None else rng
+    perm = rng.permutation(N)
+    return [np.sort(f) for f in np.array_split(perm, K)]
