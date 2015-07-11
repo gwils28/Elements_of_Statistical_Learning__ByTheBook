@@ -575,3 +575,9 @@ def elastic_net_augment(X, y, lam, alpha):
     X_aug = np.vstack([X, np.sqrt(lam * alpha) * np.eye(p)])
     y_aug = np.concatenate([np.asarray(y, float), np.zeros(p)])
     return X_aug, y_aug, lam * (1 - alpha)
+
+
+def elastic_net_objective(X, y, beta, lam, alpha):
+    """Valeur du critère elastic net (3.91)."""
+    r = y - X @ beta
+    return r @ r + lam * (alpha * beta @ beta + (1 - alpha) * np.abs(beta).sum())
