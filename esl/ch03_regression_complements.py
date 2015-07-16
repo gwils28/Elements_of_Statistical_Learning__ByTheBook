@@ -592,3 +592,24 @@ def kfold_indices(N, K=10, rng=None):
     rng = np.random.RandomState(0) if rng is None else rng
     perm = rng.permutation(N)
     return [np.sort(f) for f in np.array_split(perm, K)]
+
+
+def one_se_rule(complexity, cv_mean, cv_se):
+    """Règle « un écart-type » : modèle le plus simple à moins d'un écart-type du minimum.
+
+    Parameters
+    ----------
+    complexity : array_like
+        Complexités, rangées par ordre croissant.
+    cv_mean, cv_se : array_like
+        Erreur de validation croisée moyenne et son écart-type estimé.
+
+    Returns
+    -------
+    int : indice du modèle choisi.
+    """
+    cv_mean = np.asarray(cv_mean)
+    cv_se = np.asarray(cv_se)
+    best = int(np.argmin(cv_mean))
+    threshold = cv_mean[best] + cv_se[best]
+    return int(np.flatnonzero(cv_mean <= threshold)[0])
