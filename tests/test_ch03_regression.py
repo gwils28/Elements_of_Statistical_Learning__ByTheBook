@@ -18,3 +18,8 @@ def data():
     beta = np.array([2.0, -1.0, 0.0, 0.5, 0.0, 1.5])
     y = 1.0 + X @ beta + rng.randn(N)
     return X, y
+
+
+@pytest.fixture
+def prostate():
+    return cr.load_prostate_standardized()
