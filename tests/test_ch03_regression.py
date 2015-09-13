@@ -23,3 +23,15 @@ def data():
 @pytest.fixture
 def prostate():
     return cr.load_prostate_standardized()
+
+
+def test_gram_schmidt_qr(data):
+    X, _ = data
+    A = cr.add_intercept(X)
+    Q, R = cr.gram_schmidt_qr(A)
+    assert np.allclose(Q.T @ Q, np.eye(A.shape[1]))
+    assert np.allclose(np.triu(R), R)
+    assert np.allclose(Q @ R, A)
+    Q2, R2 = np.linalg.qr(A)
+    S = np.sign(np.diag(R2))
+    assert np.allclose(R, S[:, None] * R2)
