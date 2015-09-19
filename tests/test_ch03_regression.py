@@ -42,3 +42,12 @@ def test_back_substitution():
     R = np.triu(rng.randn(5, 5)) + 5 * np.eye(5)
     b = rng.randn(5)
     assert np.allclose(R @ cr.back_substitution(R, b), b)
+
+
+def test_ols_matches_sklearn(data):
+    X, y = data
+    fit = cr.ols_fit(X, y)
+    lr = LinearRegression().fit(X, y)
+    assert np.isclose(fit["coef"][0], lr.intercept_)
+    assert np.allclose(fit["coef"][1:], lr.coef_)
+    assert np.allclose(cr.ols_qr(cr.add_intercept(X), y), fit["coef"])
