@@ -51,3 +51,30 @@ def test_ols_matches_sklearn(data):
     assert np.isclose(fit["coef"][0], lr.intercept_)
     assert np.allclose(fit["coef"][1:], lr.coef_)
     assert np.allclose(cr.ols_qr(cr.add_intercept(X), y), fit["coef"])
+
+
+def test_table_3_2(prostate):
+    Xtr, ytr, Xte, yte, _ = prostate
+    fit = cr.ols_fit(Xtr, ytr)
+    book_coef = [2.46, 0.68, 0.26, -0.14, 0.21, 0.31, -0.29, -0.02, 0.27]
+    book_z = [27.60, 5.37, 2.75, -1.40, 2.06, 2.47, -1.87, -0.15, 1.74]
+    assert np.allclose(fit["coef"], book_coef, atol=0.006)
+    assert np.allclose(fit["z"], book_z, atol=0.006)
+    pred = fit["coef"][0] + Xte @ fit["coef"][1:]
+    assert np.isclose(np.mean((yte - pred) ** 2), 0.521, atol=5e-4)
+
+
+def test_f_test_equals_z2_and_book(prostate):
+    Xtr, ytr, _, _, _ = prostate
+    full = cr.ols_fit(Xtr, ytr)
+    N = len(ytr)
+    # retrait d'une seule variable : F = z^2 (exercice 3.1)
+    for j in range(8):
+        keep = [k for k in range(8) if k != j]
+        small = cr.ols_fit(Xtr[:, keep], ytr)
+        F, _ = cr.f_test(small["rss"], full["rss"], 7, 8, N)
+        assert np.isclose(F, full["z"][j + 1] ** 2)
+    # éq. (3.16) : F = 1.67, p = 0.17
+    small = cr.ols_fit(Xtr[:, [0, 1, 3, 4]], ytr)
+    F, pv = cr.f_test(small["rss"], full["rss"], 4, 8, N)
+    assert abs(F - 1.67) < 0.01 and abs(pv - 0.17) < 0.01
