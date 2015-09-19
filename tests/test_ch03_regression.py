@@ -35,3 +35,10 @@ def test_gram_schmidt_qr(data):
     Q2, R2 = np.linalg.qr(A)
     S = np.sign(np.diag(R2))
     assert np.allclose(R, S[:, None] * R2)
+
+
+def test_back_substitution():
+    rng = np.random.RandomState(1)
+    R = np.triu(rng.randn(5, 5)) + 5 * np.eye(5)
+    b = rng.randn(5)
+    assert np.allclose(R @ cr.back_substitution(R, b), b)
