@@ -90,3 +90,11 @@ def test_successive_orthogonalization(data):
     zp = Z[:, -1]
     beta = cr.ols_fit(X, y)["coef"]
     assert np.isclose(zp @ y / (zp @ zp), beta[-1])
+
+
+def test_hat_matrix(data):
+    X, _ = data
+    H = cr.hat_matrix(cr.add_intercept(X))
+    assert np.allclose(H, H.T)
+    assert np.allclose(H @ H, H)
+    assert np.isclose(np.trace(H), X.shape[1] + 1)
