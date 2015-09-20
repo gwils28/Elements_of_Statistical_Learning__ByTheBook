@@ -78,3 +78,15 @@ def test_f_test_equals_z2_and_book(prostate):
     small = cr.ols_fit(Xtr[:, [0, 1, 3, 4]], ytr)
     F, pv = cr.f_test(small["rss"], full["rss"], 4, 8, N)
     assert abs(F - 1.67) < 0.01 and abs(pv - 0.17) < 0.01
+
+
+def test_successive_orthogonalization(data):
+    X, y = data
+    A = cr.add_intercept(X)
+    Z, G = cr.successive_orthogonalization(A)
+    assert np.allclose(Z @ G, A)
+    D = Z.T @ Z
+    assert np.allclose(D - np.diag(np.diag(D)), 0, atol=1e-8)
+    zp = Z[:, -1]
+    beta = cr.ols_fit(X, y)["coef"]
+    assert np.isclose(zp @ y / (zp @ zp), beta[-1])
