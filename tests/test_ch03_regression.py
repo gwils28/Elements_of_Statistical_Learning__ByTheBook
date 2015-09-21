@@ -98,3 +98,14 @@ def test_hat_matrix(data):
     assert np.allclose(H, H.T)
     assert np.allclose(H @ H, H)
     assert np.isclose(np.trace(H), X.shape[1] + 1)
+
+
+def test_best_subset_bruteforce(data):
+    X, y = data
+    subsets, rss = cr.best_subset(X, y)
+    assert np.all(np.diff(rss) <= 1e-12)
+    for k in (1, 3):
+        best = min(combinations(range(X.shape[1]), k),
+                   key=lambda S: cr.ols_fit(X[:, list(S)], y)["rss"])
+        assert set(best) == set(subsets[k])
+    assert np.isclose(rss[-1], cr.ols_fit(X, y)["rss"])
