@@ -109,3 +109,15 @@ def test_best_subset_bruteforce(data):
                    key=lambda S: cr.ols_fit(X[:, list(S)], y)["rss"])
         assert set(best) == set(subsets[k])
     assert np.isclose(rss[-1], cr.ols_fit(X, y)["rss"])
+
+
+def test_forward_stepwise_greedy(data):
+    X, y = data
+    order, rss = cr.forward_stepwise(X, y)
+    chosen = []
+    for k, j in enumerate(order):
+        cand = [i for i in range(X.shape[1]) if i not in chosen]
+        r = [cr.ols_fit(X[:, chosen + [i]], y)["rss"] for i in cand]
+        assert cand[int(np.argmin(r))] == j
+        chosen.append(j)
+        assert np.isclose(min(r), rss[k + 1])
