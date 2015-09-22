@@ -121,3 +121,13 @@ def test_forward_stepwise_greedy(data):
         assert cand[int(np.argmin(r))] == j
         chosen.append(j)
         assert np.isclose(min(r), rss[k + 1])
+
+
+def test_backward_stepwise(data):
+    X, y = data
+    removed, rss = cr.backward_stepwise(X, y)
+    full = cr.ols_fit(X, y)
+    j = removed[0]
+    keep = [k for k in range(X.shape[1]) if k != j]
+    assert np.isclose(rss[1] - rss[0], full["z"][j + 1] ** 2 * full["sigma2"])
+    assert np.isclose(rss[1], cr.ols_fit(X[:, keep], y)["rss"])
