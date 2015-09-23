@@ -131,3 +131,13 @@ def test_backward_stepwise(data):
     keep = [k for k in range(X.shape[1]) if k != j]
     assert np.isclose(rss[1] - rss[0], full["z"][j + 1] ** 2 * full["sigma2"])
     assert np.isclose(rss[1], cr.ols_fit(X[:, keep], y)["rss"])
+
+
+def test_forward_stagewise_converges_to_ols(data):
+    X, y = data
+    # convergence lente (variables corrélées) mais certaine
+    path = cr.forward_stagewise(X, y, n_steps=30000)
+    assert np.allclose(path[-1], cr.ols_fit(X, y)["coef"][1:], atol=1e-6)
+    # FS_eps : les pas ont tous la même taille eps en norme L1
+    path = cr.forward_stagewise(X, y, eps=0.01, n_steps=200)
+    assert np.allclose(np.abs(np.diff(path, axis=0)).sum(1), 0.01)
