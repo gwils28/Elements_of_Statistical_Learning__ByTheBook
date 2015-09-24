@@ -141,3 +141,17 @@ def test_forward_stagewise_converges_to_ols(data):
     # FS_eps : les pas ont tous la même taille eps en norme L1
     path = cr.forward_stagewise(X, y, eps=0.01, n_steps=200)
     assert np.allclose(np.abs(np.diff(path, axis=0)).sum(1), 0.01)
+
+
+def test_ridge_matches_sklearn_and_df(data):
+    X, y = data
+    for lam in (0.1, 5.0, 100.0):
+        b0, b = cr.ridge_fit(X, y, lam)
+        sk = Ridge(alpha=lam).fit(X, y)
+        assert np.allclose(b, sk.coef_) and np.isclose(b0, sk.intercept_)
+    Xc = X - X.mean(0)
+    d = np.linalg.svd(Xc, compute_uv=False)
+    lam = 7.0
+    H = Xc @ np.linalg.solve(Xc.T @ Xc + lam * np.eye(X.shape[1]), Xc.T)
+    assert np.isclose(cr.ridge_df(d, lam), np.trace(H))
+    assert np.isclose(cr.ridge_df(d, cr.ridge_lambda_for_df(X, 3.5)), 3.5)
