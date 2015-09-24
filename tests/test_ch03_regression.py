@@ -155,3 +155,15 @@ def test_ridge_matches_sklearn_and_df(data):
     H = Xc @ np.linalg.solve(Xc.T @ Xc + lam * np.eye(X.shape[1]), Xc.T)
     assert np.isclose(cr.ridge_df(d, lam), np.trace(H))
     assert np.isclose(cr.ridge_df(d, cr.ridge_lambda_for_df(X, 3.5)), 3.5)
+
+
+def test_lasso_matches_sklearn(data):
+    X, y = data
+    N = len(y)
+    for lam in (1.0, 20.0, 80.0):
+        b0, b = cr.lasso_cd(X, y, lam)
+        sk = Lasso(alpha=lam / N, tol=1e-12, max_iter=100000).fit(X, y)
+        assert np.allclose(b, sk.coef_, atol=1e-6)
+        assert np.isclose(b0, sk.intercept_, atol=1e-6)
+    _, b = cr.lasso_cd(X, y, cr.lasso_lambda_max(X, y) * 1.0001)
+    assert np.all(b == 0)
