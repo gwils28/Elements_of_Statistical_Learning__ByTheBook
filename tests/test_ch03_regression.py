@@ -167,3 +167,8 @@ def test_lasso_matches_sklearn(data):
         assert np.isclose(b0, sk.intercept_, atol=1e-6)
     _, b = cr.lasso_cd(X, y, cr.lasso_lambda_max(X, y) * 1.0001)
     assert np.all(b == 0)
+
+
+def test_soft_threshold():
+    z = np.array([-3.0, -0.5, 0.0, 0.5, 3.0])
+    assert np.allclose(cr.soft_threshold(z, 1.0), [-2, 0, 0, 0, 2])
