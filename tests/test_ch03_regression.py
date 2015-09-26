@@ -172,3 +172,14 @@ def test_lasso_matches_sklearn(data):
 def test_soft_threshold():
     z = np.array([-3.0, -0.5, 0.0, 0.5, 3.0])
     assert np.allclose(cr.soft_threshold(z, 1.0), [-2, 0, 0, 0, 2])
+
+
+@pytest.mark.parametrize("method", ["lar", "lasso"])
+def test_lars_matches_sklearn(prostate, method):
+    Xtr, ytr, _, _, _ = prostate
+    coefs, corr, _ = cr.lars(Xtr, ytr, method=method)
+    Xc, yc = Xtr - Xtr.mean(0), ytr - ytr.mean()
+    _, _, sk = lars_path(Xc, yc, method=method)
+    assert coefs.shape == sk.T.shape
+    assert np.allclose(coefs, sk.T, atol=1e-8)
+    assert np.allclose(coefs[-1], cr.ols_fit(Xtr, ytr)["coef"][1:])
