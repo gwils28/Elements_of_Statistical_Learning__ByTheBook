@@ -183,3 +183,12 @@ def test_lars_matches_sklearn(prostate, method):
     assert coefs.shape == sk.T.shape
     assert np.allclose(coefs, sk.T, atol=1e-8)
     assert np.allclose(coefs[-1], cr.ols_fit(Xtr, ytr)["coef"][1:])
+
+
+def test_lasso_path_lars_vs_cd(prostate):
+    Xtr, ytr, _, _, _ = prostate
+    coefs, corr, _ = cr.lars(Xtr, ytr, method="lasso")
+    # au nœud k, le lambda du lasso (forme 1/2 RSS) est la corrélation commune
+    for k in (2, 4, 6):
+        _, b = cr.lasso_cd(Xtr, ytr, corr[k])
+        assert np.allclose(b, coefs[k], atol=1e-7)
