@@ -192,3 +192,16 @@ def test_lasso_path_lars_vs_cd(prostate):
     for k in (2, 4, 6):
         _, b = cr.lasso_cd(Xtr, ytr, corr[k])
         assert np.allclose(b, coefs[k], atol=1e-7)
+
+
+def test_pcr(data):
+    X, y = data
+    b0, B = cr.pcr_path(X, y)
+    assert np.allclose(B[0], 0)
+    assert np.allclose(B[-1], cr.ols_fit(X, y)["coef"][1:])
+    Xc = X - X.mean(0)
+    _, _, Vt = np.linalg.svd(Xc, full_matrices=False)
+    Z = Xc @ Vt[:3].T
+    lr = LinearRegression().fit(Z, y)
+    assert np.allclose(B[3], Vt[:3].T @ lr.coef_)
+    assert np.allclose(b0[3] + X @ B[3], lr.predict(Z))
