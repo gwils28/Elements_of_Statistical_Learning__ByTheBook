@@ -205,3 +205,33 @@ def test_pcr(data):
     lr = LinearRegression().fit(Z, y)
     assert np.allclose(B[3], Vt[:3].T @ lr.coef_)
     assert np.allclose(b0[3] + X @ B[3], lr.predict(Z))
+
+
+def test_pls_matches_sklearn(prostate):
+    Xtr, ytr, Xte, _, _ = prostate
+    b0, B, Z = cr.pls_path(Xtr, ytr)
+    assert np.allclose(B[-1], cr.ols_fit(Xtr, ytr)["coef"][1:])
+    G = Z.T @ Z
+    assert np.allclose(G - np.diag(np.diag(G)), 0, atol=1e-8 * G.max())
+    for M in (1, 2, 4):
+        sk = PLSRegression(n_components=M, scale=False).fit(Xtr, ytr)
+        pred = b0[M] + Xte @ B[M]
+        assert np.allclose(pred, sk.predict(Xte).ravel(), atol=1e-8)
+
+
+def test_cv_and_one_se_rule():
+    mean = np.array([1.5, 0.8, 0.62, 0.6, 0.61])
+    se = np.array([0.2, 0.1, 0.05, 0.05, 0.05])
+    assert cr.one_se_rule(mean, se) == 2
+    folds = cr.kfold_indices(23, K=5, rng=np.random.RandomState(0))
+    assert sorted(np.concatenate(folds)) == list(range(23))
+    rng = np.random.RandomState(0)
+    X = rng.randn(40, 2)
+    y = X @ [1.0, 2.0] + 1e-3 * rng.randn(40)
+
+    def fit(Xa, ya):
+        b = cr.ols_fit(Xa, ya)["coef"]
+        return np.array([0.0, b[0]]), np.array([[0, 0], b[1:]])
+
+    m, s = cr.cv_error(fit, X, y, cr.kfold_indices(40, 5))
+    assert m[1] < 1e-5 and m[0] > 1
