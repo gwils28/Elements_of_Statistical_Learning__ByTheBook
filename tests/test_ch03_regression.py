@@ -235,3 +235,16 @@ def test_cv_and_one_se_rule():
 
     m, s = cr.cv_error(fit, X, y, cr.kfold_indices(40, 5))
     assert m[1] < 1e-5 and m[0] > 1
+
+
+def test_lasso_lars_with_drops_matches_sklearn():
+    # jeu de données où des variables sortent puis rentrent dans le chemin lasso
+    rng = np.random.RandomState(6)
+    N, p = 60, 6
+    X = rng.randn(N, p) @ rng.randn(p, p)
+    y = X @ (2 * rng.randn(p)) + 4 * rng.randn(N)
+    coefs, _, actions = cr.lars(X, y, method="lasso")
+    assert any(a < 0 for a in actions)
+    _, _, sk = lars_path(X - X.mean(0), y - y.mean(), method="lasso")
+    assert coefs.shape == sk.T.shape
+    assert np.allclose(coefs, sk.T, atol=1e-8)
