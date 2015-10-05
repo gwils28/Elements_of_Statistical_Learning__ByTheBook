@@ -16,3 +16,11 @@ def make_data(N=60, p=6, seed=0, rho=0.5):
     y = X @ beta + rng.randn(N)
     X, _, _, _ = rc.standardize(X, unit_norm=True)
     return X, y - y.mean()
+
+
+def test_standardize():
+    X, _ = make_data()
+    Xs, _, _, _ = rc.standardize(X)
+    assert np.allclose(Xs.mean(0), 0) and np.allclose(Xs.std(0), 1)
+    Xu, _, _, _ = rc.standardize(X, unit_norm=True)
+    assert np.allclose(np.linalg.norm(Xu, axis=0), 1)
