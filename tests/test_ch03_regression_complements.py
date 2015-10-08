@@ -24,3 +24,16 @@ def test_standardize():
     assert np.allclose(Xs.mean(0), 0) and np.allclose(Xs.std(0), 1)
     Xu, _, _, _ = rc.standardize(X, unit_norm=True)
     assert np.allclose(np.linalg.norm(Xu, axis=0), 1)
+
+
+def test_orthonormal_estimators():
+    rng = np.random.RandomState(1)
+    X = np.linalg.qr(rng.randn(40, 5))[0]
+    y = rng.randn(40)
+    b_ls = X.T @ y
+    assert np.allclose(rc.ridge(X, y, 2.0), b_ls / 3)
+    lam = 0.3
+    assert np.allclose(rc.lasso_cd(X, y, lam), rc.soft_threshold(b_ls, lam), atol=1e-8)
+    hb = rc.hard_threshold(b_ls, 2)
+    assert np.count_nonzero(hb) == 2
+    assert np.min(np.abs(hb[hb != 0])) >= np.max(np.abs(b_ls[hb == 0]))
