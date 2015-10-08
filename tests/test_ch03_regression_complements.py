@@ -37,3 +37,11 @@ def test_orthonormal_estimators():
     hb = rc.hard_threshold(b_ls, 2)
     assert np.count_nonzero(hb) == 2
     assert np.min(np.abs(hb[hb != 0])) >= np.max(np.abs(b_ls[hb == 0]))
+
+
+def test_ridge_vs_sklearn_and_svd():
+    X, y = make_data()
+    b = rc.ridge(X, y, 0.7)
+    sk = Ridge(alpha=0.7, fit_intercept=False).fit(X, y).coef_
+    assert np.allclose(b, sk)
+    assert np.allclose(rc.ridge_svd_path(X, y, [0.7])[:, 0], b)
