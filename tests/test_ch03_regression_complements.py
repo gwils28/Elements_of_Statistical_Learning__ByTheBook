@@ -45,3 +45,12 @@ def test_ridge_vs_sklearn_and_svd():
     sk = Ridge(alpha=0.7, fit_intercept=False).fit(X, y).coef_
     assert np.allclose(b, sk)
     assert np.allclose(rc.ridge_svd_path(X, y, [0.7])[:, 0], b)
+
+
+def test_ridge_df_inverse():
+    X, _ = make_data()
+    d = np.linalg.svd(X, compute_uv=False)
+    for df in [0.5, 2.0, 5.5]:
+        lam = rc.ridge_lambda_for_df(d, df)
+        assert np.isclose(rc.ridge_df(d, lam), df)
+    assert rc.ridge_lambda_for_df(d, X.shape[1]) == 0.0
