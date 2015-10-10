@@ -54,3 +54,12 @@ def test_ridge_df_inverse():
         lam = rc.ridge_lambda_for_df(d, df)
         assert np.isclose(rc.ridge_df(d, lam), df)
     assert rc.ridge_lambda_for_df(d, X.shape[1]) == 0.0
+
+
+def test_lasso_cd_vs_sklearn():
+    X, y = make_data()
+    N = len(y)
+    lam = 0.5
+    b = rc.lasso_cd(X, y, lam)
+    sk = Lasso(alpha=lam / N, fit_intercept=False, tol=1e-12, max_iter=100000).fit(X, y).coef_
+    assert np.allclose(b, sk, atol=1e-6)
