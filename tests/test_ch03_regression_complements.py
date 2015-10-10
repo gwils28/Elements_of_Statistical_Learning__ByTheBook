@@ -63,3 +63,7 @@ def test_lasso_cd_vs_sklearn():
     b = rc.lasso_cd(X, y, lam)
     sk = Lasso(alpha=lam / N, fit_intercept=False, tol=1e-12, max_iter=100000).fit(X, y).coef_
     assert np.allclose(b, sk, atol=1e-6)
+
+
+@pytest.mark.parametrize("method", ["lar", "lasso"])
+@pytest.mark.parametrize("seed", [0, 1, 2])
