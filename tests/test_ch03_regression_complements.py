@@ -67,3 +67,9 @@ def test_lasso_cd_vs_sklearn():
 
 @pytest.mark.parametrize("method", ["lar", "lasso"])
 @pytest.mark.parametrize("seed", [0, 1, 2])
+def test_lars_vs_sklearn(method, seed):
+    X, y = make_data(N=50, p=8, seed=seed, rho=0.5)
+    res = rc.lars(X, y, method=method)
+    _, _, coefs = lars_path(X, y, method=method)
+    assert res["coefs"].shape == coefs.shape
+    assert np.allclose(res["coefs"], coefs, atol=1e-8)
