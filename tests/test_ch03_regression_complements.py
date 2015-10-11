@@ -94,3 +94,12 @@ def test_lasso_path_matches_cd():
     for k in range(1, res["coefs"].shape[1] - 1):
         lam = res["lambdas"][k]
         assert np.allclose(rc.lasso_cd(X, y, lam), res["coefs"][:, k], atol=1e-7)
+
+
+def test_interpolate_path():
+    X, y = make_data()
+    res = rc.lars(X, y, method="lasso")
+    b = rc.interpolate_path(res["coefs"], [0.0, 1.0])
+    assert np.allclose(b[:, 0], 0) and np.allclose(b[:, 1], res["coefs"][:, -1])
+    half = rc.interpolate_path(res["coefs"], [0.5])[:, 0]
+    assert np.isclose(np.abs(half).sum(), 0.5 * np.abs(res["coefs"][:, -1]).sum())
