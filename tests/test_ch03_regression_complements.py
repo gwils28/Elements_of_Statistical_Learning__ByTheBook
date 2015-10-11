@@ -73,3 +73,15 @@ def test_lars_vs_sklearn(method, seed):
     _, _, coefs = lars_path(X, y, method=method)
     assert res["coefs"].shape == coefs.shape
     assert np.allclose(res["coefs"], coefs, atol=1e-8)
+
+
+def test_lar_ends_at_least_squares_and_equal_correlations():
+    X, y = make_data(N=50, p=6, seed=4)
+    res = rc.lars(X, y)
+    b_ls = np.linalg.lstsq(X, y, rcond=None)[0]
+    assert np.allclose(res["coefs"][:, -1], b_ls)
+    # corrélations absolues liées sur l'ensemble actif à chaque nœud
+    for k, A in enumerate(res["actives"][:-1]):
+        c = np.abs(X.T @ (y - X @ res["coefs"][:, k + 1]))
+        assert np.allclose(c[A], c[A][0])
+        assert np.all(c <= c[A][0] + 1e-10)
