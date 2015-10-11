@@ -85,3 +85,12 @@ def test_lar_ends_at_least_squares_and_equal_correlations():
         c = np.abs(X.T @ (y - X @ res["coefs"][:, k + 1]))
         assert np.allclose(c[A], c[A][0])
         assert np.all(c <= c[A][0] + 1e-10)
+
+
+def test_lasso_path_matches_cd():
+    X, y = make_data(N=50, p=8, seed=3, rho=0.8)
+    res = rc.lars(X, y, method="lasso")
+    assert any(e[0] == "sortie" for e in res["events"])  # le chemin contient une sortie
+    for k in range(1, res["coefs"].shape[1] - 1):
+        lam = res["lambdas"][k]
+        assert np.allclose(rc.lasso_cd(X, y, lam), res["coefs"][:, k], atol=1e-7)
