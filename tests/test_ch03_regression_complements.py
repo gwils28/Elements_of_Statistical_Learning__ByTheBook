@@ -103,3 +103,9 @@ def test_interpolate_path():
     assert np.allclose(b[:, 0], 0) and np.allclose(b[:, 1], res["coefs"][:, -1])
     half = rc.interpolate_path(res["coefs"], [0.5])[:, 0]
     assert np.isclose(np.abs(half).sum(), 0.5 * np.abs(res["coefs"][:, -1]).sum())
+
+
+def test_pcr_full_is_least_squares():
+    X, y = make_data()
+    b = rc.pcr(X, y)
+    assert np.allclose(b[:, -1], np.linalg.lstsq(X, y, rcond=None)[0])
