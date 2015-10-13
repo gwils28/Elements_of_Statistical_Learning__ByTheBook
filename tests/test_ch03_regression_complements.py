@@ -109,3 +109,16 @@ def test_pcr_full_is_least_squares():
     X, y = make_data()
     b = rc.pcr(X, y)
     assert np.allclose(b[:, -1], np.linalg.lstsq(X, y, rcond=None)[0])
+
+
+def test_pls_vs_sklearn_and_ls():
+    X, y = make_data(N=60, p=5, seed=2)
+    Xs, _, _, _ = rc.standardize(X)
+    out = rc.pls(Xs, y)
+    assert np.allclose(out["betas"][:, -1], np.linalg.lstsq(Xs, y, rcond=None)[0])
+    for m in (1, 2, 3):
+        sk = PLSRegression(n_components=m, scale=False).fit(Xs, y)
+        assert np.allclose(Xs @ out["betas"][:, m] + y.mean(), sk.predict(Xs).ravel(), atol=1e-8)
+    Z = out["Z"]
+    G = Z.T @ Z
+    assert np.allclose(G - np.diag(np.diag(G)), 0, atol=1e-8)
