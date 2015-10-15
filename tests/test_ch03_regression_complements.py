@@ -122,3 +122,12 @@ def test_pls_vs_sklearn_and_ls():
     Z = out["Z"]
     G = Z.T @ Z
     assert np.allclose(G - np.diag(np.diag(G)), 0, atol=1e-8)
+
+
+def test_pls_equals_conjugate_gradient():
+    X, y = make_data(N=60, p=6, seed=7)
+    Xs, _, _, _ = rc.standardize(X)
+    yc = y - y.mean()
+    b_pls = rc.pls(Xs, yc)["betas"]
+    b_cg = rc.conjugate_gradient(Xs.T @ Xs, Xs.T @ yc)
+    assert np.allclose(b_pls, b_cg, atol=1e-8)
