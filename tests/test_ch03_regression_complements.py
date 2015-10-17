@@ -131,3 +131,10 @@ def test_pls_equals_conjugate_gradient():
     b_pls = rc.pls(Xs, yc)["betas"]
     b_cg = rc.conjugate_gradient(Xs.T @ Xs, Xs.T @ yc)
     assert np.allclose(b_pls, b_cg, atol=1e-8)
+
+
+def test_pls_norm_increases():
+    X, y = make_data(N=40, p=8, seed=8, rho=0.9)
+    b = rc.pls(X, y)["betas"]
+    norms = np.linalg.norm(b, axis=0)
+    assert np.all(np.diff(norms) >= -1e-10)
