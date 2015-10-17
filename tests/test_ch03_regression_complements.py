@@ -138,3 +138,13 @@ def test_pls_norm_increases():
     b = rc.pls(X, y)["betas"]
     norms = np.linalg.norm(b, axis=0)
     assert np.all(np.diff(norms) >= -1e-10)
+
+
+def test_forward_stepwise():
+    X, y = make_data(N=50, p=6, seed=9)
+    order, betas, rss = rc.forward_stepwise(X, y)
+    assert sorted(order) == list(range(6))
+    assert np.all(np.diff(rss) <= 1e-10)
+    assert np.isclose(rss[-1], np.sum((y - X @ betas[:, -1]) ** 2))
+    # premier choix = variable de plus forte corrélation (normes égales)
+    assert order[0] == int(np.argmax(np.abs(X.T @ y)))
