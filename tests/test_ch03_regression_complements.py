@@ -148,3 +148,10 @@ def test_forward_stepwise():
     assert np.isclose(rss[-1], np.sum((y - X @ betas[:, -1]) ** 2))
     # premier choix = variable de plus forte corrélation (normes égales)
     assert order[0] == int(np.argmax(np.abs(X.T @ y)))
+
+
+def test_forward_stagewise_small_steps():
+    X, y = make_data(N=50, p=4, seed=10, rho=0.2)
+    path = rc.forward_stagewise(X, y, eps=0.001, n_steps=20000, record_every=20000)
+    b_ls = np.linalg.lstsq(X, y, rcond=None)[0]
+    assert np.allclose(path[:, -1], b_ls, atol=0.01)
