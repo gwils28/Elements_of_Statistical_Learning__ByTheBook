@@ -155,3 +155,21 @@ def test_forward_stagewise_small_steps():
     path = rc.forward_stagewise(X, y, eps=0.001, n_steps=20000, record_every=20000)
     b_ls = np.linalg.lstsq(X, y, rcond=None)[0]
     assert np.allclose(path[:, -1], b_ls, atol=0.01)
+
+
+def test_cca_properties():
+    rng = np.random.RandomState(11)
+    N, p, K = 200, 4, 3
+    X = rng.randn(N, p)
+    Y = X[:, :K] @ rng.randn(K, K) + rng.randn(N, K)
+    X -= X.mean(0)
+    Y -= Y.mean(0)
+    U, V, corr = rc.cca(X, Y)
+    assert np.allclose(U.T @ Y.T @ Y @ U, np.eye(K))
+    assert np.allclose(V.T @ X.T @ X @ V, np.eye(K))
+    assert np.allclose(np.diag(U.T @ Y.T @ X @ V), corr)
+    emp = [np.corrcoef(Y @ U[:, m], X @ V[:, m])[0, 1] for m in range(K)]
+    assert np.allclose(emp, corr)
+    # carrés des corrélations = valeurs propres de (Y'Y)^-1 Y'X (X'X)^-1 X'Y
+    M = np.linalg.solve(Y.T @ Y, Y.T @ X @ np.linalg.solve(X.T @ X, X.T @ Y))
+    assert np.allclose(np.sort(np.linalg.eigvals(M).real)[::-1], corr ** 2)
