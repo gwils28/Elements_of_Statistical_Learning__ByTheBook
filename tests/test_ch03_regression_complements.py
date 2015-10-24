@@ -173,3 +173,28 @@ def test_cca_properties():
     # carrés des corrélations = valeurs propres de (Y'Y)^-1 Y'X (X'X)^-1 X'Y
     M = np.linalg.solve(Y.T @ Y, Y.T @ X @ np.linalg.solve(X.T @ X, X.T @ Y))
     assert np.allclose(np.sort(np.linalg.eigvals(M).real)[::-1], corr ** 2)
+
+
+def test_reduced_rank():
+    rng = np.random.RandomState(12)
+    N, p, K = 150, 5, 4
+    X = rng.randn(N, p)
+    Y = X @ rng.randn(p, 2) @ rng.randn(2, K) + rng.randn(N, K)
+    X -= X.mean(0)
+    Y -= Y.mean(0)
+    for m in (1, 2, 3):
+        B1 = rc.reduced_rank_regression(X, Y, m)
+        B2 = rc.reduced_rank_cca(X, Y, m)
+        assert np.allclose(B1, B2)
+        assert np.linalg.matrix_rank(B1) == m
+        B_ls = np.linalg.lstsq(X, Y, rcond=None)[0]
+        E = Y - X @ B_ls
+        Sig2 = E.T @ E / (N - p * K)
+        assert np.allclose(rc.reduced_rank_regression(X, Y, m, Sigma=Sig2), B1)
+        Sig = Y.T @ Y / N
+        best = rc.rrr_criterion(X, Y, B1, Sig)
+        for _ in range(20):
+            Bp = B1 + 0.05 * rng.randn(p, m) @ rng.randn(m, K)
+            Ur, s, Vt = np.linalg.svd(Bp)
+            Bp = (Ur[:, :m] * s[:m]) @ Vt[:m]
+            assert rc.rrr_criterion(X, Y, Bp, Sig) >= best - 1e-9
