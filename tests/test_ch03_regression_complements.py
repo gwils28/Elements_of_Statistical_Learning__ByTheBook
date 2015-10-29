@@ -198,3 +198,18 @@ def test_reduced_rank():
             Ur, s, Vt = np.linalg.svd(Bp)
             Bp = (Ur[:, :m] * s[:m]) @ Vt[:m]
             assert rc.rrr_criterion(X, Y, Bp, Sig) >= best - 1e-9
+
+
+def test_elastic_net_augmentation():
+    X, y = make_data(N=50, p=6, seed=13)
+    N = len(y)
+    lam, alpha = 4.0, 0.3
+    Xa, ya, lam1 = rc.elastic_net_augment(X, y, lam, alpha)
+    b = rc.lasso_cd(Xa, ya, lam1 / 2)
+    a = lam * (1 - alpha) / (2 * N) + lam * alpha / N
+    l1r = lam * (1 - alpha) / (2 * N) / a
+    sk = ElasticNet(alpha=a, l1_ratio=l1r, fit_intercept=False, tol=1e-12,
+                    max_iter=100000).fit(X, y).coef_
+    assert np.allclose(b, sk, atol=1e-6)
+    r = ya - Xa @ b
+    assert np.isclose(rc.elastic_net_objective(X, y, b, lam, alpha), r @ r + lam1 * np.abs(b).sum())
