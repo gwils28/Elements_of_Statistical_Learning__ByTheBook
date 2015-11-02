@@ -224,3 +224,10 @@ def test_ridge_duplicates_equal():
     x = X[:, 0]
     b1 = rc.ridge(np.column_stack([x] * m), y, lam)
     assert np.allclose(b1, x @ y / (m * x @ x + lam))
+
+
+def test_kfold_and_one_se():
+    folds = rc.kfold_indices(23, 5)
+    allidx = np.sort(np.concatenate(folds))
+    assert np.array_equal(allidx, np.arange(23))
+    assert rc.one_se_rule([0, 1, 2, 3], [5.0, 2.0, 1.8, 1.7], [0.1, 0.1, 0.1, 0.2]) == 2
