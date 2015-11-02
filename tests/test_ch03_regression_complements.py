@@ -213,3 +213,14 @@ def test_elastic_net_augmentation():
     assert np.allclose(b, sk, atol=1e-6)
     r = ya - Xa @ b
     assert np.isclose(rc.elastic_net_objective(X, y, b, lam, alpha), r @ r + lam1 * np.abs(b).sum())
+
+
+def test_ridge_duplicates_equal():
+    X, y = make_data(N=40, p=3, seed=14)
+    m, lam = 3, 1.5
+    Xd = np.column_stack([X] + [X[:, [0]]] * (m - 1))
+    b = rc.ridge(Xd, y, lam)
+    assert np.allclose(b[[0, 3, 4]], b[0])
+    x = X[:, 0]
+    b1 = rc.ridge(np.column_stack([x] * m), y, lam)
+    assert np.allclose(b1, x @ y / (m * x @ x + lam))
