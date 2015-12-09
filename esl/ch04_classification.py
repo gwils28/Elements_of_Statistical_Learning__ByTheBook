@@ -46,3 +46,8 @@ def indicator_matrix(y, classes=None):
 def error_rate(y_true, y_pred):
     """Taux d'erreur de classification (proportion de prédictions fausses)."""
     return float(np.mean(np.asarray(y_true) != np.asarray(y_pred)))
+
+
+def _add_intercept(X):
+    X = np.asarray(X, float)
+    return np.column_stack([np.ones(X.shape[0]), X])
