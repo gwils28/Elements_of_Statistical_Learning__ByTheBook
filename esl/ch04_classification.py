@@ -41,3 +41,8 @@ def indicator_matrix(y, classes=None):
     """
     classes = np.unique(y) if classes is None else np.asarray(classes)
     return (np.asarray(y)[:, None] == classes[None, :]).astype(float)
+
+
+def error_rate(y_true, y_pred):
+    """Taux d'erreur de classification (proportion de prédictions fausses)."""
+    return float(np.mean(np.asarray(y_true) != np.asarray(y_pred)))
