@@ -51,3 +51,23 @@ def error_rate(y_true, y_pred):
 def _add_intercept(X):
     X = np.asarray(X, float)
     return np.column_stack([np.ones(X.shape[0]), X])
+
+
+# ---------------------------------------------------------------------------
+# 4.2  Régression sur matrice indicatrice
+# ---------------------------------------------------------------------------
+
+def indicator_regression_fit(X, y):
+    """Régression linéaire (avec constante) de la matrice indicatrice sur X.
+
+    Returns
+    -------
+    model : dict
+        ``B`` (p+1, K) coefficients (première ligne = constantes) et
+        ``classes``.
+    """
+    classes = np.unique(y)
+    Y = indicator_matrix(y, classes)
+    Xa = _add_intercept(X)
+    B, *_ = np.linalg.lstsq(Xa, Y, rcond=None)
+    return {"B": B, "classes": classes}
