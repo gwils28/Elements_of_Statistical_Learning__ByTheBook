@@ -71,3 +71,10 @@ def indicator_regression_fit(X, y):
     Xa = _add_intercept(X)
     B, *_ = np.linalg.lstsq(Xa, Y, rcond=None)
     return {"B": B, "classes": classes}
+
+
+def indicator_regression_predict(model, X, return_fitted=False):
+    """Classe de plus grande composante ajustée, règle (4.4) du livre."""
+    F = _add_intercept(X) @ model["B"]
+    pred = model["classes"][np.argmax(F, axis=1)]
+    return (pred, F) if return_fitted else pred
