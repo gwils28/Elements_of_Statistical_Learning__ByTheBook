@@ -91,3 +91,24 @@ def _class_stats(X, y):
     counts = np.array([np.sum(y == k) for k in classes])
     means = np.array([X[y == k].mean(axis=0) for k in classes])
     return X, classes, counts, means
+
+
+def lda_fit(X, y, priors=None):
+    """Analyse discriminante linéaire (section 4.3).
+
+    Estimations (4.10) du livre : proportions ``pi_k = N_k / N``, moyennes de
+    classe, covariance intra-classe commune ``sum_k sum_{g_i=k}
+    (x_i - mu_k)(x_i - mu_k)^T / (N - K)``.
+
+    Returns
+    -------
+    model : dict
+        ``classes``, ``priors``, ``means`` (K, p), ``cov`` (p, p).
+    """
+    X, classes, counts, means = _class_stats(X, y)
+    N, K = X.shape[0], len(classes)
+    R = X - means[np.searchsorted(classes, y)]
+    cov = R.T @ R / (N - K)
+    pri = counts / N if priors is None else np.asarray(priors, float)
+    return {"classes": classes, "priors": pri, "means": means, "cov": cov,
+            "counts": counts}
