@@ -130,3 +130,41 @@ def lda_decision_function(model, X):
 def lda_predict(model, X):
     """Classe maximisant la fonction discriminante linéaire."""
     return model["classes"][np.argmax(lda_decision_function(model, X), axis=1)]
+
+
+def qda_fit(X, y, alpha=1.0, priors=None):
+    """Analyse discriminante quadratique, éventuellement régularisée (RDA).
+
+    Chaque classe a sa propre covariance ``S_k`` (dénominateur ``N_k - 1``).
+    Avec ``alpha < 1`` on utilise la covariance régularisée (4.13) du livre
+    ``S_k(alpha) = alpha S_k + (1 - alpha) S`` où ``S`` est la covariance
+    commune de la LDA (``alpha = 0`` redonne la LDA, ``alpha = 1`` la QDA).
+
+    Returns
+    -------
+    model : dict
+        ``classes``, ``priors``, ``means``, ``covs`` (K, p, p).
+    """
+    X, classes, counts, means = _class_stats(X, y)
+    pooled = lda_fit(X, y)["cov"]
+    covs = []
+    for k, c in enumerate(classes):
+        R = X[y == c] - means[k]
+        Sk = R.T @ R / (counts[k] - 1)
+        covs.append(alpha * Sk + (1 - alpha) * pooled)
+    pri = counts / X.shape[0] if priors is None else np.asarray(priors, float)
+    return {"classes": classes, "priors": pri, "means": means,
+            "covs": np.array(covs)}
+
+
+def qda_decision_function(model, X):
+    """Fonctions discriminantes quadratiques (4.12) :
+    ``-log|S_k|/2 - (x - mu_k)^T S_k^{-1} (x - mu_k)/2 + log pi_k``."""
+    X = np.asarray(X, float)
+    D = np.empty((X.shape[0], len(model["classes"])))
+    for k in range(len(model["classes"])):
+        L = linalg.cholesky(model["covs"][k], lower=True)
+        Zk = linalg.solve_triangular(L, (X - model["means"][k]).T, lower=True)
+        logdet = 2 * np.sum(np.log(np.diag(L)))
+        D[:, k] = -0.5 * logdet - 0.5 * np.sum(Zk ** 2, axis=0) + np.log(model["priors"][k])
+    return D
