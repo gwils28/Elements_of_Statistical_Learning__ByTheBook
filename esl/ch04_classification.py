@@ -125,3 +125,8 @@ def lda_decision_function(model, X):
     A = linalg.solve(model["cov"], model["means"].T, assume_a="pos")  # (p, K)
     const = -0.5 * np.sum(model["means"].T * A, axis=0) + np.log(model["priors"])
     return np.asarray(X, float) @ A + const
+
+
+def lda_predict(model, X):
+    """Classe maximisant la fonction discriminante linéaire."""
+    return model["classes"][np.argmax(lda_decision_function(model, X), axis=1)]
