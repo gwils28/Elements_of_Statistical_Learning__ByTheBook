@@ -78,3 +78,16 @@ def indicator_regression_predict(model, X, return_fitted=False):
     F = _add_intercept(X) @ model["B"]
     pred = model["classes"][np.argmax(F, axis=1)]
     return (pred, F) if return_fitted else pred
+
+
+# ---------------------------------------------------------------------------
+# 4.3  LDA, QDA, RDA
+# ---------------------------------------------------------------------------
+
+def _class_stats(X, y):
+    X = np.asarray(X, float)
+    classes = np.unique(y)
+    N, p = X.shape
+    counts = np.array([np.sum(y == k) for k in classes])
+    means = np.array([X[y == k].mean(axis=0) for k in classes])
+    return X, classes, counts, means
