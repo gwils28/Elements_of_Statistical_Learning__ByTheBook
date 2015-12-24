@@ -112,3 +112,16 @@ def lda_fit(X, y, priors=None):
     pri = counts / N if priors is None else np.asarray(priors, float)
     return {"classes": classes, "priors": pri, "means": means, "cov": cov,
             "counts": counts}
+
+
+def lda_decision_function(model, X):
+    """Fonctions discriminantes linéaires (4.10) :
+    ``delta_k(x) = x^T S^{-1} mu_k - mu_k^T S^{-1} mu_k / 2 + log pi_k``.
+
+    Returns
+    -------
+    D : array (N, K)
+    """
+    A = linalg.solve(model["cov"], model["means"].T, assume_a="pos")  # (p, K)
+    const = -0.5 * np.sum(model["means"].T * A, axis=0) + np.log(model["priors"])
+    return np.asarray(X, float) @ A + const
