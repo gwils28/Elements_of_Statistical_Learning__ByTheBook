@@ -168,3 +168,8 @@ def qda_decision_function(model, X):
         logdet = 2 * np.sum(np.log(np.diag(L)))
         D[:, k] = -0.5 * logdet - 0.5 * np.sum(Zk ** 2, axis=0) + np.log(model["priors"][k])
     return D
+
+
+def qda_predict(model, X):
+    """Classe maximisant la fonction discriminante quadratique."""
+    return model["classes"][np.argmax(qda_decision_function(model, X), axis=1)]
