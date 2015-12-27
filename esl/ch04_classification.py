@@ -173,3 +173,43 @@ def qda_decision_function(model, X):
 def qda_predict(model, X):
     """Classe maximisant la fonction discriminante quadratique."""
     return model["classes"][np.argmax(qda_decision_function(model, X), axis=1)]
+
+
+# ---------------------------------------------------------------------------
+# 4.3.3  LDA de rang réduit (variables canoniques)
+# ---------------------------------------------------------------------------
+
+def reduced_rank_lda_fit(X, y):
+    """Directions discriminantes de Fisher (section 4.3.3).
+
+    On résout le problème aux valeurs propres généralisé ``B v = lambda W v``
+    où ``W`` est la covariance intra-classe (celle de la LDA) et
+    ``B = sum_k pi_k (mu_k - mu)(mu_k - mu)^T`` la covariance inter-classes.
+    Les vecteurs sont normalisés par ``v^T W v = 1`` et rangés par valeurs
+    propres décroissantes ; seuls les ``min(p, K-1)`` premiers sont gardés.
+
+    Returns
+    -------
+    model : dict
+        Celui de :func:`lda_fit` complété de ``center`` (moyenne globale
+        pondérée), ``scalings`` (p, r) et ``eigvals`` (r,).
+    """
+    model = lda_fit(X, y)
+    pi, M = model["priors"], model["means"]
+    center = pi @ M
+    Mc = M - center
+    B = (Mc * pi[:, None]).T @ Mc
+    vals, vecs = linalg.eigh(B, model["cov"])
+    order = np.argsort(vals)[::-1]
+    r = min(M.shape[1], len(pi) - 1)
+    vecs = vecs[:, order[:r]]
+    # orientation reproductible : première composante non nulle positive
+    signs = np.sign(vecs[np.argmax(np.abs(vecs) > 1e-12, axis=0), np.arange(r)])
+    model.update(center=center, scalings=vecs * signs, eigvals=vals[order[:r]])
+    return model
+
+
+def reduced_rank_lda_transform(model, X, L=None):
+    """Coordonnées discriminantes (variables canoniques) ``Z = (X - mu) V_L``."""
+    V = model["scalings"] if L is None else model["scalings"][:, :L]
+    return (np.asarray(X, float) - model["center"]) @ V
