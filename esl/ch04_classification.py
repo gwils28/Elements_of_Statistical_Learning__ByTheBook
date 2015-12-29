@@ -223,3 +223,11 @@ def reduced_rank_lda_predict(model, X, L):
     C = reduced_rank_lda_transform(model, model["means"], L)
     d2 = ((Z[:, None, :] - C[None, :, :]) ** 2).sum(axis=2)
     return model["classes"][np.argmax(-0.5 * d2 + np.log(model["priors"]), axis=1)]
+
+
+# ---------------------------------------------------------------------------
+# 4.4  Régression logistique
+# ---------------------------------------------------------------------------
+
+def _sigmoid(t):
+    return 0.5 * (1 + np.tanh(0.5 * t))
