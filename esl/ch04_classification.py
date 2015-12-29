@@ -213,3 +213,13 @@ def reduced_rank_lda_transform(model, X, L=None):
     """Coordonnées discriminantes (variables canoniques) ``Z = (X - mu) V_L``."""
     V = model["scalings"] if L is None else model["scalings"][:, :L]
     return (np.asarray(X, float) - model["center"]) @ V
+
+
+def reduced_rank_lda_predict(model, X, L):
+    """Classification au centroïde le plus proche dans le sous-espace de
+    dimension ``L`` avec la correction ``log pi_k`` :
+    ``argmax_k  -||z - zbar_k||^2 / 2 + log pi_k``."""
+    Z = reduced_rank_lda_transform(model, X, L)
+    C = reduced_rank_lda_transform(model, model["means"], L)
+    d2 = ((Z[:, None, :] - C[None, :, :]) ** 2).sum(axis=2)
+    return model["classes"][np.argmax(-0.5 * d2 + np.log(model["priors"]), axis=1)]
