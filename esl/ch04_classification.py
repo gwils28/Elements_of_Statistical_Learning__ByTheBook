@@ -231,3 +231,54 @@ def reduced_rank_lda_predict(model, X, L):
 
 def _sigmoid(t):
     return 0.5 * (1 + np.tanh(0.5 * t))
+
+
+def logistic_irls(X, y, max_iter=50, tol=1e-10, beta_init=None):
+    """Régression logistique binaire par Newton-Raphson (= IRLS), éq. (4.26)-(4.28).
+
+    À chaque itération : ``p = sigma(X beta)``, ``W = diag(p(1-p))``,
+    réponse ajustée ``z = X beta + W^{-1}(y - p)`` puis
+    ``beta <- (X^T W X)^{-1} X^T W z`` (moindres carrés pondérés).
+
+    Parameters
+    ----------
+    X : array (N, p)
+        Prédicteurs (une colonne de 1 est ajoutée).
+    y : array (N,)
+        Réponses 0/1.
+
+    Returns
+    -------
+    res : dict
+        ``coef`` (p+1,) (constante en premier), ``se`` erreurs standard
+        (racine de la diagonale de ``(X^T W X)^{-1}``), ``z`` scores de Wald,
+        ``deviance`` (= -2 log-vraisemblance), ``n_iter``, ``history`` (suite
+        des log-vraisemblances), ``coef_path`` (itérés successifs).
+    """
+    Xa = _add_intercept(X)
+    y = np.asarray(y, float)
+    beta = np.zeros(Xa.shape[1]) if beta_init is None else np.array(beta_init, float)
+    history, path = [], [beta.copy()]
+    for it in range(1, max_iter + 1):
+        eta = Xa @ beta
+        p = _sigmoid(eta)
+        history.append(float(np.sum(y * eta - np.logaddexp(0, eta))))
+        w = np.clip(p * (1 - p), 1e-12, None)
+        z = eta + (y - p) / w
+        XtW = Xa.T * w
+        new = linalg.solve(XtW @ Xa, XtW @ z, assume_a="pos")
+        path.append(new.copy())
+        done = np.max(np.abs(new - beta)) < tol * (1 + np.max(np.abs(beta)))
+        beta = new
+        if done:
+            break
+    eta = Xa @ beta
+    p = _sigmoid(eta)
+    loglik = float(np.sum(y * eta - np.logaddexp(0, eta)))
+    history.append(loglik)
+    w = p * (1 - p)
+    cov = linalg.inv((Xa.T * w) @ Xa)
+    se = np.sqrt(np.diag(cov))
+    return {"coef": beta, "se": se, "z": beta / se, "deviance": -2 * loglik,
+            "loglik": loglik, "n_iter": it, "history": np.array(history),
+            "coef_path": np.array(path), "cov": cov}
