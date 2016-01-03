@@ -282,3 +282,8 @@ def logistic_irls(X, y, max_iter=50, tol=1e-10, beta_init=None):
     return {"coef": beta, "se": se, "z": beta / se, "deviance": -2 * loglik,
             "loglik": loglik, "n_iter": it, "history": np.array(history),
             "coef_path": np.array(path), "cov": cov}
+
+
+def logistic_predict_proba(coef, X):
+    """Probabilités ``Pr(Y = 1 | x)`` pour des coefficients (constante en tête)."""
+    return _sigmoid(_add_intercept(X) @ coef)
