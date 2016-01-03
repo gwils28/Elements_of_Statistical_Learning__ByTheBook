@@ -287,3 +287,56 @@ def logistic_irls(X, y, max_iter=50, tol=1e-10, beta_init=None):
 def logistic_predict_proba(coef, X):
     """Probabilités ``Pr(Y = 1 | x)`` pour des coefficients (constante en tête)."""
     return _sigmoid(_add_intercept(X) @ coef)
+
+
+def multilogit_newton(X, y, max_iter=100, tol=1e-9):
+    """Régression logistique multinomiale par Newton-Raphson (exercice 4.4).
+
+    Modèle (4.17) : la dernière classe sert de référence,
+    ``log Pr(G=k|x)/Pr(G=K|x) = beta_k0 + beta_k^T x`` pour ``k < K``.
+    Le vecteur des paramètres ``theta`` (de taille ``(p+1)(K-1)``) empile les
+    ``beta_k`` ; gradient et hessienne sont calculés par blocs, et un pas de
+    Newton est divisé par deux tant que la log-vraisemblance ne croît pas.
+
+    Returns
+    -------
+    res : dict
+        ``coef`` (K-1, p+1), ``classes``, ``loglik``, ``n_iter``,
+        ``history``.
+    """
+    classes = np.unique(y)
+    Xa = _add_intercept(X)
+    N, q = Xa.shape
+    K = len(classes)
+    Y = indicator_matrix(y, classes)[:, :K - 1]
+
+    def loglik(theta):
+        E = np.column_stack([Xa @ theta.reshape(K - 1, q).T, np.zeros(N)])
+        lse = np.logaddexp.reduce(E, axis=1)
+        return float(np.sum(Y * E[:, :K - 1]) - np.sum(lse)), np.exp(E - lse[:, None])[:, :K - 1]
+
+    theta = np.zeros((K - 1) * q)
+    ll, P = loglik(theta)
+    history = [ll]
+    for it in range(1, max_iter + 1):
+        grad = ((Y - P).T @ Xa).ravel()                       # blocs X^T (y_k - p_k)
+        H = np.empty(((K - 1) * q, (K - 1) * q))
+        for k in range(K - 1):
+            for l in range(K - 1):
+                w = P[:, k] * ((k == l) - P[:, l])
+                H[k * q:(k + 1) * q, l * q:(l + 1) * q] = -(Xa.T * w) @ Xa
+        step = linalg.solve(-H, grad, assume_a="pos")
+        t = 1.0
+        while True:
+            new_ll, new_P = loglik(theta + t * step)
+            if new_ll >= ll - 1e-12 or t < 1e-8:
+                break
+            t /= 2
+        theta = theta + t * step
+        done = abs(new_ll - ll) < tol * (1 + abs(ll))
+        ll, P = new_ll, new_P
+        history.append(ll)
+        if done:
+            break
+    return {"coef": theta.reshape(K - 1, q), "classes": classes, "loglik": ll,
+            "n_iter": it, "history": np.array(history)}
