@@ -340,3 +340,12 @@ def multilogit_newton(X, y, max_iter=100, tol=1e-9):
             break
     return {"coef": theta.reshape(K - 1, q), "classes": classes, "loglik": ll,
             "n_iter": it, "history": np.array(history)}
+
+
+def multilogit_predict_proba(res, X):
+    """Probabilités a posteriori (N, K) du modèle multinomial."""
+    Xa = _add_intercept(X)
+    E = np.column_stack([Xa @ res["coef"].T, np.zeros(Xa.shape[0])])
+    E -= E.max(axis=1, keepdims=True)
+    P = np.exp(E)
+    return P / P.sum(axis=1, keepdims=True)
