@@ -349,3 +349,8 @@ def multilogit_predict_proba(res, X):
     E -= E.max(axis=1, keepdims=True)
     P = np.exp(E)
     return P / P.sum(axis=1, keepdims=True)
+
+
+def multilogit_predict(res, X):
+    """Classe de plus grande probabilité a posteriori."""
+    return res["classes"][np.argmax(multilogit_predict_proba(res, X), axis=1)]
