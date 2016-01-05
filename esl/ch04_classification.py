@@ -354,3 +354,8 @@ def multilogit_predict_proba(res, X):
 def multilogit_predict(res, X):
     """Classe de plus grande probabilité a posteriori."""
     return res["classes"][np.argmax(multilogit_predict_proba(res, X), axis=1)]
+
+
+def soft_threshold(z, g):
+    """Seuillage doux ``S(z, g) = sign(z) (|z| - g)_+``."""
+    return np.sign(z) * np.maximum(np.abs(z) - g, 0.0)
