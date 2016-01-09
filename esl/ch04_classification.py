@@ -477,3 +477,43 @@ def perceptron(X, y, beta_init=None, max_epochs=1000, rng=None, normalize=False)
             break
     return {"beta": beta, "coef": beta[:-1], "intercept": beta[-1],
             "n_updates": n_upd, "converged": converged, "path": np.array(path)}
+
+
+def optimal_hyperplane(X, y, tol=1e-6):
+    """Hyperplan séparateur optimal (marge maximale), problème (4.48).
+
+    Résout ``min ||beta||^2 / 2`` sous ``y_i (x_i^T beta + beta_0) >= 1`` par
+    programmation quadratique séquentielle (SLSQP de scipy) ; les données
+    doivent être linéairement séparables.
+
+    Returns
+    -------
+    res : dict
+        ``coef``, ``intercept``, ``margin`` (= 1/||beta||, demi-largeur de la
+        bande), ``support`` (indices des points de support), ``alpha``
+        (multiplicateurs de Lagrange, obtenus par moindres carrés positifs sur
+        la relation ``beta = sum_i alpha_i y_i x_i``).
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    N, p = X.shape
+    A = y[:, None] * np.column_stack([X, np.ones(N)])
+    cons = {"type": "ineq", "fun": lambda t: A @ t - 1, "jac": lambda t: A}
+    # point de départ réalisable : un perceptron convenablement dilaté
+    per = perceptron(X, y, max_epochs=5000)
+    if not per["converged"]:
+        raise ValueError("données non séparables (le perceptron n'a pas convergé)")
+    t0 = per["beta"] / np.min(A @ per["beta"])
+    res = optimize.minimize(lambda t: 0.5 * t[:p] @ t[:p], t0,
+                            jac=lambda t: np.r_[t[:p], 0.0], constraints=[cons],
+                            method="SLSQP", options={"ftol": 1e-12, "maxiter": 500})
+    t = res.x
+    margins = A @ t
+    support = np.where(margins < 1 + 1e-4 * max(1.0, np.max(np.abs(t))))[0]
+    G = (y[support, None] * X[support]).T
+    G = np.vstack([G, y[support]])                       # aussi sum alpha_i y_i = 0
+    alpha_s, _ = optimize.nnls(G, np.r_[t[:p], 0.0])
+    alpha = np.zeros(N)
+    alpha[support] = alpha_s
+    return {"coef": t[:p], "intercept": t[p], "margin": 1 / np.linalg.norm(t[:p]),
+            "support": support, "alpha": alpha, "success": res.success}
