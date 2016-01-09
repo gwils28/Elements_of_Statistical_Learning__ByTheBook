@@ -430,3 +430,50 @@ def logistic_l1_path(X, y, n_lambda=60, ratio=1e-3):
         cur = logistic_l1(X, y, lam, coef_init=cur)
         coefs.append(cur)
     return lams, np.array(coefs)
+
+
+# ---------------------------------------------------------------------------
+# 4.5  Hyperplans séparateurs
+# ---------------------------------------------------------------------------
+
+def perceptron(X, y, beta_init=None, max_epochs=1000, rng=None, normalize=False):
+    """Algorithme du perceptron de Rosenblatt (4.44), pas ``rho = 1``.
+
+    On parcourt les observations (dans un ordre aléatoire si ``rng`` est
+    fourni) ; chaque point mal classé (``y_i f(x_i) <= 0``) déclenche la
+    mise à jour ``beta <- beta + y_i x_i*`` avec ``x_i* = (x_i, 1)``.
+
+    Parameters
+    ----------
+    y : array (N,)
+        Étiquettes dans {-1, +1}.
+    normalize : bool
+        Si vrai, on utilise ``z_i = x_i* / ||x_i*||`` (exercice 4.6).
+
+    Returns
+    -------
+    res : dict
+        ``beta`` (p+1,) au format ``(beta_1, beta_0)``, ``coef``,
+        ``intercept``, ``n_updates``, ``converged``, ``path``.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    Z = np.column_stack([X, np.ones(len(y))])
+    if normalize:
+        Z = Z / np.linalg.norm(Z, axis=1, keepdims=True)
+    beta = np.zeros(Z.shape[1]) if beta_init is None else np.array(beta_init, float)
+    path, n_upd, converged = [beta.copy()], 0, False
+    for _ in range(max_epochs):
+        order = np.arange(len(y)) if rng is None else rng.permutation(len(y))
+        changed = False
+        for i in order:
+            if y[i] * (Z[i] @ beta) <= 0:
+                beta = beta + y[i] * Z[i]
+                n_upd += 1
+                changed = True
+                path.append(beta.copy())
+        if not changed:
+            converged = True
+            break
+    return {"beta": beta, "coef": beta[:-1], "intercept": beta[-1],
+            "n_updates": n_upd, "converged": converged, "path": np.array(path)}
