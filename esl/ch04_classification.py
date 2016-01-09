@@ -517,3 +517,34 @@ def optimal_hyperplane(X, y, tol=1e-6):
     alpha[support] = alpha_s
     return {"coef": t[:p], "intercept": t[p], "margin": 1 / np.linalg.norm(t[:p]),
             "support": support, "alpha": alpha, "success": res.success}
+
+
+# ---------------------------------------------------------------------------
+# Graphiques
+# ---------------------------------------------------------------------------
+
+def plot_decision_regions(ax, predict, xlim, ylim, classes, colors, n=300,
+                          alpha=0.12, linecolor="#52514e", linewidth=1.2):
+    """Colorie les régions de décision d'un classifieur en dimension 2.
+
+    Parameters
+    ----------
+    ax : matplotlib Axes
+    predict : callable
+        Fonction ``(M, 2) -> (M,)`` renvoyant des étiquettes de ``classes``.
+    classes : sequence
+        Étiquettes possibles, dans l'ordre des ``colors``.
+    colors : sequence
+        Une couleur par classe.
+    """
+    from matplotlib.colors import ListedColormap
+    from esl.plotting import decision_grid
+    xx, yy, grid = decision_grid(xlim, ylim, n)
+    lab = np.searchsorted(np.asarray(classes), predict(grid)).reshape(xx.shape)
+    K = len(classes)
+    ax.contourf(xx, yy, lab, levels=np.arange(K + 1) - 0.5,
+                cmap=ListedColormap(list(colors)[:K]), alpha=alpha)
+    ax.contour(xx, yy, lab, levels=np.arange(K) + 0.5, colors=linecolor,
+               linewidths=linewidth)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
