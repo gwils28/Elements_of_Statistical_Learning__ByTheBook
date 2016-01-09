@@ -359,3 +359,51 @@ def multilogit_predict(res, X):
 def soft_threshold(z, g):
     """Seuillage doux ``S(z, g) = sign(z) (|z| - g)_+``."""
     return np.sign(z) * np.maximum(np.abs(z) - g, 0.0)
+
+
+def logistic_l1(X, y, lam, coef_init=None, max_outer=100, max_inner=1000, tol=1e-8):
+    """Régression logistique pénalisée L1 (éq. (4.31) du livre).
+
+    Minimise ``-(1/N) l(beta0, beta) + lam * ||beta||_1`` (constante non
+    pénalisée) : à chaque itération externe on remplace la log-vraisemblance
+    par son approximation quadratique (moindres carrés pondérés de l'IRLS),
+    que l'on minimise avec la pénalité L1 par descente par coordonnées.
+
+    Returns
+    -------
+    coef : array (p+1,)
+        Constante puis coefficients.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    N, p = X.shape
+    if coef_init is None:
+        ybar = np.clip(y.mean(), 1e-6, 1 - 1e-6)
+        b0, b = np.log(ybar / (1 - ybar)), np.zeros(p)
+    else:
+        b0, b = float(coef_init[0]), np.array(coef_init[1:], float)
+    for _ in range(max_outer):
+        eta = b0 + X @ b
+        prob = _sigmoid(eta)
+        w = np.clip(prob * (1 - prob), 1e-5, None)
+        z = eta + (y - prob) / w
+        b0_old, b_old = b0, b.copy()
+        r = z - b0 - X @ b                       # résidu de travail
+        xw2 = (w[:, None] * X ** 2).sum(axis=0) / N
+        for _ in range(max_inner):
+            delta = 0.0
+            for j in range(p):
+                old = b[j]
+                rho = np.dot(w * X[:, j], r) / N + xw2[j] * old
+                b[j] = soft_threshold(rho, lam) / xw2[j]
+                if b[j] != old:
+                    r -= X[:, j] * (b[j] - old)
+                    delta = max(delta, abs(b[j] - old))
+            d0 = np.dot(w, r) / np.sum(w)
+            b0 += d0
+            r -= d0
+            if max(delta, abs(d0)) < tol:
+                break
+        if max(np.max(np.abs(b - b_old), initial=0), abs(b0 - b0_old)) < tol:
+            break
+    return np.concatenate([[b0], b])
