@@ -407,3 +407,26 @@ def logistic_l1(X, y, lam, coef_init=None, max_outer=100, max_inner=1000, tol=1e
         if max(np.max(np.abs(b - b_old), initial=0), abs(b0 - b0_old)) < tol:
             break
     return np.concatenate([[b0], b])
+
+
+def logistic_l1_path(X, y, n_lambda=60, ratio=1e-3):
+    """Chemin de régularisation L1 sur une grille géométrique de ``lam``.
+
+    ``lam_max = max_j |x_j^T (y - ybar)| / N`` est la plus petite valeur
+    annulant tous les coefficients ; on descend jusqu'à ``ratio * lam_max``
+    avec démarrage à chaud.
+
+    Returns
+    -------
+    lams : array (n_lambda,)
+    coefs : array (n_lambda, p+1)
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    lam_max = np.max(np.abs(X.T @ (y - y.mean()))) / len(y) * (1 + 1e-10)
+    lams = lam_max * np.logspace(0, np.log10(ratio), n_lambda)
+    coefs, cur = [], None
+    for lam in lams:
+        cur = logistic_l1(X, y, lam, coef_init=cur)
+        coefs.append(cur)
+    return lams, np.array(coefs)
