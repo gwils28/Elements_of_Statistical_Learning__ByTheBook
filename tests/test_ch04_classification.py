@@ -23,3 +23,12 @@ def gauss3():
 @pytest.fixture(scope="module")
 def vowel():
     return datasets.load_vowel("train") + datasets.load_vowel("test")
+
+
+@pytest.fixture(scope="module")
+def separable():
+    rng = np.random.RandomState(1)
+    X = rng.randn(40, 2)
+    y = np.where(X @ np.array([1.0, -1.0]) + 0.3 > 0, 1, -1)
+    X = X + 0.4 * y[:, None] * np.array([1.0, -1.0]) / np.sqrt(2)   # marge nette
+    return X, y
