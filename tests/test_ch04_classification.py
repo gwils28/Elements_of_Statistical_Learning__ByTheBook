@@ -32,3 +32,10 @@ def separable():
     y = np.where(X @ np.array([1.0, -1.0]) + 0.3 > 0, 1, -1)
     X = X + 0.4 * y[:, None] * np.array([1.0, -1.0]) / np.sqrt(2)   # marge nette
     return X, y
+
+
+def test_indicator_rows_sum_to_one(gauss3):
+    X, y = gauss3
+    m = c4.indicator_regression_fit(X, y)
+    _, F = c4.indicator_regression_predict(m, X, return_fitted=True)
+    np.testing.assert_allclose(F.sum(axis=1), 1.0, atol=1e-10)
