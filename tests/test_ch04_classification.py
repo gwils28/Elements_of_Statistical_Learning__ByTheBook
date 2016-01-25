@@ -39,3 +39,16 @@ def test_indicator_rows_sum_to_one(gauss3):
     m = c4.indicator_regression_fit(X, y)
     _, F = c4.indicator_regression_predict(m, X, return_fitted=True)
     np.testing.assert_allclose(F.sum(axis=1), 1.0, atol=1e-10)
+
+
+def test_lda_matches_sklearn(gauss3):
+    X, y = gauss3
+    m = c4.lda_fit(X, y)
+    sk = LinearDiscriminantAnalysis(solver="lsqr").fit(X, y)
+    np.testing.assert_array_equal(c4.lda_predict(m, X), sk.predict(X))
+    # différences de discriminants = log-rapports de densités a posteriori
+    from scipy.stats import multivariate_normal as mvn
+    D = c4.lda_decision_function(m, X[:5])
+    logf = np.column_stack([mvn(m["means"][k], m["cov"]).logpdf(X[:5]) + np.log(m["priors"][k])
+                            for k in range(3)])
+    np.testing.assert_allclose(D - D[:, :1], logf - logf[:, :1], atol=1e-8)
