@@ -59,3 +59,20 @@ def test_qda_matches_sklearn(gauss3):
     m = c4.qda_fit(X, y)
     sk = QuadraticDiscriminantAnalysis().fit(X, y)
     np.testing.assert_array_equal(c4.qda_predict(m, X), sk.predict(X))
+
+
+def test_rda_limits(gauss3):
+    X, y = gauss3
+    m0 = c4.qda_fit(X, y, alpha=0.0)
+    lda = c4.lda_fit(X, y)
+    np.testing.assert_array_equal(c4.qda_predict(m0, X), c4.lda_predict(lda, X))
+
+
+def test_vowel_error_rates_table_4_1(vowel):
+    Xtr, ytr, Xte, yte = vowel
+    lda = c4.lda_fit(Xtr, ytr)
+    qda = c4.qda_fit(Xtr, ytr)
+    reg = c4.indicator_regression_fit(Xtr, ytr)
+    assert round(c4.error_rate(yte, c4.lda_predict(lda, Xte)), 2) == 0.56
+    assert round(c4.error_rate(yte, c4.qda_predict(qda, Xte)), 2) == 0.53
+    assert round(c4.error_rate(yte, c4.indicator_regression_predict(reg, Xte)), 2) == 0.67
