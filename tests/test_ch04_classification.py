@@ -52,3 +52,10 @@ def test_lda_matches_sklearn(gauss3):
     logf = np.column_stack([mvn(m["means"][k], m["cov"]).logpdf(X[:5]) + np.log(m["priors"][k])
                             for k in range(3)])
     np.testing.assert_allclose(D - D[:, :1], logf - logf[:, :1], atol=1e-8)
+
+
+def test_qda_matches_sklearn(gauss3):
+    X, y = gauss3
+    m = c4.qda_fit(X, y)
+    sk = QuadraticDiscriminantAnalysis().fit(X, y)
+    np.testing.assert_array_equal(c4.qda_predict(m, X), sk.predict(X))
