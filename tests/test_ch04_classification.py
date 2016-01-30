@@ -92,3 +92,13 @@ def test_reduced_rank_normalisation(gauss3):
     assert V.shape == (3, 2)
     np.testing.assert_allclose(V.T @ rr["cov"] @ V, np.eye(2), atol=1e-10)
     assert rr["eigvals"][0] >= rr["eigvals"][1] > 0
+
+
+def test_logistic_irls_table_4_2():
+    df = datasets.load_saheart()
+    cols = ["sbp", "tobacco", "ldl", "famhist", "obesity", "alcohol", "age"]
+    r = c4.logistic_irls(df[cols].values, df["chd"].values)
+    expected = [-4.130, 0.006, 0.080, 0.185, 0.939, -0.035, 0.001, 0.043]
+    np.testing.assert_allclose(np.round(r["coef"], 3), expected, atol=1e-3)
+    np.testing.assert_allclose(r["se"][[0, 4]], [0.964, 0.225], atol=1e-3)
+    assert np.all(np.diff(r["history"]) >= -1e-9)        # Newton monotone ici
