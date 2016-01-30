@@ -76,3 +76,10 @@ def test_vowel_error_rates_table_4_1(vowel):
     assert round(c4.error_rate(yte, c4.lda_predict(lda, Xte)), 2) == 0.56
     assert round(c4.error_rate(yte, c4.qda_predict(qda, Xte)), 2) == 0.53
     assert round(c4.error_rate(yte, c4.indicator_regression_predict(reg, Xte)), 2) == 0.67
+
+
+def test_reduced_rank_full_equals_lda(vowel):
+    Xtr, ytr, Xte, _ = vowel
+    rr = c4.reduced_rank_lda_fit(Xtr, ytr)
+    np.testing.assert_array_equal(c4.reduced_rank_lda_predict(rr, Xte, 10),
+                                  c4.lda_predict(c4.lda_fit(Xtr, ytr), Xte))
