@@ -83,3 +83,12 @@ def test_reduced_rank_full_equals_lda(vowel):
     rr = c4.reduced_rank_lda_fit(Xtr, ytr)
     np.testing.assert_array_equal(c4.reduced_rank_lda_predict(rr, Xte, 10),
                                   c4.lda_predict(c4.lda_fit(Xtr, ytr), Xte))
+
+
+def test_reduced_rank_normalisation(gauss3):
+    X, y = gauss3
+    rr = c4.reduced_rank_lda_fit(X, y)
+    V = rr["scalings"]
+    assert V.shape == (3, 2)
+    np.testing.assert_allclose(V.T @ rr["cov"] @ V, np.eye(2), atol=1e-10)
+    assert rr["eigvals"][0] >= rr["eigvals"][1] > 0
