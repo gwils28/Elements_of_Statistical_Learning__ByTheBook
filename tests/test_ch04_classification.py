@@ -109,3 +109,11 @@ def test_multilogit_matches_sklearn(gauss3):
     r = c4.multilogit_newton(X, y)
     sk = LogisticRegression(C=1e10, max_iter=5000, tol=1e-10).fit(X, y)
     np.testing.assert_allclose(c4.multilogit_predict_proba(r, X), sk.predict_proba(X), atol=1e-4)
+
+
+def test_multilogit_two_classes_equals_binary(gauss3):
+    X, y = gauss3
+    mask = y < 2
+    r = c4.multilogit_newton(X[mask], y[mask])
+    b = c4.logistic_irls(X[mask], (y[mask] == 0).astype(float))  # classe 0 contre référence 1
+    np.testing.assert_allclose(r["coef"][0], b["coef"], atol=1e-6)
