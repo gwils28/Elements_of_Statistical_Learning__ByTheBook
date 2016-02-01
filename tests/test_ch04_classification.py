@@ -102,3 +102,10 @@ def test_logistic_irls_table_4_2():
     np.testing.assert_allclose(np.round(r["coef"], 3), expected, atol=1e-3)
     np.testing.assert_allclose(r["se"][[0, 4]], [0.964, 0.225], atol=1e-3)
     assert np.all(np.diff(r["history"]) >= -1e-9)        # Newton monotone ici
+
+
+def test_multilogit_matches_sklearn(gauss3):
+    X, y = gauss3
+    r = c4.multilogit_newton(X, y)
+    sk = LogisticRegression(C=1e10, max_iter=5000, tol=1e-10).fit(X, y)
+    np.testing.assert_allclose(c4.multilogit_predict_proba(r, X), sk.predict_proba(X), atol=1e-4)
