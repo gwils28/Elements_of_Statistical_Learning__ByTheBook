@@ -135,3 +135,10 @@ def test_l1_logistic_limits():
     act = C[k, 1:] != 0
     np.testing.assert_allclose(g[act], lams[k] * np.sign(C[k, 1:][act]), atol=1e-5)
     assert np.all(np.abs(g[~act]) <= lams[k] + 1e-6)
+
+
+def test_perceptron_separates(separable):
+    X, y = separable
+    r = c4.perceptron(X, y, rng=np.random.RandomState(0))
+    assert r["converged"]
+    assert np.all(y * (X @ r["coef"] + r["intercept"]) > 0)
