@@ -117,3 +117,21 @@ def test_multilogit_two_classes_equals_binary(gauss3):
     r = c4.multilogit_newton(X[mask], y[mask])
     b = c4.logistic_irls(X[mask], (y[mask] == 0).astype(float))  # classe 0 contre référence 1
     np.testing.assert_allclose(r["coef"][0], b["coef"], atol=1e-6)
+
+
+def test_l1_logistic_limits():
+    df = datasets.load_saheart()
+    cols = ["sbp", "tobacco", "ldl", "famhist", "obesity", "alcohol", "age"]
+    X = df[cols].values
+    X = (X - X.mean(0)) / X.std(0)
+    y = df["chd"].values
+    lams, C = c4.logistic_l1_path(X, y, n_lambda=20, ratio=1e-4)
+    assert np.all(C[0, 1:] == 0)
+    np.testing.assert_allclose(C[-1], c4.logistic_irls(X, y)["coef"], atol=5e-3)
+    # conditions d'optimalité (KKT) pour une valeur intermédiaire
+    k = 10
+    p = c4.logistic_predict_proba(C[k], X)
+    g = X.T @ (y - p) / len(y)
+    act = C[k, 1:] != 0
+    np.testing.assert_allclose(g[act], lams[k] * np.sign(C[k, 1:][act]), atol=1e-5)
+    assert np.all(np.abs(g[~act]) <= lams[k] + 1e-6)
