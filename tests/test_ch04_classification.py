@@ -142,3 +142,17 @@ def test_perceptron_separates(separable):
     r = c4.perceptron(X, y, rng=np.random.RandomState(0))
     assert r["converged"]
     assert np.all(y * (X @ r["coef"] + r["intercept"]) > 0)
+
+
+def test_perceptron_bound_ex_4_6(separable):
+    X, y = separable
+    Z = np.column_stack([X, np.ones(len(y))])
+    Z /= np.linalg.norm(Z, axis=1, keepdims=True)
+    r = c4.perceptron(X, y, normalize=True)
+    assert r["converged"]
+    # beta_sep de l'exercice 4.6 (a) : un séparateur des z_i remis à l'échelle
+    bsep = r["beta"] / np.min(y * (Z @ r["beta"]))
+    assert np.all(y * (Z @ bsep) >= 1 - 1e-12)
+    # borne (b) : nombre de mises à jour <= ||beta_start - beta_sep||^2
+    r2 = c4.perceptron(X, y, normalize=True, rng=np.random.RandomState(3))
+    assert r2["n_updates"] <= bsep @ bsep
