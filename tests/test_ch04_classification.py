@@ -156,3 +156,16 @@ def test_perceptron_bound_ex_4_6(separable):
     # borne (b) : nombre de mises à jour <= ||beta_start - beta_sep||^2
     r2 = c4.perceptron(X, y, normalize=True, rng=np.random.RandomState(3))
     assert r2["n_updates"] <= bsep @ bsep
+
+
+def test_optimal_hyperplane_kkt(separable):
+    X, y = separable
+    r = c4.optimal_hyperplane(X, y)
+    f = X @ r["coef"] + r["intercept"]
+    assert np.all(y * f >= 1 - 1e-6)
+    np.testing.assert_allclose(y[r["support"]] * f[r["support"]], 1, atol=1e-4)
+    np.testing.assert_allclose((r["alpha"] * y) @ X, r["coef"], atol=1e-4)
+    assert abs(r["alpha"] @ y) < 1e-4
+    from sklearn.svm import SVC
+    sk = SVC(kernel="linear", C=1e8).fit(X, y)
+    np.testing.assert_allclose(r["coef"], sk.coef_[0], rtol=1e-3, atol=1e-3)
