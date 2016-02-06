@@ -169,3 +169,14 @@ def test_optimal_hyperplane_kkt(separable):
     from sklearn.svm import SVC
     sk = SVC(kernel="linear", C=1e8).fit(X, y)
     np.testing.assert_allclose(r["coef"], sk.coef_[0], rtol=1e-3, atol=1e-3)
+
+
+def test_generalized_eigen_ex_4_1(gauss3):
+    rng = np.random.RandomState(0)
+    A = rng.randn(4, 4)
+    W = A @ A.T + np.eye(4)
+    Bm = rng.randn(4, 2)
+    B = Bm @ Bm.T
+    vals, vecs = linalg.eigh(B, W)
+    Wm12 = linalg.inv(linalg.sqrtm(W).real)
+    np.testing.assert_allclose(np.sort(linalg.eigvalsh(Wm12 @ B @ Wm12)), vals, atol=1e-10)
