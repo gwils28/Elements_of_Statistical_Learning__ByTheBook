@@ -89,3 +89,19 @@ def truncated_power_basis(x, knots, degree=3):
     """
     return piecewise_polynomial_basis(x, knots, degree=degree,
                                       continuity=degree - 1)
+
+
+# ---------------------------------------------------------------------------
+# B-splines (Cox-de Boor)
+# ---------------------------------------------------------------------------
+
+def augmented_knots(inner_knots, lo, hi, order=4):
+    """Suite de nœuds augmentée :math:`\\tau` de l'annexe du chapitre.
+
+    Les nœuds de bord :math:`\\xi_0 = lo` et :math:`\\xi_{K+1} = hi` sont
+    répétés ``order`` fois : :math:`\\tau = (lo, \\dots, lo, \\xi_1, \\dots,
+    \\xi_K, hi, \\dots, hi)`, de longueur :math:`K + 2M`.
+    """
+    inner = np.sort(np.atleast_1d(np.asarray(inner_knots, dtype=float)))
+    return np.concatenate([np.repeat(float(lo), order), inner,
+                           np.repeat(float(hi), order)])
