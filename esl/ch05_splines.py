@@ -67,3 +67,25 @@ def piecewise_polynomial_basis(x, knots, degree=3, continuity=None):
             else:
                 cols.append(np.where(x > xi, (x - xi) ** j, 0.0))
     return np.column_stack(cols)
+
+
+def truncated_power_basis(x, knots, degree=3):
+    """Base des puissances tronquées d'une spline d'ordre ``degree + 1``.
+
+    Colonnes : :math:`h_j(x) = x^{j-1}` (:math:`j = 1..M`) puis
+    :math:`h_{M+\\ell}(x) = (x - \\xi_\\ell)_+^{M-1}` (:math:`\\ell = 1..K`),
+    cf. éq. (5.3) du livre et le paragraphe qui la suit.
+
+    Parameters
+    ----------
+    x : array_like, shape (N,)
+    knots : array_like, shape (K,)
+    degree : int
+        Degré :math:`M - 1` (3 pour les splines cubiques).
+
+    Returns
+    -------
+    H : ndarray, shape (N, M + K)
+    """
+    return piecewise_polynomial_basis(x, knots, degree=degree,
+                                      continuity=degree - 1)
