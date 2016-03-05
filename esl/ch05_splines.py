@@ -113,3 +113,32 @@ def _safe_div(num, den):
     ok = den != 0
     out[:, ok] = num[:, ok] / den[ok]
     return out
+
+
+def _bspline_from_tau(x, tau, order, deriv=0):
+    """B-splines d'ordre ``order`` (et dérivée ``deriv``) pour la suite ``tau``."""
+    x = np.asarray(x, dtype=float)
+    if deriv > 0:
+        # B'_{i,m} = (m-1) [B_{i,m-1}/(tau_{i+m-1}-tau_i) - B_{i+1,m-1}/(tau_{i+m}-tau_{i+1})]
+        lower = _bspline_from_tau(x, tau, order - 1, deriv - 1)
+        m = order
+        n = len(tau) - m
+        d1 = tau[m - 1:m - 1 + n] - tau[:n]
+        d2 = tau[m:m + n] - tau[1:1 + n]
+        return (m - 1) * (_safe_div(lower[:, :n], d1)
+                          - _safe_div(lower[:, 1:n + 1], d2))
+    # ordre 1 : indicatrices des intervalles [tau_i, tau_{i+1}) (éq. 5.77)
+    n1 = len(tau) - 1
+    B = ((tau[:n1] <= x[:, None]) & (x[:, None] < tau[1:])).astype(float)
+    # le point hi (bord droit) est rattaché au dernier intervalle non vide
+    nonempty = np.nonzero(tau[1:] > tau[:-1])[0]
+    if len(nonempty):
+        last = nonempty[-1]
+        B[x == tau[last + 1], last] = 1.0
+    # récurrence de Cox-de Boor (éq. 5.78)
+    for m in range(2, order + 1):
+        n = len(tau) - m
+        w1 = _safe_div((x[:, None] - tau[:n]), tau[m - 1:m - 1 + n] - tau[:n])
+        w2 = _safe_div((tau[m:m + n] - x[:, None]), tau[m:m + n] - tau[1:1 + n])
+        B = w1 * B[:, :n] + w2 * B[:, 1:n + 1]
+    return B
