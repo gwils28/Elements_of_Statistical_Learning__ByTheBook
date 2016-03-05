@@ -105,3 +105,11 @@ def augmented_knots(inner_knots, lo, hi, order=4):
     inner = np.sort(np.atleast_1d(np.asarray(inner_knots, dtype=float)))
     return np.concatenate([np.repeat(float(lo), order), inner,
                            np.repeat(float(hi), order)])
+
+
+def _safe_div(num, den):
+    """Division avec la convention 0/0 = 0 (nœuds répétés)."""
+    out = np.zeros_like(num)
+    ok = den != 0
+    out[:, ok] = num[:, ok] / den[ok]
+    return out
