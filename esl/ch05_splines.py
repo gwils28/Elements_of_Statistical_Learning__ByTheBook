@@ -142,3 +142,30 @@ def _bspline_from_tau(x, tau, order, deriv=0):
         w2 = _safe_div((tau[m:m + n] - x[:, None]), tau[m:m + n] - tau[1:1 + n])
         B = w1 * B[:, :n] + w2 * B[:, 1:n + 1]
     return B
+
+
+def bspline_basis(x, inner_knots, lo=None, hi=None, order=4, deriv=0):
+    """Base de B-splines d'ordre ``order`` (récurrence de Cox-de Boor).
+
+    Parameters
+    ----------
+    x : array_like, shape (N,)
+        Points d'évaluation (les B-splines sont nulles hors de ``[lo, hi]``).
+    inner_knots : array_like, shape (K,)
+        Nœuds intérieurs :math:`\\xi_1 < \\dots < \\xi_K`.
+    lo, hi : float, optional
+        Nœuds de bord :math:`\\xi_0, \\xi_{K+1}` (par défaut min et max de ``x``).
+    order : int
+        Ordre :math:`M` (4 pour les splines cubiques).
+    deriv : int
+        Ordre de dérivation (0 : les fonctions elles-mêmes).
+
+    Returns
+    -------
+    B : ndarray, shape (N, K + M)
+    """
+    x = np.asarray(x, dtype=float)
+    lo = x.min() if lo is None else lo
+    hi = x.max() if hi is None else hi
+    tau = augmented_knots(inner_knots, lo, hi, order)
+    return _bspline_from_tau(x, tau, order, deriv)
