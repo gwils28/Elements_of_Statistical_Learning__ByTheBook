@@ -169,3 +169,33 @@ def bspline_basis(x, inner_knots, lo=None, hi=None, order=4, deriv=0):
     hi = x.max() if hi is None else hi
     tau = augmented_knots(inner_knots, lo, hi, order)
     return _bspline_from_tau(x, tau, order, deriv)
+
+
+def bspline_penalty_matrix(inner_knots, lo, hi, order=4, deriv=2):
+    """Matrice :math:`\\Omega_{jk} = \\int_{lo}^{hi} B_j^{(m)}(t) B_k^{(m)}(t)\\,dt`.
+
+    Le calcul est exact : sur chaque intervalle entre nœuds consécutifs, le
+    produit des dérivées est un polynôme de degré :math:`2(M-1-m)`, intégré
+    exactement par une quadrature de Gauss-Legendre à :math:`M - m` points.
+
+    Parameters
+    ----------
+    inner_knots : array_like
+    lo, hi : float
+    order : int
+        Ordre :math:`M` des B-splines.
+    deriv : int
+        Ordre :math:`m` de la dérivée pénalisée (2 pour les splines de lissage).
+
+    Returns
+    -------
+    Omega : ndarray, shape (K + M, K + M), symétrique semi-définie positive.
+    """
+    br = np.unique(np.concatenate([[lo], np.atleast_1d(inner_knots), [hi]]))
+    npts = max(order - deriv, 1)
+    g, w = np.polynomial.legendre.leggauss(npts)
+    a, b = br[:-1], br[1:]
+    t = ((a + b)[:, None] + (b - a)[:, None] * g[None, :]) / 2
+    wt = ((b - a)[:, None] / 2) * w[None, :]
+    D = bspline_basis(t.ravel(), inner_knots, lo, hi, order, deriv)
+    return D.T @ (wt.ravel()[:, None] * D)
