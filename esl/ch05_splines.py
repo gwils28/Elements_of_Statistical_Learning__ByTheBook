@@ -235,3 +235,135 @@ def natural_spline_basis(x, knots):
     for k in range(K - 2):
         cols.append(d(k) - dK1)
     return np.column_stack(cols)
+
+
+# ---------------------------------------------------------------------------
+# Splines de lissage
+# ---------------------------------------------------------------------------
+
+class SmoothingSpline:
+    """Spline cubique de lissage (éq. (5.9) du livre), calculée en base de B-splines.
+
+    On minimise :math:`\\sum_i w_i (y_i - f(x_i))^2 + \\lambda \\int f''(t)^2 dt`.
+    La solution est une spline cubique naturelle à nœuds aux valeurs distinctes
+    :math:`x_{(1)} < \\dots < x_{(n)}` ; on la représente dans la base des
+    :math:`n + 2` B-splines cubiques ayant pour nœuds intérieurs
+    :math:`x_{(2)}, \\dots, x_{(n-1)}` (exercice 5.8) :
+    :math:`\\hat\\gamma = (B^T W B + \\lambda\\Omega_B)^{-1} B^T W y` (éq. (5.79)).
+
+    Parameters
+    ----------
+    lam : float, optional
+        Paramètre de lissage :math:`\\lambda` (échelle de ``x`` d'origine).
+    df : float, optional
+        Degrés de liberté effectifs visés (si ``lam`` n'est pas donné).
+    """
+
+    def __init__(self, lam=None, df=None):
+        if lam is None and df is None:
+            raise ValueError("Préciser lam ou df.")
+        self.lam = lam
+        self.df = df
+
+    def _design(self, x):
+        self.ux_ = np.unique(x)
+        if len(self.ux_) < 3:
+            raise ValueError("Il faut au moins 3 valeurs distinctes de x.")
+        self.lo_, self.hi_ = self.ux_[0], self.ux_[-1]
+        self.inner_ = self.ux_[1:-1]
+        B = bspline_basis(x, self.inner_, self.lo_, self.hi_)
+        Om = bspline_penalty_matrix(self.inner_, self.lo_, self.hi_)
+        return B, Om
+
+    def fit(self, x, y, w=None):
+        """Ajuste la spline aux données ``(x, y)`` avec poids ``w`` (défaut 1).
+
+        Pour la stabilité numérique (et pour obtenir :math:`df_\\lambda` en
+        :math:`O(p)` pour tout :math:`\\lambda`), on diagonalise simultanément
+        :math:`B^TWB` et :math:`\\Omega` : avec :math:`A_0 = B^TWB + c\\,\\Omega = LL^T`
+        et :math:`L^{-1}\\Omega L^{-T} = U\\,\\mathrm{diag}(d)\\,U^T`, on a
+        :math:`B^TWB + \\lambda\\Omega = LU\\,\\mathrm{diag}(1 + (\\lambda - c) d)\\,U^TL^T`.
+        """
+        x = np.asarray(x, dtype=float)
+        y = np.asarray(y, dtype=float)
+        w = np.ones_like(x) if w is None else np.asarray(w, dtype=float)
+        B, Om = self._design(x)
+        BtWB = B.T @ (w[:, None] * B)
+        c = np.trace(BtWB) / np.trace(Om)
+        L = np.linalg.cholesky(BtWB + c * Om)
+        Li = np.linalg.solve(L, np.eye(len(L)))
+        G = Li @ Om @ Li.T
+        d, U = np.linalg.eigh((G + G.T) / 2)
+        # le noyau de Omega (fonctions linéaires) : valeurs propres exactement nulles
+        d = np.where(d < 1e-10 * d.max(), 0.0, d)
+        self.c_, self.d_, self.T_ = c, d, Li.T @ U
+        # e_k = 1 - c d_k >= 0 : valeurs propres de B^TWB dans la même base
+        self.e_ = np.clip(1.0 - c * d, 0.0, None)
+        self.BtWB_, self.Omega_, self.B_, self.w_ = BtWB, Om, B, w
+        self.x_, self.y_ = x, y
+        if self.lam is None:
+            self.lam_ = self._lambda_for_df(self.df)
+        else:
+            self.lam_ = float(self.lam)
+        self._proj_ = self.T_.T @ (B.T @ (w * y))
+        return self.set_lambda(self.lam_)
+
+    def set_lambda(self, lam):
+        """Change :math:`\\lambda` sans refaire la diagonalisation (coût :math:`O(p^2)`)."""
+        self.lam_ = float(lam)
+        self.coef_ = self.T_ @ (self._shrink(self.lam_) * self._proj_)
+        self.df_ = self._df(self.lam_)
+        return self
+
+    def _shrink(self, lam):
+        return 1.0 / (self.e_ + lam * self.d_)
+
+    def _df(self, lam):
+        return float(np.sum(self.e_ * self._shrink(lam)))
+
+    def _lambda_for_df(self, df):
+        n = len(self.ux_)
+        if not 2 < df < n:
+            raise ValueError("df doit être dans ]2, %d[." % n)
+        g = lambda t: self._df(np.exp(t)) - df
+        lc = np.log(self.c_)
+        return float(np.exp(brentq(g, lc - 40, lc + 40, xtol=1e-12)))
+
+    def smoother_matrix(self):
+        """Matrice de lissage :math:`S_\\lambda` aux points d'apprentissage (N x N)."""
+        BT = self.B_ @ self.T_
+        return (BT * self._shrink(self.lam_)) @ BT.T * self.w_[None, :]
+
+    def linear_operator(self, x0):
+        """Matrice :math:`L` (len(x0) x N) telle que ``predict(x0) == L @ y``.
+
+        La ligne :math:`\\ell(x_0)^T` donne les poids du lisseur linéaire au point
+        :math:`x_0` : :math:`\\hat f(x_0) = \\sum_i \\ell_i(x_0) y_i`.
+        """
+        x0 = np.asarray(x0, dtype=float)
+        xc = np.clip(x0, self.lo_, self.hi_)
+        P = bspline_basis(xc, self.inner_, self.lo_, self.hi_)
+        P = P + (x0 - xc)[:, None] * bspline_basis(xc, self.inner_, self.lo_, self.hi_, deriv=1)
+        PT = P @ self.T_
+        BT = self.B_ @ self.T_
+        return (PT * self._shrink(self.lam_)) @ BT.T * self.w_[None, :]
+
+    def predict(self, x0, deriv=0):
+        """Évalue :math:`\\hat f` (ou sa dérivée) ; extrapolation linéaire hors de [lo, hi]."""
+        x0 = np.asarray(x0, dtype=float)
+        xc = np.clip(x0, self.lo_, self.hi_)
+        f = bspline_basis(xc, self.inner_, self.lo_, self.hi_, deriv=deriv) @ self.coef_
+        if deriv == 0:
+            slope = bspline_basis(xc, self.inner_, self.lo_, self.hi_, deriv=1) @ self.coef_
+            f = f + slope * (x0 - xc)
+        elif deriv == 1:
+            pass
+        else:
+            f = np.where(x0 == xc, f, 0.0)
+        return f
+
+
+def smoother_matrix(x, lam, w=None):
+    """Matrice de lissage :math:`S_\\lambda` d'une spline de lissage (éq. (5.14))."""
+    s = SmoothingSpline(lam=lam).fit(x, np.zeros(len(x)), w)
+    return s.smoother_matrix()
