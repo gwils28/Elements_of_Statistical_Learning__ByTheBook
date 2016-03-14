@@ -199,3 +199,39 @@ def bspline_penalty_matrix(inner_knots, lo, hi, order=4, deriv=2):
     wt = ((b - a)[:, None] / 2) * w[None, :]
     D = bspline_basis(t.ravel(), inner_knots, lo, hi, order, deriv)
     return D.T @ (wt.ravel()[:, None] * D)
+
+
+# ---------------------------------------------------------------------------
+# Splines cubiques naturelles
+# ---------------------------------------------------------------------------
+
+def natural_spline_basis(x, knots):
+    """Base des splines cubiques naturelles de l'éq. (5.4)-(5.5) du livre.
+
+    :math:`N_1(x) = 1`, :math:`N_2(x) = x`, :math:`N_{k+2}(x) = d_k(x) - d_{K-1}(x)`
+    avec :math:`d_k(x) = \\frac{(x-\\xi_k)_+^3 - (x-\\xi_K)_+^3}{\\xi_K - \\xi_k}`.
+
+    Parameters
+    ----------
+    x : array_like, shape (N,)
+    knots : array_like, shape (K,), K >= 2
+        Tous les nœuds, y compris les nœuds de bord :math:`\\xi_1` et :math:`\\xi_K`.
+
+    Returns
+    -------
+    N : ndarray, shape (N, K)
+        Fonctions linéaires à gauche de :math:`\\xi_1` et à droite de :math:`\\xi_K`.
+    """
+    x = np.asarray(x, dtype=float)
+    xi = np.sort(np.asarray(knots, dtype=float))
+    K = len(xi)
+    cube = lambda u: np.where(u > 0, u, 0.0) ** 3
+
+    def d(k):
+        return (cube(x - xi[k]) - cube(x - xi[K - 1])) / (xi[K - 1] - xi[k])
+
+    cols = [np.ones_like(x), x]
+    dK1 = d(K - 2)
+    for k in range(K - 2):
+        cols.append(d(k) - dK1)
+    return np.column_stack(cols)
