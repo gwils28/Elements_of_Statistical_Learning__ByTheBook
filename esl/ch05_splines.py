@@ -367,3 +367,8 @@ def smoother_matrix(x, lam, w=None):
     """Matrice de lissage :math:`S_\\lambda` d'une spline de lissage (éq. (5.14))."""
     s = SmoothingSpline(lam=lam).fit(x, np.zeros(len(x)), w)
     return s.smoother_matrix()
+
+
+def effective_df(x, lam, w=None):
+    """Degrés de liberté effectifs :math:`df_\\lambda = \\mathrm{tr}(S_\\lambda)` (éq. (5.16))."""
+    return SmoothingSpline(lam=lam).fit(x, np.zeros(len(x)), w).df_
