@@ -372,3 +372,13 @@ def smoother_matrix(x, lam, w=None):
 def effective_df(x, lam, w=None):
     """Degrés de liberté effectifs :math:`df_\\lambda = \\mathrm{tr}(S_\\lambda)` (éq. (5.16))."""
     return SmoothingSpline(lam=lam).fit(x, np.zeros(len(x)), w).df_
+
+
+def lambda_for_df(x, df, w=None):
+    """Valeur de :math:`\\lambda` telle que :math:`\\mathrm{tr}(S_\\lambda) = df`.
+
+    :math:`df_\\lambda` décroît strictement de :math:`n` (nombre de valeurs
+    distinctes) à 2 quand :math:`\\lambda` croît de 0 à l'infini : on résout
+    l'équation par la méthode de Brent sur :math:`\\log\\lambda`.
+    """
+    return SmoothingSpline(df=df).fit(x, np.zeros(len(x)), w).lam_
