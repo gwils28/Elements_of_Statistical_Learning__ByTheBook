@@ -382,3 +382,11 @@ def lambda_for_df(x, df, w=None):
     l'équation par la méthode de Brent sur :math:`\\log\\lambda`.
     """
     return SmoothingSpline(df=df).fit(x, np.zeros(len(x)), w).lam_
+
+
+def loocv_score(x, y, lam):
+    """Validation croisée « leave-one-out » par la formule (5.27) du livre."""
+    s = SmoothingSpline(lam=lam).fit(x, y)
+    S = s.smoother_matrix()
+    r = (y - S @ y) / (1 - np.diag(S))
+    return np.mean(r ** 2)
