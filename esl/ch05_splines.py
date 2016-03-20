@@ -398,3 +398,50 @@ def gcv_score(x, y, lam):
     S = s.smoother_matrix()
     N = len(y)
     return np.mean(((y - S @ y) / (1 - np.trace(S) / N)) ** 2)
+
+
+# ---------------------------------------------------------------------------
+# Ondelettes de Haar
+# ---------------------------------------------------------------------------
+
+def haar_transform(y):
+    """Transformée de Haar orthonormée rapide (algorithme pyramidal en O(N)).
+
+    Parameters
+    ----------
+    y : array_like, shape (N,), N = 2**J
+
+    Returns
+    -------
+    c : ndarray, shape (N,)
+        ``c[0]`` : coefficient d'échelle (espace :math:`V_0`) ; puis les
+        coefficients d'ondelettes des niveaux :math:`j = 0, 1, \\dots, J-1`,
+        le niveau :math:`j` occupant ``c[2**j : 2**(j+1)]``.
+    """
+    a = np.asarray(y, dtype=float)
+    N = len(a)
+    J = int(round(np.log2(N)))
+    if 2 ** J != N:
+        raise ValueError("La longueur doit être une puissance de 2.")
+    details = []
+    for _ in range(J):
+        s = (a[0::2] + a[1::2]) / np.sqrt(2)
+        d = (a[0::2] - a[1::2]) / np.sqrt(2)
+        details.append(d)
+        a = s
+    return np.concatenate([a] + details[::-1])
+
+
+def inverse_haar_transform(c):
+    """Inverse de :func:`haar_transform` (également en O(N))."""
+    c = np.asarray(c, dtype=float)
+    N = len(c)
+    J = int(round(np.log2(N)))
+    a = c[:1].copy()
+    for j in range(J):
+        d = c[2 ** j:2 ** (j + 1)]
+        out = np.empty(2 * len(a))
+        out[0::2] = (a + d) / np.sqrt(2)
+        out[1::2] = (a - d) / np.sqrt(2)
+        a = out
+    return a
