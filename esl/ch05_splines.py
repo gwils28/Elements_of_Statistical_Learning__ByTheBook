@@ -390,3 +390,11 @@ def loocv_score(x, y, lam):
     S = s.smoother_matrix()
     r = (y - S @ y) / (1 - np.diag(S))
     return np.mean(r ** 2)
+
+
+def gcv_score(x, y, lam):
+    """Validation croisée généralisée : moyenne de :math:`((y_i-\\hat f_i)/(1-df/N))^2`."""
+    s = SmoothingSpline(lam=lam).fit(x, y)
+    S = s.smoother_matrix()
+    N = len(y)
+    return np.mean(((y - S @ y) / (1 - np.trace(S) / N)) ** 2)
