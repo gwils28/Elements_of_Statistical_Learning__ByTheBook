@@ -445,3 +445,9 @@ def inverse_haar_transform(c):
         out[1::2] = (a - d) / np.sqrt(2)
         a = out
     return a
+
+
+def haar_matrix(N):
+    """Matrice orthogonale :math:`W` (N x N) dont les colonnes sont les ondelettes
+    de Haar discrètes, de sorte que ``haar_transform(y) == W.T @ y``."""
+    return np.column_stack([inverse_haar_transform(e) for e in np.eye(N)])
