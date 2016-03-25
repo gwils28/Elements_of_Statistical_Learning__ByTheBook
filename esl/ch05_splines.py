@@ -451,3 +451,9 @@ def haar_matrix(N):
     """Matrice orthogonale :math:`W` (N x N) dont les colonnes sont les ondelettes
     de Haar discrètes, de sorte que ``haar_transform(y) == W.T @ y``."""
     return np.column_stack([inverse_haar_transform(e) for e in np.eye(N)])
+
+
+def soft_threshold(z, lam):
+    """Seuillage doux :math:`\\mathrm{sign}(z)(|z| - \\lambda)_+` (éq. (5.69))."""
+    z = np.asarray(z, dtype=float)
+    return np.sign(z) * np.maximum(np.abs(z) - lam, 0.0)
