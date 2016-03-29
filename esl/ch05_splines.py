@@ -457,3 +457,41 @@ def soft_threshold(z, lam):
     """Seuillage doux :math:`\\mathrm{sign}(z)(|z| - \\lambda)_+` (éq. (5.69))."""
     z = np.asarray(z, dtype=float)
     return np.sign(z) * np.maximum(np.abs(z) - lam, 0.0)
+
+
+# ---------------------------------------------------------------------------
+# Régression logistique (IRLS)
+# ---------------------------------------------------------------------------
+
+def logistic_irls(X, y, max_iter=100, tol=1e-8, ridge=0.0):
+    """Régression logistique binaire par Newton-Raphson (IRLS).
+
+    Parameters
+    ----------
+    X : ndarray, shape (N, p)
+        Matrice de régression (ajouter soi-même une colonne de 1 pour l'intercept).
+    y : ndarray, shape (N,), valeurs dans {0, 1}
+    max_iter : int
+    tol : float
+        Critère d'arrêt sur la norme du pas de Newton.
+    ridge : float
+        Petite pénalité quadratique optionnelle (0 : maximum de vraisemblance).
+
+    Returns
+    -------
+    beta : ndarray, shape (p,)
+    """
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float)
+    beta = np.zeros(X.shape[1])
+    for _ in range(max_iter):
+        eta = X @ beta
+        p = 1 / (1 + np.exp(-eta))
+        W = p * (1 - p)
+        grad = X.T @ (y - p) - ridge * beta
+        H = X.T @ (W[:, None] * X) + ridge * np.eye(X.shape[1])
+        step = np.linalg.solve(H, grad)
+        beta = beta + step
+        if np.linalg.norm(step) < tol * (1 + np.linalg.norm(beta)):
+            break
+    return beta
