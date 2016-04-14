@@ -39,3 +39,10 @@ def test_bspline_matches_scipy(order):
     B = bspline_basis(x, KNOTS, 0, 1, order)
     ref = BSpline.design_matrix(x, t, order - 1).toarray()
     assert np.allclose(B, ref, atol=1e-12)
+
+
+def test_bspline_partition_of_unity_and_positivity():
+    x = np.linspace(0, 1, 301)  # bord droit inclus
+    B = bspline_basis(x, KNOTS, 0, 1, 4)
+    assert np.allclose(B.sum(1), 1)
+    assert (B >= -1e-14).all()
