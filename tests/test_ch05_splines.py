@@ -22,3 +22,11 @@ def test_truncated_power_shape_and_span():
     # même espace : projection de B sur H sans résidu
     coef, *_ = np.linalg.lstsq(H, B, rcond=None)
     assert np.allclose(H @ coef, B, atol=1e-8)
+
+
+def test_piecewise_dimensions():
+    # (K+1)(d+1) - K(c+1) fonctions
+    for c in (-1, 0, 1, 2):
+        H = piecewise_polynomial_basis(X, KNOTS, degree=3, continuity=c)
+        assert H.shape[1] == 4 * 4 - 3 * (c + 1)
+        assert np.linalg.matrix_rank(H) == H.shape[1]
