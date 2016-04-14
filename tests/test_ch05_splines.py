@@ -30,3 +30,12 @@ def test_piecewise_dimensions():
         H = piecewise_polynomial_basis(X, KNOTS, degree=3, continuity=c)
         assert H.shape[1] == 4 * 4 - 3 * (c + 1)
         assert np.linalg.matrix_rank(H) == H.shape[1]
+
+
+@pytest.mark.parametrize("order", [1, 2, 3, 4])
+def test_bspline_matches_scipy(order):
+    t = augmented_knots(KNOTS, 0, 1, order)
+    x = np.linspace(0, 0.999, 200)
+    B = bspline_basis(x, KNOTS, 0, 1, order)
+    ref = BSpline.design_matrix(x, t, order - 1).toarray()
+    assert np.allclose(B, ref, atol=1e-12)
