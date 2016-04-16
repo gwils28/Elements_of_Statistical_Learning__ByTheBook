@@ -46,3 +46,13 @@ def test_bspline_partition_of_unity_and_positivity():
     B = bspline_basis(x, KNOTS, 0, 1, 4)
     assert np.allclose(B.sum(1), 1)
     assert (B >= -1e-14).all()
+
+
+def test_bspline_derivatives():
+    x = np.linspace(0.01, 0.99, 50)
+    t = augmented_knots(KNOTS, 0, 1, 4)
+    c = rng.randn(len(KNOTS) + 4)
+    spl = BSpline(t, c, 3)
+    for d in (1, 2, 3):
+        Bd = bspline_basis(x, KNOTS, 0, 1, 4, deriv=d)
+        assert np.allclose(Bd @ c, spl.derivative(d)(x), atol=1e-8)
