@@ -56,3 +56,16 @@ def test_bspline_derivatives():
     for d in (1, 2, 3):
         Bd = bspline_basis(x, KNOTS, 0, 1, 4, deriv=d)
         assert np.allclose(Bd @ c, spl.derivative(d)(x), atol=1e-8)
+
+
+def test_penalty_matrix_exact():
+    t = augmented_knots(KNOTS, 0, 1, 4)
+    c = rng.randn(len(KNOTS) + 4)
+    Om = bspline_penalty_matrix(KNOTS, 0, 1)
+    f2 = BSpline(t, c, 3).derivative(2)
+    grid = np.linspace(0, 1, 200001)
+    num = np.trapezoid(f2(grid) ** 2, grid)
+    assert np.isclose(c @ Om @ c, num, rtol=1e-6)
+    # le noyau de Omega = fonctions linéaires
+    ev = np.linalg.eigvalsh(Om)
+    assert np.sum(ev < 1e-8 * ev.max()) == 2
