@@ -69,3 +69,16 @@ def test_penalty_matrix_exact():
     # le noyau de Omega = fonctions linéaires
     ev = np.linalg.eigvalsh(Om)
     assert np.sum(ev < 1e-8 * ev.max()) == 2
+
+
+def test_natural_spline_linear_outside():
+    xi = np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+    N = natural_spline_basis(np.array([0.92, 0.95, 0.98, 0.0, 0.03, 0.06]), xi)
+    # différences secondes nulles de chaque côté
+    assert np.allclose(N[0] - 2 * N[1] + N[2], 0, atol=1e-12)
+    assert np.allclose(N[3] - 2 * N[4] + N[5], 0, atol=1e-12)
+    # c'est bien une spline cubique de nœuds xi
+    H = truncated_power_basis(X, xi)
+    Nx = natural_spline_basis(X, xi)
+    coef, *_ = np.linalg.lstsq(H, Nx, rcond=None)
+    assert np.allclose(H @ coef, Nx, atol=1e-10)
