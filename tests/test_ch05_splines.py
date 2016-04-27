@@ -82,3 +82,17 @@ def test_natural_spline_linear_outside():
     Nx = natural_spline_basis(X, xi)
     coef, *_ = np.linalg.lstsq(H, Nx, rcond=None)
     assert np.allclose(H @ coef, Nx, atol=1e-10)
+
+
+def test_smoothing_spline_limits():
+    y = np.sin(6 * X) + 0.1 * rng.randn(60)
+    # lambda tres grand : droite des moindres carres
+    big = SmoothingSpline(lam=1e8).fit(X, y)
+    line = np.polyval(np.polyfit(X, y, 1), X)
+    assert np.allclose(big.predict(X), line, atol=1e-4)
+    # lambda tres petit : interpolation (spline naturelle interpolante)
+    small = SmoothingSpline(lam=1e-16).fit(X, y)
+    assert np.allclose(small.predict(X), y, atol=1e-4)
+    nat = make_interp_spline(X, y, k=3, bc_type="natural")
+    xx = np.linspace(X[0], X[-1], 50)
+    assert np.allclose(small.predict(xx), nat(xx), atol=1e-4)
