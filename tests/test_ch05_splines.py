@@ -106,3 +106,9 @@ def test_smoother_matrix_properties():
     assert np.sum(np.abs(ev - 1) < 1e-8) == 2
     # S reproduit les fonctions lineaires
     assert np.allclose(S @ (2 + 3 * X), 2 + 3 * X, atol=1e-8)
+
+
+def test_df_and_lambda_inverse():
+    lam = lambda_for_df(X, 7.0)
+    assert np.isclose(effective_df(X, lam), 7.0, atol=1e-6)
+    assert effective_df(X, 10 * lam) < 7.0
