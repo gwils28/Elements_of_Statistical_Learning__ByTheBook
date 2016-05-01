@@ -96,3 +96,13 @@ def test_smoothing_spline_limits():
     nat = make_interp_spline(X, y, k=3, bc_type="natural")
     xx = np.linspace(X[0], X[-1], 50)
     assert np.allclose(small.predict(xx), nat(xx), atol=1e-4)
+
+
+def test_smoother_matrix_properties():
+    S = smoother_matrix(X, 1e-4)
+    assert np.allclose(S, S.T, atol=1e-10)
+    ev = np.linalg.eigvalsh(S)
+    assert ev.min() > -1e-10 and ev.max() < 1 + 1e-10
+    assert np.sum(np.abs(ev - 1) < 1e-8) == 2
+    # S reproduit les fonctions lineaires
+    assert np.allclose(S @ (2 + 3 * X), 2 + 3 * X, atol=1e-8)
