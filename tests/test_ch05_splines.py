@@ -112,3 +112,15 @@ def test_df_and_lambda_inverse():
     lam = lambda_for_df(X, 7.0)
     assert np.isclose(effective_df(X, lam), 7.0, atol=1e-6)
     assert effective_df(X, 10 * lam) < 7.0
+
+
+def test_loocv_formula_bruteforce():
+    x = X[::3]
+    y = np.cos(4 * x) + 0.2 * rng.randn(len(x))
+    lam = 1e-4
+    errs = []
+    for i in range(len(x)):
+        m = np.arange(len(x)) != i
+        s = SmoothingSpline(lam=lam).fit(x[m], y[m])
+        errs.append(y[i] - s.predict(x[i:i + 1])[0])
+    assert np.isclose(np.mean(np.square(errs)), loocv_score(x, y, lam), rtol=1e-6)
