@@ -124,3 +124,13 @@ def test_loocv_formula_bruteforce():
         s = SmoothingSpline(lam=lam).fit(x[m], y[m])
         errs.append(y[i] - s.predict(x[i:i + 1])[0])
     assert np.isclose(np.mean(np.square(errs)), loocv_score(x, y, lam), rtol=1e-6)
+
+
+def test_haar():
+    y = rng.randn(64)
+    c = haar_transform(y)
+    W = haar_matrix(64)
+    assert np.allclose(W.T @ W, np.eye(64))
+    assert np.allclose(W.T @ y, c)
+    assert np.allclose(inverse_haar_transform(c), y)
+    assert np.isclose(np.sum(c ** 2), np.sum(y ** 2))
