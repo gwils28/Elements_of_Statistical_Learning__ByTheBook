@@ -134,3 +134,7 @@ def test_haar():
     assert np.allclose(W.T @ y, c)
     assert np.allclose(inverse_haar_transform(c), y)
     assert np.isclose(np.sum(c ** 2), np.sum(y ** 2))
+
+
+def test_soft_threshold():
+    assert np.allclose(soft_threshold([-3, -0.5, 0.2, 2], 1), [-2, 0, 0, 1])
