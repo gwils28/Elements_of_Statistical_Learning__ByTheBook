@@ -138,3 +138,13 @@ def test_haar():
 
 def test_soft_threshold():
     assert np.allclose(soft_threshold([-3, -0.5, 0.2, 2], 1), [-2, 0, 0, 1])
+
+
+def test_logistic_irls_vs_sklearn():
+    from sklearn.linear_model import LogisticRegression
+    Z = rng.randn(300, 3)
+    p = 1 / (1 + np.exp(-(Z @ [1, -2, 0.5] + 0.3)))
+    y = (rng.uniform(size=300) < p).astype(int)
+    b = logistic_irls(np.column_stack([np.ones(300), Z]), y)
+    sk = LogisticRegression(C=np.inf, tol=1e-10, max_iter=1000).fit(Z, y)
+    assert np.allclose(b, np.r_[sk.intercept_, sk.coef_.ravel()], atol=1e-4)
