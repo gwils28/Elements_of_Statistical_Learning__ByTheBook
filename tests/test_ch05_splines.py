@@ -155,3 +155,11 @@ def test_set_lambda_equals_refit():
     s = SmoothingSpline(lam=1e-3).fit(X, y).set_lambda(1e-2)
     r = SmoothingSpline(lam=1e-2).fit(X, y)
     assert np.allclose(s.coef_, r.coef_) and np.isclose(s.df_, r.df_)
+
+
+def test_linear_operator():
+    y = np.cos(3 * X) + 0.1 * rng.randn(60)
+    s = SmoothingSpline(df=6).fit(X, y)
+    x0 = np.linspace(-0.2, 1.2, 37)
+    assert np.allclose(s.linear_operator(x0) @ y, s.predict(x0))
+    assert np.allclose(s.linear_operator(X), s.smoother_matrix())
