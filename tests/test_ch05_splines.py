@@ -148,3 +148,10 @@ def test_logistic_irls_vs_sklearn():
     b = logistic_irls(np.column_stack([np.ones(300), Z]), y)
     sk = LogisticRegression(C=np.inf, tol=1e-10, max_iter=1000).fit(Z, y)
     assert np.allclose(b, np.r_[sk.intercept_, sk.coef_.ravel()], atol=1e-4)
+
+
+def test_set_lambda_equals_refit():
+    y = np.sin(5 * X) + 0.1 * rng.randn(60)
+    s = SmoothingSpline(lam=1e-3).fit(X, y).set_lambda(1e-2)
+    r = SmoothingSpline(lam=1e-2).fit(X, y)
+    assert np.allclose(s.coef_, r.coef_) and np.isclose(s.df_, r.df_)
