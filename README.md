@@ -51,8 +51,8 @@ Lancer les tests : `pytest tests/`.
 | 2 | [Vue d'ensemble de l'apprentissage supervisé](notebooks/ch02_apprentissage_supervise) | ✅ |
 | 3 | [Méthodes linéaires pour la régression](notebooks/ch03_regression_lineaire) | ✅ |
 | 4 | [Méthodes linéaires pour la classification](notebooks/ch04_classification_lineaire) | ✅ |
-| 5 | Expansions de bases et régularisation | 🚧 |
-| 6 | Méthodes de lissage par noyaux | - |
+| 5 | [Expansions de bases et régularisation](notebooks/ch05_bases_et_regularisation) | ✅ |
+| 6 | Méthodes de lissage par noyaux | 🚧 |
 | 7 | Évaluation et sélection de modèles | - |
 | 8 | Inférence et moyennage de modèles | - |
 | 9 | Modèles additifs, arbres et méthodes apparentées | - |
