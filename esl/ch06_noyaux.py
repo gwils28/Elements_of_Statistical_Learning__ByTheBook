@@ -36,3 +36,12 @@ def epanechnikov(t):
     """
     t = np.asarray(t, dtype=float)
     return np.where(np.abs(t) <= 1, 0.75 * (1 - t ** 2), 0.0)
+
+
+def tricube(t):
+    """Noyau tri-cube :math:`D(t) = (1 - |t|^3)^3` sur [-1, 1] (éq. 6.6).
+
+    Non normalisé : son intégrale vaut 81/70.
+    """
+    a = np.abs(np.asarray(t, dtype=float))
+    return np.where(a <= 1, (1 - a ** 3) ** 3, 0.0)
