@@ -45,3 +45,13 @@ def tricube(t):
     """
     a = np.abs(np.asarray(t, dtype=float))
     return np.where(a <= 1, (1 - a ** 3) ** 3, 0.0)
+
+
+def gaussian(t):
+    """Noyau gaussien :math:`D(t) = \\varphi(t)` (densité de la loi N(0, 1))."""
+    t = np.asarray(t, dtype=float)
+    return np.exp(-0.5 * t ** 2) / np.sqrt(2 * np.pi)
+
+
+KERNELS = {"epanechnikov": epanechnikov, "tricube": tricube,
+           "gaussian": gaussian}
