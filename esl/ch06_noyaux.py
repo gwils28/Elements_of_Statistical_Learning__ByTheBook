@@ -55,3 +55,13 @@ def gaussian(t):
 
 KERNELS = {"epanechnikov": epanechnikov, "tricube": tricube,
            "gaussian": gaussian}
+
+
+def _kernel(kernel):
+    """Renvoie la fonction noyau associée à un nom (ou la fonction elle-même)."""
+    if callable(kernel):
+        return kernel
+    try:
+        return KERNELS[kernel]
+    except KeyError:
+        raise ValueError("Noyau inconnu : %r" % (kernel,))
