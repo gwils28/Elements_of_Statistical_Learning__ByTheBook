@@ -65,3 +65,9 @@ def _kernel(kernel):
         return KERNELS[kernel]
     except KeyError:
         raise ValueError("Noyau inconnu : %r" % (kernel,))
+
+
+def _as_2d(x):
+    """Met un tableau de points sous la forme (n, p)."""
+    x = np.asarray(x, dtype=float)
+    return x[:, None] if x.ndim == 1 else x
