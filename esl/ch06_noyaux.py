@@ -71,3 +71,30 @@ def _as_2d(x):
     """Met un tableau de points sous la forme (n, p)."""
     x = np.asarray(x, dtype=float)
     return x[:, None] if x.ndim == 1 else x
+
+
+def distances(x0, x, A=None):
+    """Distances entre points cibles et points d'apprentissage.
+
+    Parameters
+    ----------
+    x0 : array_like, shape (m,) ou (m, p)
+        Points cibles.
+    x : array_like, shape (n,) ou (n, p)
+        Points d'apprentissage.
+    A : ndarray (p, p), optional
+        Matrice semi-définie positive de la métrique
+        :math:`\\sqrt{(x - x_0)^T A (x - x_0)}` (cf. éq. 6.14). Par défaut,
+        l'identité (distance euclidienne).
+
+    Returns
+    -------
+    ndarray, shape (m, n)
+    """
+    x0, x = _as_2d(x0), _as_2d(x)
+    diff = x[None, :, :] - x0[:, None, :]
+    if A is None:
+        d2 = np.einsum("mnp,mnp->mn", diff, diff)
+    else:
+        d2 = np.einsum("mnp,pq,mnq->mn", diff, np.asarray(A, float), diff)
+    return np.sqrt(np.maximum(d2, 0.0))
