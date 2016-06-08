@@ -130,3 +130,15 @@ def kernel_weights(x0, x, lam=None, k=None, kernel="epanechnikov", A=None):
     else:
         h = np.full(d.shape[0], float(lam))
     return _kernel(kernel)(d / h[:, None])
+
+
+# ---------------------------------------------------------------------------
+# Moyennes locales
+# ---------------------------------------------------------------------------
+
+
+def knn_mean(x0, x, y, k):
+    """Moyenne des k plus proches voisins (éq. 6.1)."""
+    d = distances(x0, x)
+    idx = np.argsort(d, axis=1, kind="stable")[:, :k]
+    return np.asarray(y, float)[idx].mean(axis=1)
