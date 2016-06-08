@@ -98,3 +98,35 @@ def distances(x0, x, A=None):
     else:
         d2 = np.einsum("mnp,pq,mnq->mn", diff, np.asarray(A, float), diff)
     return np.sqrt(np.maximum(d2, 0.0))
+
+
+def kernel_weights(x0, x, lam=None, k=None, kernel="epanechnikov", A=None):
+    """Poids :math:`K_\\lambda(x_0, x_i) = D(\\|x_i - x_0\\| / h(x_0))` (éq. 6.5).
+
+    Parameters
+    ----------
+    x0, x : array_like
+        Points cibles (m,) / (m, p) et points d'apprentissage (n,) / (n, p).
+    lam : float, optional
+        Largeur métrique constante :math:`h(x_0) = \\lambda`.
+    k : int, optional
+        Fenêtre adaptative : :math:`h(x_0)` est la distance au k-ième plus
+        proche voisin de :math:`x_0` (exclusif avec ``lam``).
+    kernel : str ou callable
+        ``"epanechnikov"``, ``"tricube"``, ``"gaussian"`` ou une fonction D.
+    A : ndarray, optional
+        Métrique (voir :func:`distances`).
+
+    Returns
+    -------
+    ndarray, shape (m, n)
+    """
+    if (lam is None) == (k is None):
+        raise ValueError("Préciser exactement un des deux paramètres lam ou k.")
+    d = distances(x0, x, A)
+    if k is not None:
+        h = np.partition(d, k - 1, axis=1)[:, k - 1]
+        h = np.where(h > 0, h, 1e-12)
+    else:
+        h = np.full(d.shape[0], float(lam))
+    return _kernel(kernel)(d / h[:, None])
