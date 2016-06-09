@@ -153,3 +153,33 @@ def nadaraya_watson(x0, x, y, lam=None, k=None, kernel="epanechnikov", A=None):
     s = W.sum(axis=1)
     with np.errstate(invalid="ignore", divide="ignore"):
         return np.where(s > 0, W @ np.asarray(y, float) / np.where(s > 0, s, 1), np.nan)
+
+
+# ---------------------------------------------------------------------------
+# Régression polynomiale locale
+# ---------------------------------------------------------------------------
+
+
+def monomials_of_degree(p, degree):
+    """Liste des exposants (tuples de longueur p) de degré total <= ``degree``.
+
+    Le monôme constant ``(0, ..., 0)`` est toujours en tête.
+    """
+    out = [(0,) * p]
+    if degree >= 1:
+        for j in range(p):
+            e = [0] * p
+            e[j] = 1
+            out.append(tuple(e))
+    if degree >= 2:
+        for j in range(p):
+            for l in range(j, p):
+                e = [0] * p
+                e[j] += 1
+                e[l] += 1
+                out.append(tuple(e))
+    if degree >= 3:
+        if p != 1:
+            raise ValueError("Degré > 2 seulement disponible en dimension 1.")
+        out += [(d,) for d in range(3, degree + 1)]
+    return out
