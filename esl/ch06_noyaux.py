@@ -142,3 +142,14 @@ def knn_mean(x0, x, y, k):
     d = distances(x0, x)
     idx = np.argsort(d, axis=1, kind="stable")[:, :k]
     return np.asarray(y, float)[idx].mean(axis=1)
+
+
+def nadaraya_watson(x0, x, y, lam=None, k=None, kernel="epanechnikov", A=None):
+    """Moyenne pondérée de Nadaraya-Watson (éq. 6.2).
+
+    Renvoie ``nan`` aux points cibles dont la fenêtre ne contient aucun point.
+    """
+    W = kernel_weights(x0, x, lam=lam, k=k, kernel=kernel, A=A)
+    s = W.sum(axis=1)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return np.where(s > 0, W @ np.asarray(y, float) / np.where(s > 0, s, 1), np.nan)
