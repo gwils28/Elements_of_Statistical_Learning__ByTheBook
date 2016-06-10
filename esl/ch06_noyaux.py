@@ -183,3 +183,9 @@ def monomials_of_degree(p, degree):
             raise ValueError("Degré > 2 seulement disponible en dimension 1.")
         out += [(d,) for d in range(3, degree + 1)]
     return out
+
+
+def _design(xc, monomials):
+    """Matrice des monômes évalués en des coordonnées centrées ``xc`` (n, p)."""
+    cols = [np.prod(xc ** np.asarray(e)[None, :], axis=1) for e in monomials]
+    return np.column_stack(cols)
