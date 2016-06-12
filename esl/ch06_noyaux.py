@@ -241,3 +241,11 @@ def local_weights_matrix(x0, x, lam=None, k=None, degree=1, kernel="tricube",
             continue
         L[a] = np.linalg.solve(M, BtW)[j0]
     return L
+
+
+def local_regression(x0, x, y, lam=None, k=None, degree=1, kernel="tricube",
+                     A=None, monomials=None):
+    """Prédictions :math:`\\hat f(x_0)` de la régression polynomiale locale."""
+    L = local_weights_matrix(x0, x, lam=lam, k=k, degree=degree, kernel=kernel,
+                             A=A, monomials=monomials)
+    return L @ np.asarray(y, float)
