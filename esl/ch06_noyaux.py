@@ -189,3 +189,55 @@ def _design(xc, monomials):
     """Matrice des monômes évalués en des coordonnées centrées ``xc`` (n, p)."""
     cols = [np.prod(xc ** np.asarray(e)[None, :], axis=1) for e in monomials]
     return np.column_stack(cols)
+
+
+def local_weights_matrix(x0, x, lam=None, k=None, degree=1, kernel="tricube",
+                         A=None, monomials=None, W=None):
+    """Noyau équivalent de la régression polynomiale locale (éq. 6.8-6.9).
+
+    Pour chaque point cible :math:`x_0`, on résout le problème de moindres
+    carrés pondérés (6.12) avec des monômes centrés en :math:`x_0` ; la
+    prédiction :math:`\\hat f(x_0)` est alors le coefficient du monôme
+    constant, ce qui s'écrit :math:`\\hat f(x_0) = \\sum_i l_i(x_0) y_i`.
+
+    Parameters
+    ----------
+    x0, x : array_like
+        Points cibles et points d'apprentissage.
+    lam, k, kernel, A :
+        Voir :func:`kernel_weights`.
+    degree : int
+        Degré du polynôme local (0 : Nadaraya-Watson, 1 : linéaire local...).
+    monomials : list of tuple, optional
+        Liste explicite d'exposants (doit contenir le monôme constant) ; elle
+        remplace ``degree`` (utile pour les modèles à coefficients variables).
+    W : ndarray (m, n), optional
+        Poids déjà calculés (remplacent ``lam``/``k``/``kernel``).
+
+    Returns
+    -------
+    L : ndarray, shape (m, n)
+        ``L[a, i]`` = :math:`l_i(x_{0,a})`. Lignes à ``nan`` si le système
+        local est singulier (trop peu de points dans la fenêtre).
+    """
+    x0, x = _as_2d(x0), _as_2d(x)
+    p = x.shape[1]
+    if monomials is None:
+        monomials = monomials_of_degree(p, degree)
+    monomials = [tuple(e) for e in monomials]
+    const = (0,) * p
+    if const not in monomials:
+        raise ValueError("Le monôme constant doit figurer dans la liste.")
+    j0 = monomials.index(const)
+    if W is None:
+        W = kernel_weights(x0, x, lam=lam, k=k, kernel=kernel, A=A)
+    L = np.full((x0.shape[0], x.shape[0]), np.nan)
+    for a in range(x0.shape[0]):
+        w = W[a]
+        B = _design(x - x0[a], monomials)
+        BtW = B.T * w
+        M = BtW @ B
+        if np.linalg.matrix_rank(M, tol=1e-10 * max(1.0, np.abs(M).max())) < M.shape[0]:
+            continue
+        L[a] = np.linalg.solve(M, BtW)[j0]
+    return L
