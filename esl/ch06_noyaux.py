@@ -249,3 +249,13 @@ def local_regression(x0, x, y, lam=None, k=None, degree=1, kernel="tricube",
     L = local_weights_matrix(x0, x, lam=lam, k=k, degree=degree, kernel=kernel,
                              A=A, monomials=monomials)
     return L @ np.asarray(y, float)
+
+
+def smoother_matrix(x, lam=None, k=None, degree=1, kernel="tricube", A=None):
+    """Matrice de lissage :math:`S_\\lambda` telle que :math:`\\hat{\\mathbf f} = S_\\lambda y`.
+
+    ``S[i, j]`` = :math:`l_j(x_i)` (poids de :math:`y_j` dans l'ajustement en
+    :math:`x_i`).
+    """
+    return local_weights_matrix(x, x, lam=lam, k=k, degree=degree,
+                                kernel=kernel, A=A)
