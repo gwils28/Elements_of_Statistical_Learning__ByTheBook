@@ -259,3 +259,8 @@ def smoother_matrix(x, lam=None, k=None, degree=1, kernel="tricube", A=None):
     """
     return local_weights_matrix(x, x, lam=lam, k=k, degree=degree,
                                 kernel=kernel, A=A)
+
+
+def effective_df(S):
+    """Degrés de liberté effectifs :math:`\\mathrm{trace}(S_\\lambda)`."""
+    return float(np.trace(S))
