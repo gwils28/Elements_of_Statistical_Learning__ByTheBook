@@ -264,3 +264,14 @@ def smoother_matrix(x, lam=None, k=None, degree=1, kernel="tricube", A=None):
 def effective_df(S):
     """Degrés de liberté effectifs :math:`\\mathrm{trace}(S_\\lambda)`."""
     return float(np.trace(S))
+
+
+def loocv_error(S, y):
+    """Erreur de validation croisée « leave-one-out » d'un lisseur linéaire.
+
+    Utilise la formule :math:`y_i - \\hat f^{(-i)}(x_i) =
+    (y_i - \\hat f(x_i)) / (1 - S_{ii})` (exercice 6.7).
+    """
+    y = np.asarray(y, float)
+    r = (y - S @ y) / (1 - np.diag(S))
+    return float(np.mean(r ** 2))
