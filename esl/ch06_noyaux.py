@@ -275,3 +275,10 @@ def loocv_error(S, y):
     y = np.asarray(y, float)
     r = (y - S @ y) / (1 - np.diag(S))
     return float(np.mean(r ** 2))
+
+
+def gcv_error(S, y):
+    """Validation croisée généralisée :math:`\\mathrm{ASR}/(1 - \\mathrm{tr}(S)/N)^2`."""
+    y = np.asarray(y, float)
+    n = len(y)
+    return float(np.mean((y - S @ y) ** 2) / (1 - np.trace(S) / n) ** 2)
