@@ -282,3 +282,10 @@ def gcv_error(S, y):
     y = np.asarray(y, float)
     n = len(y)
     return float(np.mean((y - S @ y) ** 2) / (1 - np.trace(S) / n) ** 2)
+
+
+def cp_criterion(S, y, sigma2):
+    """Critère :math:`C_\\lambda = \\mathrm{ASR} + 2 \\sigma^2 \\mathrm{tr}(S)/N` (éq. 6.35)."""
+    y = np.asarray(y, float)
+    n = len(y)
+    return float(np.mean((y - S @ y) ** 2) + 2 * sigma2 * np.trace(S) / n)
