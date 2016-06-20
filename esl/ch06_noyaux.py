@@ -289,3 +289,46 @@ def cp_criterion(S, y, sigma2):
     y = np.asarray(y, float)
     n = len(y)
     return float(np.mean((y - S @ y) ** 2) + 2 * sigma2 * np.trace(S) / n)
+
+
+# ---------------------------------------------------------------------------
+# Régression logistique globale et locale
+# ---------------------------------------------------------------------------
+
+
+def _sigmoid(z):
+    return 0.5 * (1 + np.tanh(0.5 * z))
+
+
+def logistic_irls(X, y, w=None, n_iter=100, tol=1e-10, ridge=1e-10):
+    """Régression logistique binaire pondérée par Newton-Raphson (IRLS).
+
+    Maximise :math:`\\sum_i w_i [y_i \\eta_i - \\log(1 + e^{\\eta_i})]` avec
+    :math:`\\eta_i = x_i^T \\beta` (la colonne de 1 doit être fournie).
+
+    Parameters
+    ----------
+    X : ndarray (n, q)
+    y : ndarray (n,) à valeurs dans {0, 1}
+    w : ndarray (n,), optional
+        Poids des observations (par ex. poids de noyau).
+    ridge : float
+        Petite pénalité quadratique qui stabilise les cas séparables.
+
+    Returns
+    -------
+    beta : ndarray (q,)
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    w = np.ones(len(y)) if w is None else np.asarray(w, float)
+    beta = np.zeros(X.shape[1])
+    for _ in range(n_iter):
+        p = _sigmoid(X @ beta)
+        g = X.T @ (w * (y - p)) - ridge * beta
+        H = (X.T * (w * p * (1 - p))) @ X + ridge * np.eye(X.shape[1])
+        step = np.linalg.solve(H, g)
+        beta = beta + step
+        if np.max(np.abs(step)) < tol:
+            break
+    return beta
