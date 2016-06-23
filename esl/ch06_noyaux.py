@@ -332,3 +332,40 @@ def logistic_irls(X, y, w=None, n_iter=100, tol=1e-10, ridge=1e-10):
         if np.max(np.abs(step)) < tol:
             break
     return beta
+
+
+def local_logistic(x0, x, y, lam=None, k=None, degree=1, kernel="tricube",
+                   n_iter=50, ridge=1e-8):
+    """Régression logistique polynomiale locale (vraisemblance locale, §6.5).
+
+    Pour chaque :math:`x_0`, on maximise la log-vraisemblance pondérée par
+    :math:`K_\\lambda(x_0, x_i)` d'un modèle logistique dont le logit est un
+    polynôme en :math:`x - x_0`.
+
+    Returns
+    -------
+    prob : ndarray (m,)
+        Probabilités estimées :math:`\\hat P(Y = 1 | x_0)`.
+    se_logit : ndarray (m,)
+        Écart-type « sandwich » estimé du logit en :math:`x_0`.
+    """
+    x0, x = _as_2d(x0), _as_2d(x)
+    y = np.asarray(y, float)
+    W = kernel_weights(x0, x, lam=lam, k=k, kernel=kernel)
+    monos = monomials_of_degree(x.shape[1], degree)
+    prob = np.full(x0.shape[0], np.nan)
+    se = np.full(x0.shape[0], np.nan)
+    for a in range(x0.shape[0]):
+        w = W[a]
+        keep = w > 0
+        B = _design(x[keep] - x0[a], monos)
+        beta = logistic_irls(B, y[keep], w[keep], n_iter=n_iter, ridge=ridge)
+        p = _sigmoid(B @ beta)
+        v = p * (1 - p)
+        H = (B.T * (w[keep] * v)) @ B + ridge * np.eye(B.shape[1])
+        G = (B.T * (w[keep] ** 2 * v)) @ B
+        Hi = np.linalg.inv(H)
+        cov = Hi @ G @ Hi
+        prob[a] = _sigmoid(beta[0])
+        se[a] = np.sqrt(max(cov[0, 0], 0.0))
+    return prob, se
