@@ -369,3 +369,18 @@ def local_logistic(x0, x, y, lam=None, k=None, degree=1, kernel="tricube",
         prob[a] = _sigmoid(beta[0])
         se[a] = np.sqrt(max(cov[0, 0], 0.0))
     return prob, se
+
+
+# ---------------------------------------------------------------------------
+# Densités par noyau et classification
+# ---------------------------------------------------------------------------
+
+
+def silverman_bandwidth(x):
+    """Règle de Silverman :math:`0.9 \\min(\\hat\\sigma, \\mathrm{IQR}/1.34) N^{-1/5}`."""
+    x = np.asarray(x, float)
+    q75, q25 = np.percentile(x, [75, 25])
+    s = min(np.std(x, ddof=1), (q75 - q25) / 1.34)
+    if s <= 0:
+        s = np.std(x, ddof=1) if np.std(x) > 0 else 1.0
+    return 0.9 * s * len(x) ** (-0.2)
