@@ -384,3 +384,20 @@ def silverman_bandwidth(x):
     if s <= 0:
         s = np.std(x, ddof=1) if np.std(x) > 0 else 1.0
     return 0.9 * s * len(x) ** (-0.2)
+
+
+def kde(x0, x, lam, kernel="gaussian"):
+    """Estimateur de densité de Parzen.
+
+    En dimension 1 : :math:`\\hat f(x_0) = \\frac{1}{N\\lambda} \\sum_i
+    D(|x_0 - x_i| / \\lambda)` (éq. 6.22), pour tout noyau d'intégrale 1.
+    En dimension p > 1 : noyau gaussien produit (éq. 6.24) uniquement.
+    """
+    x0, x = _as_2d(x0), _as_2d(x)
+    p = x.shape[1]
+    d = distances(x0, x)
+    if p == 1:
+        return _kernel(kernel)(d / lam).mean(axis=1) / lam
+    if kernel != "gaussian":
+        raise ValueError("En dimension > 1, seul le noyau gaussien est prévu.")
+    return np.exp(-0.5 * (d / lam) ** 2).mean(axis=1) / (2 * np.pi * lam ** 2) ** (p / 2)
