@@ -401,3 +401,34 @@ def kde(x0, x, lam, kernel="gaussian"):
     if kernel != "gaussian":
         raise ValueError("En dimension > 1, seul le noyau gaussien est prévu.")
     return np.exp(-0.5 * (d / lam) ** 2).mean(axis=1) / (2 * np.pi * lam ** 2) ** (p / 2)
+
+
+def kde_posterior(x0, x, g, lam, priors=None, kernel="gaussian"):
+    """Probabilités a posteriori par densités de classe estimées (éq. 6.25).
+
+    Parameters
+    ----------
+    x0, x : array_like
+        Points cibles et points d'apprentissage.
+    g : array_like (n,)
+        Étiquettes de classe.
+    lam : float ou sequence
+        Largeur(s) de fenêtre (une par classe éventuellement).
+    priors : array_like, optional
+        Probabilités a priori ; par défaut les proportions empiriques.
+
+    Returns
+    -------
+    post : ndarray (m, J), classes : ndarray (J,)
+    """
+    g = np.asarray(g)
+    x = _as_2d(x)
+    classes = np.unique(g)
+    lams = np.broadcast_to(np.asarray(lam, float), (len(classes),))
+    if priors is None:
+        priors = np.array([np.mean(g == c) for c in classes])
+    dens = np.column_stack([kde(x0, x[g == c], lams[j], kernel)
+                            for j, c in enumerate(classes)])
+    num = dens * np.asarray(priors)[None, :]
+    with np.errstate(invalid="ignore"):
+        return num / num.sum(axis=1, keepdims=True), classes
