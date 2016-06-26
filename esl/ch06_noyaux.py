@@ -519,3 +519,17 @@ def rbf_basis(x, centers, lam, normalized=False):
     if normalized:
         H = H / H.sum(axis=1, keepdims=True)
     return H
+
+
+def gmm_log_components(X, weights, means, covs):
+    """Matrice (n, M) des :math:`\\log(\\alpha_m \\varphi(x_i; \\mu_m, \\Sigma_m))`."""
+    X = _as_2d(X)
+    n, p = X.shape
+    out = np.empty((n, len(weights)))
+    for m in range(len(weights)):
+        C = np.linalg.cholesky(np.atleast_2d(covs[m]))
+        z = np.linalg.solve(C, (X - means[m]).T)
+        logdet = 2 * np.sum(np.log(np.diag(C)))
+        out[:, m] = (np.log(weights[m]) - 0.5 * np.sum(z ** 2, axis=0)
+                     - 0.5 * logdet - 0.5 * p * np.log(2 * np.pi))
+    return out
