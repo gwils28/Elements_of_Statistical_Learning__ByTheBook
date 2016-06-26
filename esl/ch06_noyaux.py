@@ -432,3 +432,90 @@ def kde_posterior(x0, x, g, lam, priors=None, kernel="gaussian"):
     num = dens * np.asarray(priors)[None, :]
     with np.errstate(invalid="ignore"):
         return num / num.sum(axis=1, keepdims=True), classes
+
+
+class NaiveBayesKDE:
+    """Classifieur bayésien naïf à marges estimées par noyau (§6.6.3).
+
+    Chaque densité marginale conditionnelle :math:`f_{jk}` est estimée par un
+    noyau gaussien unidimensionnel (variables continues) ou par des
+    fréquences lissées (variables discrètes), puis
+    :math:`\\log \\hat P(G = j | x) = \\log \\hat\\pi_j + \\sum_k \\log \\hat
+    f_{jk}(x_k) + \\text{cte}` (éq. 6.26-6.27).
+
+    Parameters
+    ----------
+    discrete : sequence of bool, optional
+        Indique les colonnes discrètes.
+    bw_factor : float
+        Facteur multiplicatif appliqué aux largeurs de Silverman.
+    """
+
+    def __init__(self, discrete=None, bw_factor=1.0):
+        self.discrete = discrete
+        self.bw_factor = bw_factor
+
+    def fit(self, X, y):
+        X = _as_2d(X)
+        y = np.asarray(y)
+        p = X.shape[1]
+        self.discrete_ = (np.zeros(p, bool) if self.discrete is None
+                          else np.asarray(self.discrete, bool))
+        self.classes_ = np.unique(y)
+        self.log_prior_ = np.log([np.mean(y == c) for c in self.classes_])
+        self.models_ = []
+        for c in self.classes_:
+            Xc = X[y == c]
+            cols = []
+            for j in range(p):
+                if self.discrete_[j]:
+                    levels = np.unique(X[:, j])
+                    counts = np.array([np.sum(Xc[:, j] == v) for v in levels]) + 1.0
+                    cols.append(("d", levels, np.log(counts / counts.sum())))
+                else:
+                    bw = self.bw_factor * silverman_bandwidth(Xc[:, j])
+                    cols.append(("c", Xc[:, j].copy(), bw))
+            self.models_.append(cols)
+        return self
+
+    def log_marginals(self, X):
+        """Tableau (n, J, p) des :math:`\\log \\hat f_{jk}(x_k)`."""
+        X = _as_2d(X)
+        out = np.zeros((X.shape[0], len(self.classes_), X.shape[1]))
+        for j, cols in enumerate(self.models_):
+            for k, (kind, a, b) in enumerate(cols):
+                if kind == "d":
+                    idx = np.searchsorted(a, X[:, k])
+                    idx = np.clip(idx, 0, len(a) - 1)
+                    out[:, j, k] = np.where(a[idx] == X[:, k], b[idx], -np.inf)
+                else:
+                    out[:, j, k] = np.log(np.maximum(kde(X[:, k], a, b), 1e-300))
+        return out
+
+    def predict_log_proba(self, X):
+        s = self.log_prior_[None, :] + self.log_marginals(X).sum(axis=2)
+        m = s.max(axis=1, keepdims=True)
+        return s - (m + np.log(np.exp(s - m).sum(axis=1, keepdims=True)))
+
+    def predict_proba(self, X):
+        return np.exp(self.predict_log_proba(X))
+
+    def predict(self, X):
+        return self.classes_[np.argmax(self.predict_log_proba(X), axis=1)]
+
+
+# ---------------------------------------------------------------------------
+# Fonctions de base radiales et mélanges gaussiens
+# ---------------------------------------------------------------------------
+
+
+def rbf_basis(x, centers, lam, normalized=False):
+    """Base radiale gaussienne :math:`D(\\|x - \\xi_j\\| / \\lambda)` (éq. 6.28).
+
+    Avec ``normalized=True``, chaque ligne est divisée par sa somme
+    (fonctions de base renormalisées, éq. 6.30).
+    """
+    H = gaussian(distances(x, centers) / lam)
+    if normalized:
+        H = H / H.sum(axis=1, keepdims=True)
+    return H
