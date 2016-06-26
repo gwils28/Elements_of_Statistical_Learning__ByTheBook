@@ -533,3 +533,8 @@ def gmm_log_components(X, weights, means, covs):
         out[:, m] = (np.log(weights[m]) - 0.5 * np.sum(z ** 2, axis=0)
                      - 0.5 * logdet - 0.5 * p * np.log(2 * np.pi))
     return out
+
+
+def _logsumexp(a, axis=1):
+    m = np.max(a, axis=axis, keepdims=True)
+    return (m + np.log(np.sum(np.exp(a - m), axis=axis, keepdims=True))).squeeze(axis)
