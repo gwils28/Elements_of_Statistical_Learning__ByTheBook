@@ -538,3 +538,57 @@ def gmm_log_components(X, weights, means, covs):
 def _logsumexp(a, axis=1):
     m = np.max(a, axis=axis, keepdims=True)
     return (m + np.log(np.sum(np.exp(a - m), axis=axis, keepdims=True))).squeeze(axis)
+
+
+def gmm_em(X, M, n_iter=500, tol=1e-10, means_init=None, rng=None, reg=0.0):
+    """Mélange gaussien (éq. 6.32) ajusté par l'algorithme EM.
+
+    Parameters
+    ----------
+    X : array_like (n,) ou (n, p)
+    M : int
+        Nombre de composantes.
+    means_init : array_like (M, p), optional
+        Centres initiaux ; sinon M observations tirées au hasard.
+    rng : np.random.RandomState, optional
+    reg : float
+        Terme ajouté à la diagonale des covariances (0 : EM « pur »).
+
+    Returns
+    -------
+    dict
+        ``weights`` (M,), ``means`` (M, p), ``covs`` (M, p, p), ``resp``
+        (n, M) les responsabilités :math:`\\hat r_{im}` (éq. 6.33) et
+        ``loglik`` la liste des log-vraisemblances successives.
+    """
+    X = _as_2d(X)
+    n, p = X.shape
+    rng = np.random.RandomState(0) if rng is None else rng
+    if means_init is None:
+        means = X[rng.choice(n, M, replace=False)].copy()
+    else:
+        means = _as_2d(np.asarray(means_init, float)).reshape(M, p).copy()
+    covs = np.array([np.cov(X.T).reshape(p, p) + reg * np.eye(p) for _ in range(M)])
+    weights = np.full(M, 1.0 / M)
+    loglik = []
+    for _ in range(n_iter):
+        # Étape E : responsabilités
+        lc = gmm_log_components(X, weights, means, covs)
+        ll = _logsumexp(lc)
+        loglik.append(float(ll.sum()))
+        resp = np.exp(lc - ll[:, None])
+        # Étape M : moyennes, covariances et proportions pondérées
+        nk = resp.sum(axis=0)
+        weights = nk / n
+        means = (resp.T @ X) / nk[:, None]
+        for m in range(M):
+            D = X - means[m]
+            covs[m] = (D.T * resp[:, m]) @ D / nk[m] + reg * np.eye(p)
+        if len(loglik) > 1 and abs(loglik[-1] - loglik[-2]) < tol * abs(loglik[-1]):
+            break
+    lc = gmm_log_components(X, weights, means, covs)
+    ll = _logsumexp(lc)
+    loglik.append(float(ll.sum()))
+    resp = np.exp(lc - ll[:, None])
+    return {"weights": weights, "means": means, "covs": covs, "resp": resp,
+            "loglik": loglik}
