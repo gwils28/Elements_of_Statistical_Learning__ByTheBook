@@ -592,3 +592,70 @@ def gmm_em(X, M, n_iter=500, tol=1e-10, means_init=None, rng=None, reg=0.0):
     resp = np.exp(lc - ll[:, None])
     return {"weights": weights, "means": means, "covs": covs, "resp": resp,
             "loglik": loglik}
+
+
+# ---------------------------------------------------------------------------
+# Analyse discriminante linéaire locale (exercice 6.12)
+# ---------------------------------------------------------------------------
+
+
+def local_lda_predict(X0, X, y, lam, reg=1e-3, batch=250):
+    """Analyse discriminante linéaire locale à noyau gaussien.
+
+    En chaque point cible :math:`x_0`, les observations reçoivent les poids
+    :math:`w_i = \\exp(-\\|x_i - x_0\\|^2 / (2\\lambda^2))` ; les proportions
+    :math:`\\hat\\pi_k`, les moyennes :math:`\\hat\\mu_k` et la covariance
+    intra-classe commune :math:`\\hat\\Sigma` sont des moyennes pondérées, et
+    l'on classe selon les fonctions discriminantes linéaires (éq. 4.10 du
+    livre) :math:`\\delta_k(x_0) = x_0^T \\hat\\Sigma^{-1} \\hat\\mu_k -
+    \\tfrac12 \\hat\\mu_k^T \\hat\\Sigma^{-1} \\hat\\mu_k + \\log \\hat\\pi_k`.
+
+    Parameters
+    ----------
+    X0 : ndarray (m, d)
+        Points à classer.
+    X, y : ndarray (n, d), (n,)
+        Données d'apprentissage.
+    lam : float
+        Largeur du noyau (``np.inf`` : ADL globale).
+    reg : float
+        Constante ajoutée à la diagonale de :math:`\\hat\\Sigma` (stabilité).
+
+    Returns
+    -------
+    ndarray (m,)
+        Classes prédites.
+    """
+    X0, X = _as_2d(X0), _as_2d(X)
+    y = np.asarray(y)
+    classes = np.unique(y)
+    n, d = X.shape
+    XX = np.einsum("ni,nj->nij", X, X).reshape(n, d * d)
+    sqX = np.sum(X ** 2, axis=1)
+    pred = np.empty(X0.shape[0], dtype=classes.dtype)
+    for s in range(0, X0.shape[0], batch):
+        Q = X0[s:s + batch]
+        q = Q.shape[0]
+        if np.isinf(lam):
+            Wt = np.ones((q, n))
+        else:
+            d2 = np.maximum(np.sum(Q ** 2, 1)[:, None] + sqX[None, :] - 2 * Q @ X.T, 0)
+            d2 -= d2.min(axis=1, keepdims=True)  # facteur commun : sans effet
+            Wt = np.exp(-0.5 * d2 / lam ** 2)
+        Wtot = Wt.sum(axis=1)
+        S2 = (Wt @ XX).reshape(q, d, d) / Wtot[:, None, None]
+        mus = np.empty((q, len(classes), d))
+        pis = np.empty((q, len(classes)))
+        for j, c in enumerate(classes):
+            idx = y == c
+            wk = Wt[:, idx].sum(axis=1)
+            pis[:, j] = wk / Wtot
+            with np.errstate(invalid="ignore", divide="ignore"):
+                mus[:, j] = (Wt[:, idx] @ X[idx]) / np.where(wk > 0, wk, 1)[:, None]
+        Sigma = S2 - np.einsum("qk,qki,qkj->qij", pis, mus, mus) + reg * np.eye(d)
+        sol = np.linalg.solve(Sigma, np.transpose(mus, (0, 2, 1)))  # (q, d, K)
+        with np.errstate(divide="ignore"):
+            delta = (np.einsum("qd,qdk->qk", Q, sol)
+                     - 0.5 * np.einsum("qkd,qdk->qk", mus, sol) + np.log(pis))
+        pred[s:s + q] = classes[np.argmax(delta, axis=1)]
+    return pred
