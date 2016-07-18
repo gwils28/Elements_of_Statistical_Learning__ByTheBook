@@ -25,3 +25,11 @@ def test_nw_equals_local_constant():
     a = nk.nadaraya_watson(x0, x, y, lam=0.2, kernel="tricube")
     b = nk.local_regression(x0, x, y, lam=0.2, degree=0, kernel="tricube")
     assert np.allclose(a, b)
+
+
+def test_knn_mean_brute_force():
+    x, y = _data()
+    x0 = np.array([0.3, 0.71])
+    for j, t in enumerate(x0):
+        idx = np.argsort(np.abs(x - t))[:10]
+        assert nk.knn_mean(x0, x, y, 10)[j] == pytest.approx(y[idx].mean())
