@@ -17,3 +17,11 @@ def test_kernels_integrals():
     assert integrate.quad(nk.gaussian, -np.inf, np.inf)[0] == pytest.approx(1.0)
     assert integrate.quad(nk.tricube, -1, 1)[0] == pytest.approx(81 / 70)
     assert nk.epanechnikov(1.5) == 0 and nk.tricube(-1.2) == 0
+
+
+def test_nw_equals_local_constant():
+    x, y = _data()
+    x0 = np.linspace(0.05, 0.95, 15)
+    a = nk.nadaraya_watson(x0, x, y, lam=0.2, kernel="tricube")
+    b = nk.local_regression(x0, x, y, lam=0.2, degree=0, kernel="tricube")
+    assert np.allclose(a, b)
