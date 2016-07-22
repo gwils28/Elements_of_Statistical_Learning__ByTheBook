@@ -45,3 +45,12 @@ def test_moments_of_equivalent_kernel(degree):
         for j in range(degree + 1):
             bj = np.sum((x - t) ** j * L[a])
             assert bj == pytest.approx(1.0 if j == 0 else 0.0, abs=1e-8)
+
+
+def test_local_linear_reproduces_lines_in_2d():
+    rng = np.random.RandomState(1)
+    X = rng.normal(size=(60, 2))
+    y = 1.0 - 2 * X[:, 0] + 0.5 * X[:, 1]
+    X0 = rng.normal(size=(5, 2))
+    f = nk.local_regression(X0, X, y, k=20, degree=1)
+    assert np.allclose(f, 1.0 - 2 * X0[:, 0] + 0.5 * X0[:, 1])
