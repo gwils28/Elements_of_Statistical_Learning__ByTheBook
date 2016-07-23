@@ -80,3 +80,12 @@ def test_varying_coefficient_through_monomials():
     f = nk.local_regression(X0, X, y, lam=0.3, kernel="tricube", A=A, monomials=monos)
     truth = 1 + 2 * X0[:, 1] + (1 + X0[:, 1]) * X0[:, 0]
     assert np.allclose(f, truth)
+
+
+def test_logistic_irls_matches_known_optimum():
+    rng = np.random.RandomState(3)
+    X = np.column_stack([np.ones(300), rng.normal(size=300)])
+    y = (rng.uniform(size=300) < 1 / (1 + np.exp(-(0.5 + X[:, 1])))).astype(float)
+    b = nk.logistic_irls(X, y)
+    p = 1 / (1 + np.exp(-X @ b))
+    assert np.allclose(X.T @ (y - p), 0, atol=1e-8)  # équations du score
