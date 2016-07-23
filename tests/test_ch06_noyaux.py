@@ -65,3 +65,18 @@ def test_loocv_shortcut_matches_brute_force():
         brute.append(nk.local_regression(x[i:i + 1], x[m], y[m], lam=0.25,
                                          degree=1, kernel="tricube")[0])
     assert nk.loocv_error(S, y) == pytest.approx(np.mean((y - np.array(brute)) ** 2))
+
+
+def test_varying_coefficient_through_monomials():
+    rng = np.random.RandomState(2)
+    n = 200
+    z = rng.uniform(0, 1, n)
+    xx = rng.normal(size=n)
+    y = 1 + 2 * z + (1 + z) * xx  # alpha(z), beta(z) affines : reproduits exactement
+    X = np.column_stack([xx, z])
+    A = np.diag([0.0, 1.0])  # le noyau ne regarde que z
+    monos = [(0, 0), (1, 0), (0, 1), (1, 1)]
+    X0 = np.array([[0.7, 0.4], [-1.0, 0.6]])
+    f = nk.local_regression(X0, X, y, lam=0.3, kernel="tricube", A=A, monomials=monos)
+    truth = 1 + 2 * X0[:, 1] + (1 + X0[:, 1]) * X0[:, 0]
+    assert np.allclose(f, truth)
