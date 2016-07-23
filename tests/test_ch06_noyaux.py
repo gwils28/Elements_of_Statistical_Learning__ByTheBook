@@ -54,3 +54,14 @@ def test_local_linear_reproduces_lines_in_2d():
     X0 = rng.normal(size=(5, 2))
     f = nk.local_regression(X0, X, y, k=20, degree=1)
     assert np.allclose(f, 1.0 - 2 * X0[:, 0] + 0.5 * X0[:, 1])
+
+
+def test_loocv_shortcut_matches_brute_force():
+    x, y = _data(50)
+    S = nk.smoother_matrix(x, lam=0.25, degree=1, kernel="tricube")
+    brute = []
+    for i in range(len(x)):
+        m = np.arange(len(x)) != i
+        brute.append(nk.local_regression(x[i:i + 1], x[m], y[m], lam=0.25,
+                                         degree=1, kernel="tricube")[0])
+    assert nk.loocv_error(S, y) == pytest.approx(np.mean((y - np.array(brute)) ** 2))
