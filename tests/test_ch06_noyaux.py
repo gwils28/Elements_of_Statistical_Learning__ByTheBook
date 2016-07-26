@@ -89,3 +89,13 @@ def test_logistic_irls_matches_known_optimum():
     b = nk.logistic_irls(X, y)
     p = 1 / (1 + np.exp(-X @ b))
     assert np.allclose(X.T @ (y - p), 0, atol=1e-8)  # équations du score
+
+
+def test_local_constant_logistic_is_nw():
+    # exercice 6.5 : logit localement constant = moyenne de Nadaraya-Watson
+    rng = np.random.RandomState(4)
+    x = rng.uniform(0, 1, 150)
+    y = (rng.uniform(size=150) < x).astype(float)
+    x0 = np.array([0.2, 0.5, 0.8])
+    p, _ = nk.local_logistic(x0, x, y, lam=0.3, degree=0, ridge=0.0)
+    assert np.allclose(p, nk.nadaraya_watson(x0, x, y, lam=0.3, kernel="tricube"))
