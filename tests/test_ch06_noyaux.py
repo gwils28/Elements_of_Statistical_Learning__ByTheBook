@@ -99,3 +99,16 @@ def test_local_constant_logistic_is_nw():
     x0 = np.array([0.2, 0.5, 0.8])
     p, _ = nk.local_logistic(x0, x, y, lam=0.3, degree=0, ridge=0.0)
     assert np.allclose(p, nk.nadaraya_watson(x0, x, y, lam=0.3, kernel="tricube"))
+
+
+def test_kde_matches_scipy_and_integrates():
+    rng = np.random.RandomState(5)
+    x = rng.normal(size=100)
+    lam = 0.4
+    grid = np.linspace(-5, 5, 2001)
+    f = nk.kde(grid, x, lam)
+    ref = stats.gaussian_kde(x, bw_method=lam / np.std(x, ddof=1))(grid)
+    assert np.allclose(f, ref)
+    assert np.trapezoid(f, grid) == pytest.approx(1.0, abs=1e-4)
+    fe = nk.kde(grid, x, lam, kernel="epanechnikov")
+    assert np.trapezoid(fe, grid) == pytest.approx(1.0, abs=1e-3)
