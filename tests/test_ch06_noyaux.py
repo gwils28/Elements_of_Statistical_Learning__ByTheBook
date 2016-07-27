@@ -112,3 +112,12 @@ def test_kde_matches_scipy_and_integrates():
     assert np.trapezoid(f, grid) == pytest.approx(1.0, abs=1e-4)
     fe = nk.kde(grid, x, lam, kernel="epanechnikov")
     assert np.trapezoid(fe, grid) == pytest.approx(1.0, abs=1e-3)
+
+
+def test_kde_posterior_rows_sum_to_one():
+    rng = np.random.RandomState(6)
+    x = np.r_[rng.normal(0, 1, 50), rng.normal(2, 1, 30)]
+    g = np.r_[np.zeros(50), np.ones(30)]
+    post, cl = nk.kde_posterior(np.linspace(-2, 4, 7), x, g, 0.5)
+    assert np.allclose(post.sum(axis=1), 1)
+    assert post[0, 0] > 0.9 and post[-1, 1] > 0.9
