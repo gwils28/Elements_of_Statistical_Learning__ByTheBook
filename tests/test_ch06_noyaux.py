@@ -138,3 +138,15 @@ def test_rbf_normalized_partition_of_unity():
     x = np.linspace(0, 10, 50)
     H = nk.rbf_basis(x, np.array([1.0, 4.0, 8.0]), 0.7, normalized=True)
     assert np.allclose(H.sum(axis=1), 1)
+
+
+def test_gmm_em_monotone_and_recovers():
+    rng = np.random.RandomState(8)
+    x = np.r_[rng.normal(0, 1, 300), rng.normal(6, 0.5, 200)]
+    fit = nk.gmm_em(x, 2, means_init=[[-1.0], [5.0]])
+    ll = np.array(fit["loglik"])
+    assert np.all(np.diff(ll) > -1e-8)
+    order = np.argsort(fit["means"][:, 0])
+    assert np.allclose(fit["means"][order, 0], [0, 6], atol=0.2)
+    assert np.allclose(fit["weights"][order], [0.6, 0.4], atol=0.05)
+    assert np.allclose(fit["resp"].sum(axis=1), 1)
