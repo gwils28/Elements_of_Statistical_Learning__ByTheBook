@@ -132,3 +132,9 @@ def test_naive_bayes_kde():
     P = nb.predict_proba(X)
     assert np.allclose(P.sum(axis=1), 1)
     assert np.mean(nb.predict(X) == y) > 0.8
+
+
+def test_rbf_normalized_partition_of_unity():
+    x = np.linspace(0, 10, 50)
+    H = nk.rbf_basis(x, np.array([1.0, 4.0, 8.0]), 0.7, normalized=True)
+    assert np.allclose(H.sum(axis=1), 1)
