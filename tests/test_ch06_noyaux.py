@@ -121,3 +121,14 @@ def test_kde_posterior_rows_sum_to_one():
     post, cl = nk.kde_posterior(np.linspace(-2, 4, 7), x, g, 0.5)
     assert np.allclose(post.sum(axis=1), 1)
     assert post[0, 0] > 0.9 and post[-1, 1] > 0.9
+
+
+def test_naive_bayes_kde():
+    rng = np.random.RandomState(7)
+    n = 300
+    y = rng.randint(0, 2, n)
+    X = np.column_stack([rng.normal(2 * y, 1), rng.binomial(1, 0.2 + 0.6 * y)])
+    nb = nk.NaiveBayesKDE(discrete=[False, True]).fit(X, y)
+    P = nb.predict_proba(X)
+    assert np.allclose(P.sum(axis=1), 1)
+    assert np.mean(nb.predict(X) == y) > 0.8
