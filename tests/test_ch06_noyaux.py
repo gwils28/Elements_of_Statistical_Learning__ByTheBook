@@ -150,3 +150,15 @@ def test_gmm_em_monotone_and_recovers():
     assert np.allclose(fit["means"][order, 0], [0, 6], atol=0.2)
     assert np.allclose(fit["weights"][order], [0.6, 0.4], atol=0.05)
     assert np.allclose(fit["resp"].sum(axis=1), 1)
+
+
+def test_local_lda_infinite_width_is_lda():
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+    rng = np.random.RandomState(9)
+    X = np.r_[rng.normal(0, 1, (60, 3)), rng.normal(1, 1, (60, 3)),
+              rng.normal(-1, 1, (60, 3)) + [2, 0, 0]]
+    y = np.repeat([0, 1, 2], 60)
+    X0 = rng.normal(0, 1.5, (100, 3))
+    ours = nk.local_lda_predict(X0, X, y, np.inf, reg=0.0)
+    ref = LinearDiscriminantAnalysis(solver="lsqr").fit(X, y).predict(X0)
+    assert np.mean(ours == ref) == 1.0
