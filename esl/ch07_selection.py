@@ -26,3 +26,21 @@ import numpy as np
 def squared_loss(y, yhat):
     """Perte quadratique ``(y - yhat)^2``, élément par élément."""
     return (np.asarray(y, float) - np.asarray(yhat, float)) ** 2
+
+
+def zero_one_loss(y, yhat):
+    """Perte 0-1 ``I(y != yhat)``, élément par élément."""
+    return (np.asarray(y) != np.asarray(yhat)).astype(float)
+
+
+# ---------------------------------------------------------------------------
+# Lisseurs linéaires  yhat = S y
+# ---------------------------------------------------------------------------
+
+def _design(X, intercept=True):
+    X = np.asarray(X, float)
+    if X.ndim == 1:
+        X = X[:, None]
+    if intercept:
+        X = np.column_stack([np.ones(len(X)), X])
+    return X
