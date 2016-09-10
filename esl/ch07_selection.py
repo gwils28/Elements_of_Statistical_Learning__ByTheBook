@@ -64,3 +64,11 @@ def hat_matrix(X, intercept=True):
     Z = _design(X, intercept)
     Q, _ = np.linalg.qr(Z)
     return Q @ Q.T
+
+
+def ols_fit_predict(Xtr, ytr, Xte, intercept=True):
+    """Ajuste les moindres carrés sur ``(Xtr, ytr)`` et prédit en ``Xte``."""
+    Ztr = _design(Xtr, intercept)
+    Zte = _design(Xte, intercept)
+    beta, *_ = np.linalg.lstsq(Ztr, np.asarray(ytr, float), rcond=None)
+    return Zte @ beta
