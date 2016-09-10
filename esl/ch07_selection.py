@@ -44,3 +44,23 @@ def _design(X, intercept=True):
     if intercept:
         X = np.column_stack([np.ones(len(X)), X])
     return X
+
+
+def hat_matrix(X, intercept=True):
+    """Matrice chapeau ``H = X (X^T X)^{-1} X^T`` des moindres carrés.
+
+    Parameters
+    ----------
+    X : array (N, p)
+        Prédicteurs.
+    intercept : bool
+        Ajoute une colonne de 1 si vrai.
+
+    Returns
+    -------
+    H : array (N, N)
+        Projecteur orthogonal sur l'espace des colonnes de X.
+    """
+    Z = _design(X, intercept)
+    Q, _ = np.linalg.qr(Z)
+    return Q @ Q.T
