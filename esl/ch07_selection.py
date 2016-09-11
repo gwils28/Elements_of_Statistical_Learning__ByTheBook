@@ -72,3 +72,16 @@ def ols_fit_predict(Xtr, ytr, Xte, intercept=True):
     Zte = _design(Xte, intercept)
     beta, *_ = np.linalg.lstsq(Ztr, np.asarray(ytr, float), rcond=None)
     return Zte @ beta
+
+
+def knn_regression(Xtr, ytr, Xte, k):
+    """Régression par les k plus proches voisins (distance euclidienne).
+
+    Le point d'apprentissage lui-même fait partie de son voisinage lorsqu'on
+    prédit en un point d'apprentissage.
+    """
+    Xtr = _design(Xtr, False)
+    Xte = _design(Xte, False)
+    d2 = ((Xte[:, None, :] - Xtr[None, :, :]) ** 2).sum(-1)
+    idx = np.argsort(d2, axis=1, kind="stable")[:, :k]
+    return np.asarray(ytr, float)[idx].mean(axis=1)
