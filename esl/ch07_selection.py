@@ -85,3 +85,18 @@ def knn_regression(Xtr, ytr, Xte, k):
     d2 = ((Xte[:, None, :] - Xtr[None, :, :]) ** 2).sum(-1)
     idx = np.argsort(d2, axis=1, kind="stable")[:, :k]
     return np.asarray(ytr, float)[idx].mean(axis=1)
+
+
+def knn_smoother_matrix(X, k):
+    """Matrice de lissage S des k plus proches voisins aux points d'apprentissage.
+
+    ``S[i, j] = 1/k`` si ``x_j`` est l'un des k plus proches voisins de ``x_i``
+    (``x_i`` compris), 0 sinon. Sa trace vaut ``N/k`` (exercice 7.6).
+    """
+    X = _design(X, False)
+    n = len(X)
+    d2 = ((X[:, None, :] - X[None, :, :]) ** 2).sum(-1)
+    idx = np.argsort(d2, axis=1, kind="stable")[:, :k]
+    S = np.zeros((n, n))
+    np.put_along_axis(S, idx, 1.0 / k, axis=1)
+    return S
