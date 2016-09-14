@@ -174,3 +174,8 @@ def smoothing_spline_predict(x, y, lam, t):
             out[m] = (a * g[i + 1] + b * g[i]) / h[i] - a * b / 6.0 * (
                 (1 + a / h[i]) * gamma[i + 1] + (1 + b / h[i]) * gamma[i])
     return out
+
+
+def df_trace(S):
+    """Nombre effectif de paramètres d'un lisseur linéaire : ``trace(S)`` (7.32)."""
+    return float(np.trace(S))
