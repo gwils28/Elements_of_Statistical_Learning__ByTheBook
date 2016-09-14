@@ -143,3 +143,34 @@ def smoothing_spline_matrix(x, lam):
     # S = I - lam Q (R + lam Q^T Q)^{-1} Q^T
     S = np.eye(len(x)) - lam * Q @ np.linalg.solve(R + lam * Q.T @ Q, Q.T)
     return (S + S.T) / 2
+
+
+def smoothing_spline_predict(x, y, lam, t):
+    """Ajuste une spline de lissage sur ``(x, y)`` et l'évalue en ``t``.
+
+    Utilise la représentation par valeurs ``g`` et dérivées secondes ``gamma``
+    aux nœuds ; prolongement linéaire hors de ``[x_1, x_n]``.
+    """
+    x = np.asarray(x, float)
+    order = np.argsort(x)
+    x, y = x[order], np.asarray(y, float)[order]
+    Q, R = _reinsch_QR(x)
+    g = smoothing_spline_matrix(x, lam) @ y
+    gamma = np.zeros(len(x))
+    gamma[1:-1] = np.linalg.solve(R, Q.T @ g)
+    t = np.atleast_1d(np.asarray(t, float))
+    out = np.empty_like(t)
+    h = np.diff(x)
+    for m, tt in enumerate(t):
+        if tt <= x[0]:
+            slope = (g[1] - g[0]) / h[0] - h[0] * gamma[1] / 6.0
+            out[m] = g[0] + slope * (tt - x[0])
+        elif tt >= x[-1]:
+            slope = (g[-1] - g[-2]) / h[-1] + h[-1] * gamma[-2] / 6.0
+            out[m] = g[-1] + slope * (tt - x[-1])
+        else:
+            i = np.searchsorted(x, tt) - 1
+            a, b = tt - x[i], x[i + 1] - tt
+            out[m] = (a * g[i + 1] + b * g[i]) / h[i] - a * b / 6.0 * (
+                (1 + a / h[i]) * gamma[i + 1] + (1 + b / h[i]) * gamma[i])
+    return out
