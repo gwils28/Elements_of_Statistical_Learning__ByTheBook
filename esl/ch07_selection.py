@@ -100,3 +100,46 @@ def knn_smoother_matrix(X, k):
     S = np.zeros((n, n))
     np.put_along_axis(S, idx, 1.0 / k, axis=1)
     return S
+
+
+def _reinsch_QR(x):
+    """Matrices Q (n, n-2) et R (n-2, n-2) de la forme de Reinsch."""
+    x = np.asarray(x, float)
+    n = len(x)
+    h = np.diff(x)
+    Q = np.zeros((n, n - 2))
+    R = np.zeros((n - 2, n - 2))
+    for j in range(1, n - 1):
+        c = j - 1
+        Q[j - 1, c] = 1.0 / h[j - 1]
+        Q[j, c] = -1.0 / h[j - 1] - 1.0 / h[j]
+        Q[j + 1, c] = 1.0 / h[j]
+        R[c, c] = (h[j - 1] + h[j]) / 3.0
+        if c + 1 < n - 2:
+            R[c, c + 1] = R[c + 1, c] = h[j] / 6.0
+    return Q, R
+
+
+def smoothing_spline_matrix(x, lam):
+    """Matrice de lissage d'une spline cubique de lissage.
+
+    Minimise ``sum (y_i - g(x_i))^2 + lam * int g''(t)^2 dt`` ; la solution
+    aux nœuds vaut ``S y`` avec ``S = (I + lam K)^{-1}``, ``K = Q R^{-1} Q^T``
+    (forme de Reinsch), calculée sous la forme équivalente
+    ``S = I - lam Q (R + lam Q^T Q)^{-1} Q^T``.
+
+    Parameters
+    ----------
+    x : array (N,)
+        Abscisses **triées et distinctes**.
+    lam : float
+        Paramètre de lissage (>= 0).
+    """
+    x = np.asarray(x, float)
+    if np.any(np.diff(x) <= 0):
+        raise ValueError("x doit être strictement croissant")
+    Q, R = _reinsch_QR(x)
+    # forme équivalente numériquement stable (Green et Silverman) :
+    # S = I - lam Q (R + lam Q^T Q)^{-1} Q^T
+    S = np.eye(len(x)) - lam * Q @ np.linalg.solve(R + lam * Q.T @ Q, Q.T)
+    return (S + S.T) / 2
