@@ -179,3 +179,12 @@ def smoothing_spline_predict(x, y, lam, t):
 def df_trace(S):
     """Nombre effectif de paramètres d'un lisseur linéaire : ``trace(S)`` (7.32)."""
     return float(np.trace(S))
+
+
+def loo_residuals(y, S):
+    """Résidus de validation croisée « leave-one-out » par le raccourci (7.64).
+
+    ``y_i - f_{-i}(x_i) = (y_i - yhat_i) / (1 - S_ii)``.
+    """
+    y = np.asarray(y, float)
+    return (y - S @ y) / (1.0 - np.diag(S))
