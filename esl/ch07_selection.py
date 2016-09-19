@@ -188,3 +188,33 @@ def loo_residuals(y, S):
     """
     y = np.asarray(y, float)
     return (y - S @ y) / (1.0 - np.diag(S))
+
+
+def gcv_score(y, S):
+    """Validation croisée généralisée (7.52)."""
+    y = np.asarray(y, float)
+    n = len(y)
+    return float(np.mean(((y - S @ y) / (1.0 - np.trace(S) / n)) ** 2))
+
+
+def df_monte_carlo(fit, f, sigma, n_rep=2000, rng=None):
+    """Estime ``df = sum_i Cov(yhat_i, y_i) / sigma^2`` (7.33) par simulation.
+
+    Parameters
+    ----------
+    fit : callable
+        ``fit(y) -> yhat`` (x fixés).
+    f : array (N,)
+        Vraie fonction de régression aux points d'apprentissage.
+    sigma : float
+        Écart-type du bruit gaussien additif.
+    n_rep : int
+        Nombre de répétitions.
+    rng : np.random.RandomState
+    """
+    rng = np.random.RandomState(0) if rng is None else rng
+    f = np.asarray(f, float)
+    Y = f + sigma * rng.randn(n_rep, len(f))
+    Yhat = np.array([fit(y) for y in Y])
+    cov = ((Y - Y.mean(0)) * (Yhat - Yhat.mean(0))).sum(0) / (n_rep - 1)
+    return float(cov.sum() / sigma ** 2)
