@@ -218,3 +218,12 @@ def df_monte_carlo(fit, f, sigma, n_rep=2000, rng=None):
     Yhat = np.array([fit(y) for y in Y])
     cov = ((Y - Y.mean(0)) * (Yhat - Yhat.mean(0))).sum(0) / (n_rep - 1)
     return float(cov.sum() / sigma ** 2)
+
+
+# ---------------------------------------------------------------------------
+# Critères analytiques
+# ---------------------------------------------------------------------------
+
+def cp_statistic(err, d, sigma2, n):
+    """Statistique Cp (7.26) : ``err + 2 d sigma2 / N``."""
+    return err + 2.0 * d * sigma2 / n
