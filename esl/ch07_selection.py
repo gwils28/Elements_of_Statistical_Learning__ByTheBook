@@ -232,3 +232,8 @@ def cp_statistic(err, d, sigma2, n):
 def aic_loglik(loglik, d, n):
     """AIC (7.29) : ``-2/N * loglik + 2 d / N``."""
     return -2.0 * loglik / n + 2.0 * d / n
+
+
+def bic_gaussian(err, d, sigma2, n):
+    """BIC gaussien (7.36) : ``N / sigma2 * (err + log(N) d sigma2 / N)``."""
+    return n / sigma2 * (err + np.log(n) * d * sigma2 / n)
