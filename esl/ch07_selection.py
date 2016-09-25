@@ -227,3 +227,8 @@ def df_monte_carlo(fit, f, sigma, n_rep=2000, rng=None):
 def cp_statistic(err, d, sigma2, n):
     """Statistique Cp (7.26) : ``err + 2 d sigma2 / N``."""
     return err + 2.0 * d * sigma2 / n
+
+
+def aic_loglik(loglik, d, n):
+    """AIC (7.29) : ``-2/N * loglik + 2 d / N``."""
+    return -2.0 * loglik / n + 2.0 * d / n
