@@ -289,3 +289,11 @@ def cross_val_error(fit_predict, X, y, K=10, rng=None, loss=squared_loss,
         fold_err.append(losses[te].mean())
     fold_err = np.array(fold_err)
     return float(losses.mean()), float(fold_err.std(ddof=1) / np.sqrt(len(folds)))
+
+
+def no_information_rate(y, yhat, loss=zero_one_loss):
+    """Taux d'erreur sans information (7.58) : moyenne de ``L(y_i, yhat_i')``
+    sur tous les couples ``(i, i')``."""
+    y = np.asarray(y)
+    yhat = np.asarray(yhat)
+    return float(loss(y[:, None], yhat[None, :]).mean())
