@@ -237,3 +237,55 @@ def aic_loglik(loglik, d, n):
 def bic_gaussian(err, d, sigma2, n):
     """BIC gaussien (7.36) : ``N / sigma2 * (err + log(N) d sigma2 / N)``."""
     return n / sigma2 * (err + np.log(n) * d * sigma2 / n)
+
+
+# ---------------------------------------------------------------------------
+# Validation croisée et bootstrap
+# ---------------------------------------------------------------------------
+
+def kfold_indices(n, K, rng=None):
+    """Partition aléatoire de ``{0, ..., n-1}`` en K blocs de tailles ~ égales."""
+    rng = np.random.RandomState(0) if rng is None else rng
+    perm = rng.permutation(n)
+    return [np.sort(b) for b in np.array_split(perm, K)]
+
+
+def cross_val_error(fit_predict, X, y, K=10, rng=None, loss=squared_loss,
+                    folds=None):
+    """Erreur de validation croisée à K blocs (7.48).
+
+    Parameters
+    ----------
+    fit_predict : callable
+        ``fit_predict(Xtr, ytr, Xte) -> prédictions en Xte``. Toute la
+        procédure (y compris une éventuelle sélection de variables) doit être
+        refaite à l'intérieur : c'est la « bonne manière » (section 7.10.2).
+    X, y : arrays
+    K : int
+        Nombre de blocs (``K = N`` : leave-one-out).
+    loss : callable
+        Perte élément par élément.
+    folds : list of arrays, optional
+        Blocs imposés (sinon tirés par :func:`kfold_indices`).
+
+    Returns
+    -------
+    cv : float
+        Moyenne des pertes sur les N observations.
+    se : float
+        Écart-type des K erreurs de blocs divisé par sqrt(K).
+    """
+    X = np.asarray(X)
+    y = np.asarray(y)
+    n = len(y)
+    if folds is None:
+        folds = kfold_indices(n, K, rng)
+    losses = np.empty(n)
+    fold_err = []
+    for te in folds:
+        tr = np.setdiff1d(np.arange(n), te)
+        pred = fit_predict(X[tr], y[tr], X[te])
+        losses[te] = loss(y[te], pred)
+        fold_err.append(losses[te].mean())
+    fold_err = np.array(fold_err)
+    return float(losses.mean()), float(fold_err.std(ddof=1) / np.sqrt(len(folds)))
