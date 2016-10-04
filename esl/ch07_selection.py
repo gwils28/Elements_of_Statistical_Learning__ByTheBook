@@ -297,3 +297,55 @@ def no_information_rate(y, yhat, loss=zero_one_loss):
     y = np.asarray(y)
     yhat = np.asarray(yhat)
     return float(loss(y[:, None], yhat[None, :]).mean())
+
+
+def bootstrap_error_estimates(fit_predict, X, y, B=100, rng=None,
+                              loss=squared_loss):
+    """Estimateurs bootstrap de l'erreur de prédiction (section 7.11).
+
+    Returns
+    -------
+    dict
+        ``err`` : erreur d'apprentissage ;
+        ``boot`` : bootstrap naïf (7.54) ;
+        ``loo1`` : bootstrap leave-one-out (7.56) ;
+        ``632`` : estimateur .632 (7.57) ;
+        ``632plus`` : estimateur .632+ (7.61) ;
+        ``gamma`` : taux sans information (7.58) ; ``R`` : (7.60).
+    """
+    rng = np.random.RandomState(0) if rng is None else rng
+    X = np.asarray(X)
+    y = np.asarray(y)
+    n = len(y)
+    fitted = fit_predict(X, y, X)
+    err = float(loss(y, fitted).mean())
+    sum_out = np.zeros(n)
+    cnt_out = np.zeros(n)
+    boot_total = 0.0
+    for _ in range(B):
+        idx = rng.randint(0, n, n)
+        pred = fit_predict(X[idx], y[idx], X)
+        L = loss(y, pred)
+        boot_total += L.mean()
+        out = np.ones(n, bool)
+        out[idx] = False
+        sum_out[out] += L[out]
+        cnt_out[out] += 1
+    ok = cnt_out > 0
+    loo1 = float(np.mean(sum_out[ok] / cnt_out[ok]))
+    gamma = no_information_rate(y, fitted, loss)
+    loo1_c = min(loo1, gamma)
+    if loo1_c > err and gamma > err:
+        R = (loo1_c - err) / (gamma - err)
+    else:
+        R = 0.0
+    w = 0.632 / (1.0 - 0.368 * R)
+    return {
+        "err": err,
+        "boot": boot_total / B,
+        "loo1": loo1,
+        "632": 0.368 * err + 0.632 * loo1,
+        "632plus": (1 - w) * err + w * loo1_c,
+        "gamma": gamma,
+        "R": R,
+    }
