@@ -349,3 +349,37 @@ def bootstrap_error_estimates(fit_predict, X, y, B=100, rng=None,
         "gamma": gamma,
         "R": R,
     }
+
+
+# ---------------------------------------------------------------------------
+# Sélection de sous-ensembles
+# ---------------------------------------------------------------------------
+
+def rss(X, y, cols):
+    """Somme des carrés résiduels de la régression (avec constante) sur ``cols``."""
+    Z = _design(np.asarray(X, float)[:, list(cols)], True) if len(cols) else \
+        np.ones((len(y), 1))
+    beta, *_ = np.linalg.lstsq(Z, y, rcond=None)
+    r = y - Z @ beta
+    return float(r @ r)
+
+
+def best_subset(X, y, max_size=None):
+    """Meilleur sous-ensemble de chaque taille (recherche exhaustive).
+
+    Returns
+    -------
+    list of tuple
+        Élément k : ``(cols, rss)`` pour le meilleur sous-ensemble de taille k
+        (k = 0, ..., max_size).
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    p = X.shape[1]
+    max_size = p if max_size is None else max_size
+    out = []
+    for k in range(max_size + 1):
+        best = min(((c, rss(X, y, c)) for c in combinations(range(p), k)),
+                   key=lambda t: t[1])
+        out.append(best)
+    return out
