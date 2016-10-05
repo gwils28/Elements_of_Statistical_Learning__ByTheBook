@@ -383,3 +383,20 @@ def best_subset(X, y, max_size=None):
                    key=lambda t: t[1])
         out.append(best)
     return out
+
+
+def forward_stepwise(X, y, max_size=None):
+    """Ordre d'entrée des variables par sélection pas à pas ascendante.
+
+    À chaque étape on ajoute la variable qui diminue le plus la RSS.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    p = X.shape[1]
+    max_size = p if max_size is None else max_size
+    active, rest = [], list(range(p))
+    for _ in range(max_size):
+        j = min(rest, key=lambda c: rss(X, y, active + [c]))
+        active.append(j)
+        rest.remove(j)
+    return active
