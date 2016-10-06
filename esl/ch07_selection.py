@@ -400,3 +400,27 @@ def forward_stepwise(X, y, max_size=None):
         active.append(j)
         rest.remove(j)
     return active
+
+
+# ---------------------------------------------------------------------------
+# Régression logistique et splines naturelles (exemple des phonèmes)
+# ---------------------------------------------------------------------------
+
+def natural_spline_basis(x, knots):
+    """Base de splines cubiques naturelles (éq. (5.4)-(5.5) du livre).
+
+    Pour K nœuds, renvoie les K fonctions ``N_1 = 1, N_2 = x,
+    N_{k+2} = d_k - d_{K-1}`` évaluées en ``x`` (tableau (len(x), K)).
+    """
+    x = np.asarray(x, float)
+    xi = np.asarray(knots, float)
+    K = len(xi)
+    cols = [np.ones_like(x), x]
+
+    def d(k):
+        return (np.maximum(x - xi[k], 0) ** 3 - np.maximum(x - xi[-1], 0) ** 3) \
+            / (xi[-1] - xi[k])
+
+    for k in range(K - 2):
+        cols.append(d(k) - d(K - 2))
+    return np.column_stack(cols)
