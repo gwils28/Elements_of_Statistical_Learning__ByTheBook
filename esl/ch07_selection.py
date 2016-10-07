@@ -456,3 +456,9 @@ def logistic_regression(X, y, ridge=1e-8, max_iter=100, tol=1e-10):
         if np.max(np.abs(step)) < tol:
             break
     return beta
+
+
+def logistic_loglik(X, y, beta):
+    """Log-vraisemblance binomiale ``sum y log p + (1-y) log(1-p)``."""
+    eta = np.asarray(X, float) @ beta
+    return float(np.sum(y * eta - np.logaddexp(0.0, eta)))
