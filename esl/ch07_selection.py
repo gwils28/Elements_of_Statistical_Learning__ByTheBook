@@ -424,3 +424,35 @@ def natural_spline_basis(x, knots):
     for k in range(K - 2):
         cols.append(d(k) - d(K - 2))
     return np.column_stack(cols)
+
+
+def logistic_regression(X, y, ridge=1e-8, max_iter=100, tol=1e-10):
+    """Régression logistique binaire par Newton-Raphson (IRLS).
+
+    Parameters
+    ----------
+    X : array (N, p)
+        Matrice de dessin (inclure soi-même la constante si voulu).
+    y : array (N,)
+        Réponses 0/1.
+    ridge : float
+        Petite pénalité quadratique pour la stabilité numérique.
+
+    Returns
+    -------
+    beta : array (p,)
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    beta = np.zeros(X.shape[1])
+    for _ in range(max_iter):
+        eta = np.clip(X @ beta, -30, 30)
+        p = 1.0 / (1.0 + np.exp(-eta))
+        W = p * (1 - p)
+        grad = X.T @ (y - p) - ridge * beta
+        H = X.T @ (X * W[:, None]) + ridge * np.eye(X.shape[1])
+        step = np.linalg.solve(H, grad)
+        beta = beta + step
+        if np.max(np.abs(step)) < tol:
+            break
+    return beta
