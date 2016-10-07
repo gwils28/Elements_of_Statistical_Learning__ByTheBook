@@ -462,3 +462,19 @@ def logistic_loglik(X, y, beta):
     """Log-vraisemblance binomiale ``sum y log p + (1-y) log(1-p)``."""
     eta = np.asarray(X, float) @ beta
     return float(np.sum(y * eta - np.logaddexp(0.0, eta)))
+
+
+# ---------------------------------------------------------------------------
+# Dimension VC : la famille I(sin(alpha x) > 0)
+# ---------------------------------------------------------------------------
+
+def sin_shatter_alpha(labels):
+    """Fréquence alpha réalisant un étiquetage donné des points 10^{-i}.
+
+    Pour des étiquettes ``y_1, ..., y_l`` dans {0, 1} associées aux points
+    ``z_i = 10^{-i}``, ``alpha = pi * (1 + sum_i (1 - y_i) 10^i)`` vérifie
+    ``I(sin(alpha z_i) > 0) = y_i`` pour tout i (exercice 7.8).
+    """
+    labels = np.asarray(labels, int)
+    i = np.arange(1, len(labels) + 1)
+    return np.pi * (1 + np.sum((1 - labels) * 10.0 ** i))
