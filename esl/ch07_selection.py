@@ -478,3 +478,8 @@ def sin_shatter_alpha(labels):
     labels = np.asarray(labels, int)
     i = np.arange(1, len(labels) + 1)
     return np.pi * (1 + np.sum((1 - labels) * 10.0 ** i))
+
+
+def sin_classifier(alpha, z):
+    """Classifieur ``I(sin(alpha z) > 0)``."""
+    return (np.sin(alpha * np.asarray(z, float)) > 0).astype(int)
