@@ -483,3 +483,17 @@ def sin_shatter_alpha(labels):
 def sin_classifier(alpha, z):
     """Classifieur ``I(sin(alpha z) > 0)``."""
     return (np.sin(alpha * np.asarray(z, float)) > 0).astype(int)
+
+
+def sin_shatter_phases(labels):
+    """Phases exactes ``(alpha z_j / pi) mod 2`` pour ``alpha`` de
+    :func:`sin_shatter_alpha`, calculées en arithmétique rationnelle.
+
+    Évite les erreurs d'arrondi de ``np.sin`` pour de grands ``l`` :
+    ``sin(alpha z_j) > 0`` si et seulement si la phase est dans ``]0, 1[``.
+    """
+    from fractions import Fraction
+    labels = [int(v) for v in labels]
+    l = len(labels)
+    coef = 1 + sum((1 - labels[i - 1]) * 10 ** i for i in range(1, l + 1))
+    return np.array([float(Fraction(coef, 10 ** j) % 2) for j in range(1, l + 1)])
