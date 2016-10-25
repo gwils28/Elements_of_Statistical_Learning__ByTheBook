@@ -21,3 +21,9 @@ def test_hat_matrix_projector_and_trace():
     assert np.allclose(H, H.T)
     assert np.allclose(H @ H, H)
     assert np.isclose(sel.df_trace(H), X.shape[1] + 1)
+
+
+def test_ols_fit_predict_matches_lstsq():
+    X, y = _data()
+    pred = sel.ols_fit_predict(X, y, X)
+    assert np.allclose(pred, sel.hat_matrix(X) @ y)
