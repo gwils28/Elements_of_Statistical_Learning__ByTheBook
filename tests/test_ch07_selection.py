@@ -27,3 +27,13 @@ def test_ols_fit_predict_matches_lstsq():
     X, y = _data()
     pred = sel.ols_fit_predict(X, y, X)
     assert np.allclose(pred, sel.hat_matrix(X) @ y)
+
+
+def test_loo_shortcut_ols():
+    X, y = _data()
+    S = sel.hat_matrix(X)
+    brute = np.array([y[i] - sel.ols_fit_predict(np.delete(X, i, 0), np.delete(y, i),
+                                                 X[i:i + 1])[0] for i in range(len(y))])
+    assert np.allclose(sel.loo_residuals(y, S), brute)
+    # exercice 7.3 (b)
+    assert np.all(np.abs(brute) >= np.abs(y - S @ y) - 1e-12)
