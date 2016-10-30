@@ -37,3 +37,20 @@ def test_loo_shortcut_ols():
     assert np.allclose(sel.loo_residuals(y, S), brute)
     # exercice 7.3 (b)
     assert np.all(np.abs(brute) >= np.abs(y - S @ y) - 1e-12)
+
+
+def test_smoothing_spline_properties():
+    rng = np.random.RandomState(1)
+    x = np.sort(rng.rand(25))
+    S = sel.smoothing_spline_matrix(x, 1e-3)
+    assert np.allclose(S, S.T)
+    # reproduit les fonctions affines
+    assert np.allclose(S @ np.ones(25), 1)
+    assert np.allclose(S @ x, x)
+    ev = np.linalg.eigvalsh(S)
+    assert ev.min() > 0 and ev.max() < 1 + 1e-10
+    assert 2 < sel.df_trace(S) < 25
+    # lam -> 0 : interpolation ; lam grand : droite des moindres carrés
+    xg = np.linspace(0, 1, 25)
+    assert np.allclose(sel.smoothing_spline_matrix(xg, 1e-12), np.eye(25), atol=1e-6)
+    assert np.allclose(sel.smoothing_spline_matrix(x, 1e9), sel.hat_matrix(x), atol=1e-4)
