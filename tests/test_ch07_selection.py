@@ -54,3 +54,15 @@ def test_smoothing_spline_properties():
     xg = np.linspace(0, 1, 25)
     assert np.allclose(sel.smoothing_spline_matrix(xg, 1e-12), np.eye(25), atol=1e-6)
     assert np.allclose(sel.smoothing_spline_matrix(x, 1e9), sel.hat_matrix(x), atol=1e-4)
+
+
+def test_smoothing_spline_predict_and_loo():
+    rng = np.random.RandomState(2)
+    x = np.sort(rng.rand(20))
+    y = np.sin(6 * x) + 0.3 * rng.randn(20)
+    lam = 1e-3
+    S = sel.smoothing_spline_matrix(x, lam)
+    assert np.allclose(sel.smoothing_spline_predict(x, y, lam, x), S @ y)
+    brute = np.array([y[i] - sel.smoothing_spline_predict(np.delete(x, i), np.delete(y, i),
+                                                          lam, x[i])[0] for i in range(20)])
+    assert np.allclose(sel.loo_residuals(y, S), brute, atol=1e-8)
