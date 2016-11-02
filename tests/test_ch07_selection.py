@@ -75,3 +75,14 @@ def test_knn_smoother():
     assert np.allclose(S.sum(1), 1)
     assert np.isclose(sel.df_trace(S), 40 / k)
     assert np.allclose(S @ y, sel.knn_regression(X, y, X, k))
+
+
+def test_gcv_and_criteria():
+    X, y = _data()
+    S = sel.hat_matrix(X)
+    n, d = len(y), 4
+    err = np.mean((y - S @ y) ** 2)
+    assert np.isclose(sel.gcv_score(y, S), err / (1 - d / n) ** 2)
+    assert np.isclose(sel.cp_statistic(err, d, 1.0, n), err + 2 * d / n)
+    assert np.isclose(sel.bic_gaussian(err, d, 2.0, n), n / 2 * err + np.log(n) * d)
+    assert np.isclose(sel.aic_loglik(-10.0, 3, 20), 1.0 + 0.3)
