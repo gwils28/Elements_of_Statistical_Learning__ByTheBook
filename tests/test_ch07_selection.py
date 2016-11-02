@@ -66,3 +66,12 @@ def test_smoothing_spline_predict_and_loo():
     brute = np.array([y[i] - sel.smoothing_spline_predict(np.delete(x, i), np.delete(y, i),
                                                           lam, x[i])[0] for i in range(20)])
     assert np.allclose(sel.loo_residuals(y, S), brute, atol=1e-8)
+
+
+def test_knn_smoother():
+    X, y = _data(n=40)
+    k = 5
+    S = sel.knn_smoother_matrix(X, k)
+    assert np.allclose(S.sum(1), 1)
+    assert np.isclose(sel.df_trace(S), 40 / k)
+    assert np.allclose(S @ y, sel.knn_regression(X, y, X, k))
