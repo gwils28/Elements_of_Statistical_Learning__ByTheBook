@@ -86,3 +86,11 @@ def test_gcv_and_criteria():
     assert np.isclose(sel.cp_statistic(err, d, 1.0, n), err + 2 * d / n)
     assert np.isclose(sel.bic_gaussian(err, d, 2.0, n), n / 2 * err + np.log(n) * d)
     assert np.isclose(sel.aic_loglik(-10.0, 3, 20), 1.0 + 0.3)
+
+
+def test_df_monte_carlo_ols():
+    X, _ = _data(n=20)
+    H = sel.hat_matrix(X)
+    df = sel.df_monte_carlo(lambda y: H @ y, np.zeros(20), 1.0, n_rep=4000,
+                            rng=np.random.RandomState(0))
+    assert abs(df - 4) < 0.3
