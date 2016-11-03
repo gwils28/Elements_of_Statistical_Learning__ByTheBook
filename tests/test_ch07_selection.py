@@ -94,3 +94,10 @@ def test_df_monte_carlo_ols():
     df = sel.df_monte_carlo(lambda y: H @ y, np.zeros(20), 1.0, n_rep=4000,
                             rng=np.random.RandomState(0))
     assert abs(df - 4) < 0.3
+
+
+def test_kfold_partition():
+    folds = sel.kfold_indices(23, 5, np.random.RandomState(0))
+    allidx = np.sort(np.concatenate(folds))
+    assert np.array_equal(allidx, np.arange(23))
+    assert {len(f) for f in folds} <= {4, 5}
