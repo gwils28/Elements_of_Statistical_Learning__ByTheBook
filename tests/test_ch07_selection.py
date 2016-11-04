@@ -117,3 +117,21 @@ def test_no_information_rate_binary():
     yhat = rng.randint(0, 2, 50)
     p1, q1 = y.mean(), yhat.mean()
     assert np.isclose(sel.no_information_rate(y, yhat), p1 * (1 - q1) + (1 - p1) * q1)
+
+
+def test_bootstrap_1nn_independent_labels():
+    rng = np.random.RandomState(0)
+    n = 100
+    X = rng.randn(n, 2)
+    y = np.repeat([0, 1], n // 2)
+
+    def nn1(Xtr, ytr, Xte):
+        d2 = ((Xte[:, None, :] - Xtr[None]) ** 2).sum(-1)
+        return ytr[d2.argmin(1)]
+
+    r = sel.bootstrap_error_estimates(nn1, X, y, B=50, rng=rng, loss=sel.zero_one_loss)
+    assert r["err"] == 0
+    assert abs(r["boot"] - 0.184) < 0.05
+    assert abs(r["loo1"] - 0.5) < 0.08
+    assert np.isclose(r["632"], 0.632 * r["loo1"])
+    assert r["632plus"] >= r["632"]
