@@ -109,3 +109,11 @@ def test_cross_val_loo_equals_shortcut():
     folds = [np.array([i]) for i in range(n)]
     cv, _ = sel.cross_val_error(sel.ols_fit_predict, X, y, folds=folds)
     assert np.isclose(cv, np.mean(sel.loo_residuals(y, sel.hat_matrix(X)) ** 2))
+
+
+def test_no_information_rate_binary():
+    rng = np.random.RandomState(0)
+    y = rng.randint(0, 2, 50)
+    yhat = rng.randint(0, 2, 50)
+    p1, q1 = y.mean(), yhat.mean()
+    assert np.isclose(sel.no_information_rate(y, yhat), p1 * (1 - q1) + (1 - p1) * q1)
