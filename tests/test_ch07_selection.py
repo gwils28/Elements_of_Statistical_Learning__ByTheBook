@@ -101,3 +101,11 @@ def test_kfold_partition():
     allidx = np.sort(np.concatenate(folds))
     assert np.array_equal(allidx, np.arange(23))
     assert {len(f) for f in folds} <= {4, 5}
+
+
+def test_cross_val_loo_equals_shortcut():
+    X, y = _data()
+    n = len(y)
+    folds = [np.array([i]) for i in range(n)]
+    cv, _ = sel.cross_val_error(sel.ols_fit_predict, X, y, folds=folds)
+    assert np.isclose(cv, np.mean(sel.loo_residuals(y, sel.hat_matrix(X)) ** 2))
