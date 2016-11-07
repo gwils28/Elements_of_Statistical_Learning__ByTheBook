@@ -158,3 +158,18 @@ def test_natural_spline_linear_beyond_boundary():
     assert B.shape == (4, 6)
     # linéaire au-delà du dernier nœud : différences secondes nulles
     assert np.allclose(np.diff(B, 2, axis=0), 0, atol=1e-10)
+
+
+def test_logistic_regression_matches_sklearn():
+    from sklearn.linear_model import LogisticRegression
+    rng = np.random.RandomState(0)
+    X = rng.randn(200, 3)
+    y = (rng.rand(200) < 1 / (1 + np.exp(-(X @ [1.0, -2.0, 0.5])))).astype(int)
+    Z = np.column_stack([np.ones(200), X])
+    beta = sel.logistic_regression(Z, y)
+    sk = LogisticRegression(C=1e10, tol=1e-10, max_iter=1000).fit(X, y)
+    assert np.allclose(beta, np.r_[sk.intercept_, sk.coef_.ravel()], atol=1e-4)
+    # le gradient de la log-vraisemblance est nul à l'optimum
+    p = 1 / (1 + np.exp(-Z @ beta))
+    assert np.allclose(Z.T @ (y - p), 0, atol=1e-6)
+    assert sel.logistic_loglik(Z, y, beta) <= 0
