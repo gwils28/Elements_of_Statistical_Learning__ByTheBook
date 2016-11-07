@@ -135,3 +135,17 @@ def test_bootstrap_1nn_independent_labels():
     assert abs(r["loo1"] - 0.5) < 0.08
     assert np.isclose(r["632"], 0.632 * r["loo1"])
     assert r["632plus"] >= r["632"]
+
+
+def test_best_subset_and_forward():
+    X, y = _data(n=40, p=4)
+    bs = sel.best_subset(X, y)
+    assert len(bs) == 5
+    rss = [r for _, r in bs]
+    assert all(a >= b - 1e-9 for a, b in zip(rss, rss[1:]))
+    for k in range(5):
+        brute = min(sel.rss(X, y, c) for c in itertools.combinations(range(4), k))
+        assert np.isclose(bs[k][1], brute)
+    order = sel.forward_stepwise(X, y)
+    assert sorted(order) == [0, 1, 2, 3]
+    assert order[0] == bs[1][0][0]
