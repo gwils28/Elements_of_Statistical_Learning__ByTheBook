@@ -149,3 +149,12 @@ def test_best_subset_and_forward():
     order = sel.forward_stepwise(X, y)
     assert sorted(order) == [0, 1, 2, 3]
     assert order[0] == bs[1][0][0]
+
+
+def test_natural_spline_linear_beyond_boundary():
+    knots = np.linspace(0, 1, 6)
+    x = np.array([1.0, 1.5, 2.0, 2.5])
+    B = sel.natural_spline_basis(x, knots)
+    assert B.shape == (4, 6)
+    # linéaire au-delà du dernier nœud : différences secondes nulles
+    assert np.allclose(np.diff(B, 2, axis=0), 0, atol=1e-10)
