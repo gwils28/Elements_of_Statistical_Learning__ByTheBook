@@ -181,3 +181,11 @@ def test_sin_shatters_all_labelings(l):
     for labels in itertools.product([0, 1], repeat=l):
         alpha = sel.sin_shatter_alpha(labels)
         assert np.array_equal(sel.sin_classifier(alpha, z), labels)
+
+
+def test_sin_phases_exact_large_l():
+    rng = np.random.RandomState(0)
+    for _ in range(20):
+        labels = rng.randint(0, 2, 25)
+        ph = sel.sin_shatter_phases(labels)
+        assert np.array_equal(((ph > 0) & (ph < 1)).astype(int), labels)
