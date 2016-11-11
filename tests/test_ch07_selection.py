@@ -173,3 +173,11 @@ def test_logistic_regression_matches_sklearn():
     p = 1 / (1 + np.exp(-Z @ beta))
     assert np.allclose(Z.T @ (y - p), 0, atol=1e-6)
     assert sel.logistic_loglik(Z, y, beta) <= 0
+
+
+@pytest.mark.parametrize("l", [1, 3, 6])
+def test_sin_shatters_all_labelings(l):
+    z = 10.0 ** -np.arange(1, l + 1)
+    for labels in itertools.product([0, 1], repeat=l):
+        alpha = sel.sin_shatter_alpha(labels)
+        assert np.array_equal(sel.sin_classifier(alpha, z), labels)
