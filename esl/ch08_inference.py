@@ -76,3 +76,22 @@ def bspline_basis(x, knots, degree=3, deriv=0):
         spl = spl.derivative(deriv)
     out = spl(x)
     return np.nan_to_num(out)
+
+
+def bspline_penalty(knots, degree=3):
+    """Matrice de pénalité :math:`\\Omega_{jk} = \\int h_j''(t) h_k''(t)\\,dt`.
+
+    L'intégrale est calculée exactement par une quadrature de Gauss-Legendre
+    à 3 points sur chaque intervalle entre deux nœuds consécutifs (les
+    produits :math:`h_j'' h_k''` y sont des polynômes de degré au plus 2 pour
+    des splines cubiques).
+    """
+    u = np.unique(knots)
+    gx, gw = np.polynomial.legendre.leggauss(3)
+    pts, wts = [], []
+    for a, b in zip(u[:-1], u[1:]):
+        pts.append((a + b) / 2 + (b - a) / 2 * gx)
+        wts.append((b - a) / 2 * gw)
+    pts, wts = np.concatenate(pts), np.concatenate(wts)
+    D2 = bspline_basis(pts, knots, degree, deriv=2)
+    return D2.T @ (wts[:, None] * D2)
