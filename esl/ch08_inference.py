@@ -48,3 +48,31 @@ def bspline_knots(interior, boundary, degree=3):
     a, b = boundary
     return np.r_[[a] * (degree + 1), np.sort(np.asarray(interior, float)),
                  [b] * (degree + 1)]
+
+
+def bspline_basis(x, knots, degree=3, deriv=0):
+    """Matrice des B-splines (ou de leurs dérivées) évaluées en ``x``.
+
+    Parameters
+    ----------
+    x : array_like, shape (n,)
+        Points d'évaluation, dans l'intervalle couvert par les nœuds.
+    knots : ndarray
+        Suite de nœuds complète (voir :func:`bspline_knots`).
+    degree : int
+        Degré des splines.
+    deriv : int
+        Ordre de dérivation (0 = les fonctions elles-mêmes).
+
+    Returns
+    -------
+    ndarray, shape (n, p)
+        Élément ``(i, j)`` : :math:`h_j^{(deriv)}(x_i)`.
+    """
+    x = np.asarray(x, float)
+    p = len(knots) - degree - 1
+    spl = BSpline(knots, np.eye(p), degree, extrapolate=False)
+    if deriv:
+        spl = spl.derivative(deriv)
+    out = spl(x)
+    return np.nan_to_num(out)
