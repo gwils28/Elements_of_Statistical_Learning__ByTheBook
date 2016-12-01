@@ -95,3 +95,9 @@ def bspline_penalty(knots, degree=3):
     pts, wts = np.concatenate(pts), np.concatenate(wts)
     D2 = bspline_basis(pts, knots, degree, deriv=2)
     return D2.T @ (wts[:, None] * D2)
+
+
+def smoother_matrix(H, Omega, lam):
+    """Matrice de lissage :math:`S_\\lambda = H (H^TH + \\lambda\\Omega)^{-1} H^T`."""
+    A = H.T @ H + lam * Omega
+    return H @ np.linalg.solve(A, H.T)
