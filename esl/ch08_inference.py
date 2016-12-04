@@ -101,3 +101,13 @@ def smoother_matrix(H, Omega, lam):
     """Matrice de lissage :math:`S_\\lambda = H (H^TH + \\lambda\\Omega)^{-1} H^T`."""
     A = H.T @ H + lam * Omega
     return H @ np.linalg.solve(A, H.T)
+
+
+def loocv_linear_smoother(S, y):
+    """Erreur de validation croisée « leave-one-out » d'un lisseur linéaire.
+
+    Utilise la formule exacte
+    :math:`\\frac1N\\sum_i \\left(\\frac{y_i-\\hat f(x_i)}{1-S_{ii}}\\right)^2`.
+    """
+    r = (y - S @ y) / (1 - np.diag(S))
+    return np.mean(r ** 2)
