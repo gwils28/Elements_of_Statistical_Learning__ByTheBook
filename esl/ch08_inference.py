@@ -111,3 +111,10 @@ def loocv_linear_smoother(S, y):
     """
     r = (y - S @ y) / (1 - np.diag(S))
     return np.mean(r ** 2)
+
+
+def gcv_linear_smoother(S, y):
+    """Critère de validation croisée généralisée (GCV) d'un lisseur linéaire."""
+    n = len(y)
+    r = y - S @ y
+    return np.mean(r ** 2) / (1 - np.trace(S) / n) ** 2
