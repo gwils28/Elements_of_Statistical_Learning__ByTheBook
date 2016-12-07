@@ -148,3 +148,8 @@ def ls_fit(H, y):
     beta = HtH_inv @ H.T @ y
     sigma2 = np.mean((y - H @ beta) ** 2)
     return beta, sigma2, HtH_inv * sigma2
+
+
+def pointwise_se(Hx, cov):
+    """Erreurs standard ponctuelles :math:`\\sqrt{h(x)^T C\\, h(x)}` (éq. (8.4))."""
+    return np.sqrt(np.einsum("ij,jk,ik->i", Hx, cov, Hx))
