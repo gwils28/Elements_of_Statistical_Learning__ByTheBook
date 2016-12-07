@@ -118,3 +118,33 @@ def gcv_linear_smoother(S, y):
     n = len(y)
     r = y - S @ y
     return np.mean(r ** 2) / (1 - np.trace(S) / n) ** 2
+
+
+# ---------------------------------------------------------------------------
+# Moindres carrés, maximum de vraisemblance, bootstrap, Bayes
+# ---------------------------------------------------------------------------
+
+def ls_fit(H, y):
+    """Ajustement par moindres carrés = maximum de vraisemblance gaussien.
+
+    Parameters
+    ----------
+    H : ndarray, shape (N, p)
+        Matrice de la base évaluée aux données.
+    y : ndarray, shape (N,)
+        Réponses.
+
+    Returns
+    -------
+    beta : ndarray, shape (p,)
+        :math:`\\hat\\beta = (H^TH)^{-1}H^Ty` (éq. (8.2)).
+    sigma2 : float
+        :math:`\\hat\\sigma^2 = \\frac1N\\sum_i (y_i-\\hat\\mu(x_i))^2`
+        (estimateur du maximum de vraisemblance, éq. (8.21)).
+    cov : ndarray, shape (p, p)
+        :math:`(H^TH)^{-1}\\hat\\sigma^2` (éq. (8.3)).
+    """
+    HtH_inv = np.linalg.inv(H.T @ H)
+    beta = HtH_inv @ H.T @ y
+    sigma2 = np.mean((y - H @ beta) ** 2)
+    return beta, sigma2, HtH_inv * sigma2
