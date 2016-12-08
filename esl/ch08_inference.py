@@ -153,3 +153,13 @@ def ls_fit(H, y):
 def pointwise_se(Hx, cov):
     """Erreurs standard ponctuelles :math:`\\sqrt{h(x)^T C\\, h(x)}` (éq. (8.4))."""
     return np.sqrt(np.einsum("ij,jk,ik->i", Hx, cov, Hx))
+
+
+def bootstrap_indices(n, B, rng):
+    """``B`` tirages avec remise de ``n`` indices parmi ``0..n-1``.
+
+    Returns
+    -------
+    ndarray, shape (B, n)
+    """
+    return rng.randint(0, n, size=(B, n))
