@@ -163,3 +163,27 @@ def bootstrap_indices(n, B, rng):
     ndarray, shape (B, n)
     """
     return rng.randint(0, n, size=(B, n))
+
+
+def bootstrap_curves(x, y, fit_predict, x_eval, B, rng):
+    """Bootstrap non paramétrique d'un lisseur.
+
+    Parameters
+    ----------
+    x, y : ndarray, shape (N,)
+        Données d'apprentissage ; l'unité de rééchantillonnage est le couple.
+    fit_predict : callable
+        ``fit_predict(x_b, y_b, x_eval)`` ajuste sur l'échantillon bootstrap
+        et renvoie les prédictions en ``x_eval``.
+    x_eval : ndarray
+        Points où l'on évalue les courbes.
+    B : int
+        Nombre d'échantillons bootstrap.
+    rng : numpy.random.RandomState
+
+    Returns
+    -------
+    ndarray, shape (B, len(x_eval))
+    """
+    idx = bootstrap_indices(len(y), B, rng)
+    return np.array([fit_predict(x[i], y[i], x_eval) for i in idx])
