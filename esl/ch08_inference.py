@@ -187,3 +187,21 @@ def bootstrap_curves(x, y, fit_predict, x_eval, B, rng):
     """
     idx = bootstrap_indices(len(y), B, rng)
     return np.array([fit_predict(x[i], y[i], x_eval) for i in idx])
+
+
+def parametric_bootstrap_curves(H, y, H_eval, B, rng):
+    """Bootstrap paramétrique (éq. (8.6)) du lisseur par moindres carrés.
+
+    On simule :math:`y^*_i = \\hat\\mu(x_i) + \\varepsilon^*_i`,
+    :math:`\\varepsilon^*_i \\sim N(0, \\hat\\sigma^2)` puis on réajuste.
+
+    Returns
+    -------
+    ndarray, shape (B, len(H_eval))
+    """
+    beta, sigma2, _ = ls_fit(H, y)
+    fitted = H @ beta
+    P = np.linalg.solve(H.T @ H, H.T)          # (p, N)
+    eps = rng.randn(B, len(y)) * np.sqrt(sigma2)
+    betas = (fitted + eps) @ P.T                # (B, p)
+    return betas @ H_eval.T
