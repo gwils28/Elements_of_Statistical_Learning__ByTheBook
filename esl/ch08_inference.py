@@ -224,3 +224,12 @@ def gaussian_posterior(H, y, sigma2, tau, Sigma=None):
     A = H.T @ H + sigma2 / tau * Sigma_inv
     A_inv = np.linalg.inv(A)
     return A_inv @ H.T @ y, A_inv * sigma2
+
+
+# ---------------------------------------------------------------------------
+# Mélange de deux gaussiennes : EM et Gibbs
+# ---------------------------------------------------------------------------
+
+def normal_pdf(y, mu, var):
+    """Densité de la loi :math:`N(\\mu, \\sigma^2)` (``var`` = :math:`\\sigma^2`)."""
+    return np.exp(-0.5 * (y - mu) ** 2 / var) / np.sqrt(2 * np.pi * var)
