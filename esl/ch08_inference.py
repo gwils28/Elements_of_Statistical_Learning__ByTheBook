@@ -233,3 +233,13 @@ def gaussian_posterior(H, y, sigma2, tau, Sigma=None):
 def normal_pdf(y, mu, var):
     """Densité de la loi :math:`N(\\mu, \\sigma^2)` (``var`` = :math:`\\sigma^2`)."""
     return np.exp(-0.5 * (y - mu) ** 2 / var) / np.sqrt(2 * np.pi * var)
+
+
+def mixture_loglik(y, theta):
+    """Log-vraisemblance observée (8.39) du mélange à 2 composantes.
+
+    ``theta = (mu1, var1, mu2, var2, pi)`` où ``pi`` = Pr(Δ = 1).
+    """
+    mu1, v1, mu2, v2, pi = theta
+    return np.sum(np.log((1 - pi) * normal_pdf(y, mu1, v1)
+                         + pi * normal_pdf(y, mu2, v2)))
