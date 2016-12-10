@@ -205,3 +205,22 @@ def parametric_bootstrap_curves(H, y, H_eval, B, rng):
     eps = rng.randn(B, len(y)) * np.sqrt(sigma2)
     betas = (fitted + eps) @ P.T                # (B, p)
     return betas @ H_eval.T
+
+
+def gaussian_posterior(H, y, sigma2, tau, Sigma=None):
+    """Loi a posteriori de :math:`\\beta` sous l'a priori :math:`N(0, \\tau\\Sigma)`.
+
+    Implémente l'éq. (8.27) :
+    :math:`E(\\beta|Z) = (H^TH + \\frac{\\sigma^2}{\\tau}\\Sigma^{-1})^{-1}H^Ty`,
+    :math:`\\mathrm{cov}(\\beta|Z) = (H^TH + \\frac{\\sigma^2}{\\tau}\\Sigma^{-1})^{-1}\\sigma^2`.
+
+    Returns
+    -------
+    mean : ndarray, shape (p,)
+    cov : ndarray, shape (p, p)
+    """
+    p = H.shape[1]
+    Sigma_inv = np.eye(p) if Sigma is None else np.linalg.inv(Sigma)
+    A = H.T @ H + sigma2 / tau * Sigma_inv
+    A_inv = np.linalg.inv(A)
+    return A_inv @ H.T @ y, A_inv * sigma2
