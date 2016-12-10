@@ -243,3 +243,23 @@ def mixture_loglik(y, theta):
     mu1, v1, mu2, v2, pi = theta
     return np.sum(np.log((1 - pi) * normal_pdf(y, mu1, v1)
                          + pi * normal_pdf(y, mu2, v2)))
+
+
+def responsibilities(y, theta):
+    """Responsabilités :math:`\\hat\\gamma_i` de la composante 2 (éq. (8.42))."""
+    mu1, v1, mu2, v2, pi = theta
+    a = (1 - pi) * normal_pdf(y, mu1, v1)
+    b = pi * normal_pdf(y, mu2, v2)
+    return b / (a + b)
+
+
+def mixture_Q(y, theta_new, theta_old):
+    """Fonction :math:`Q(\\theta', \\theta)` de l'étape E (éq. (8.43)).
+
+    Espérance de la log-vraisemblance complète (8.40) sous la loi des
+    variables latentes :math:`\\Delta_i` sachant les données et ``theta_old``.
+    """
+    g = responsibilities(y, theta_old)
+    mu1, v1, mu2, v2, pi = theta_new
+    return np.sum((1 - g) * (np.log(1 - pi) + np.log(normal_pdf(y, mu1, v1)))
+                  + g * (np.log(pi) + np.log(normal_pdf(y, mu2, v2))))
