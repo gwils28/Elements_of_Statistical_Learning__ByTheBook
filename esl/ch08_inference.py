@@ -303,3 +303,43 @@ def em_mixture(y, theta0, n_iter=100, tol=None):
             break
     return {"theta": theta, "thetas": np.array(thetas),
             "loglik": np.array(logliks), "gamma": responsibilities(y, theta)}
+
+
+def gibbs_mixture(y, var1, var2, pi, mu_init, n_iter, rng, book_variance=False):
+    """Échantillonneur de Gibbs pour les moyennes d'un mélange (algorithme 8.4).
+
+    Les variances et la proportion sont fixées ; on alterne
+    (a) le tirage des :math:`\\Delta_i` selon les responsabilités et
+    (b) le tirage des moyennes sachant les :math:`\\Delta_i`.
+
+    Parameters
+    ----------
+    book_variance : bool
+        Si ``False`` (défaut), on tire :math:`\\mu_k \\sim N(\\bar y_k,
+        \\sigma_k^2/n_k)`, loi a posteriori exacte sous un a priori plat ;
+        si ``True``, on utilise :math:`N(\\bar y_k, \\sigma_k^2)` comme écrit
+        dans l'algorithme 8.4 du livre.
+
+    Returns
+    -------
+    mus : ndarray, shape (n_iter, 2)
+    props : ndarray, shape (n_iter,)
+        Proportion :math:`\\sum_i \\Delta_i / N` à chaque itération.
+    """
+    y = np.asarray(y, float)
+    mu1, mu2 = mu_init
+    mus, props = np.empty((n_iter, 2)), np.empty(n_iter)
+    for t in range(n_iter):
+        g = responsibilities(y, (mu1, var1, mu2, var2, pi))
+        d = rng.rand(len(y)) < g
+        n2 = d.sum()
+        n1 = len(y) - n2
+        m1 = y[~d].mean() if n1 > 0 else mu1
+        m2 = y[d].mean() if n2 > 0 else mu2
+        s1 = var1 if book_variance else var1 / max(n1, 1)
+        s2 = var2 if book_variance else var2 / max(n2, 1)
+        mu1 = m1 + np.sqrt(s1) * rng.randn()
+        mu2 = m2 + np.sqrt(s2) * rng.randn()
+        mus[t] = mu1, mu2
+        props[t] = n2 / len(y)
+    return mus, props
