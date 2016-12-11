@@ -343,3 +343,26 @@ def gibbs_mixture(y, var1, var2, pi, mu_init, n_iter, rng, book_variance=False):
         mus[t] = mu1, mu2
         props[t] = n2 / len(y)
     return mus, props
+
+
+# ---------------------------------------------------------------------------
+# Bagging, souches, boosting, bumping
+# ---------------------------------------------------------------------------
+
+def bootstrap_predictions(fit_predict, X, y, X_eval, B, rng):
+    """Prédictions d'un modèle réajusté sur ``B`` échantillons bootstrap.
+
+    Parameters
+    ----------
+    fit_predict : callable
+        ``fit_predict(X_b, y_b, X_eval)`` renvoie un tableau de prédictions
+        (valeurs, probabilités, ...) pour ``X_eval``.
+
+    Returns
+    -------
+    ndarray, shape (B, ...)
+        Empilement des prédictions ; leur moyenne est l'estimateur bagging
+        (éq. (8.51)).
+    """
+    idx = bootstrap_indices(len(y), B, rng)
+    return np.array([fit_predict(X[i], y[i], X_eval) for i in idx])
