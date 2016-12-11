@@ -263,3 +263,43 @@ def mixture_Q(y, theta_new, theta_old):
     mu1, v1, mu2, v2, pi = theta_new
     return np.sum((1 - g) * (np.log(1 - pi) + np.log(normal_pdf(y, mu1, v1)))
                   + g * (np.log(pi) + np.log(normal_pdf(y, mu2, v2))))
+
+
+def em_mixture(y, theta0, n_iter=100, tol=None):
+    """Algorithme EM (algorithme 8.1) pour un mélange de deux gaussiennes.
+
+    Parameters
+    ----------
+    y : ndarray, shape (N,)
+        Données.
+    theta0 : tuple
+        Valeurs initiales ``(mu1, var1, mu2, var2, pi)``.
+    n_iter : int
+        Nombre maximal d'itérations.
+    tol : float or None
+        Arrêt si la log-vraisemblance augmente de moins de ``tol``.
+
+    Returns
+    -------
+    dict
+        ``theta`` (estimation finale), ``thetas`` (trajectoire, la première
+        ligne étant ``theta0``), ``loglik`` (log-vraisemblance observée le long
+        de la trajectoire), ``gamma`` (responsabilités finales).
+    """
+    y = np.asarray(y, float)
+    theta = tuple(float(t) for t in theta0)
+    thetas, logliks = [theta], [mixture_loglik(y, theta)]
+    for _ in range(n_iter):
+        g = responsibilities(y, theta)                   # étape E
+        w1, w2 = 1 - g, g                                # étape M
+        mu1 = np.sum(w1 * y) / np.sum(w1)
+        mu2 = np.sum(w2 * y) / np.sum(w2)
+        v1 = np.sum(w1 * (y - mu1) ** 2) / np.sum(w1)
+        v2 = np.sum(w2 * (y - mu2) ** 2) / np.sum(w2)
+        theta = (mu1, v1, mu2, v2, np.mean(g))
+        thetas.append(theta)
+        logliks.append(mixture_loglik(y, theta))
+        if tol is not None and logliks[-1] - logliks[-2] < tol:
+            break
+    return {"theta": theta, "thetas": np.array(thetas),
+            "loglik": np.array(logliks), "gamma": responsibilities(y, theta)}
