@@ -366,3 +366,28 @@ def bootstrap_predictions(fit_predict, X, y, X_eval, B, rng):
     """
     idx = bootstrap_indices(len(y), B, rng)
     return np.array([fit_predict(X[i], y[i], X_eval) for i in idx])
+
+
+def bagging_error_curves(probas, y_test):
+    """Erreurs de test du bagging en fonction du nombre ``b`` d'arbres.
+
+    Parameters
+    ----------
+    probas : ndarray, shape (B, n_test, K)
+        Probabilités de classe prédites par chaque modèle bootstrap.
+    y_test : ndarray of int, shape (n_test,)
+        Classes de test codées ``0..K-1``.
+
+    Returns
+    -------
+    err_vote, err_prob : ndarray, shape (B,)
+        Erreur du vote majoritaire (« consensus ») et de la moyenne des
+        probabilités, pour ``b = 1..B``.
+    """
+    B, n, K = probas.shape
+    votes = np.eye(K)[probas.argmax(axis=2)]          # (B, n, K) indicatrices
+    cum_votes = np.cumsum(votes, axis=0)
+    cum_prob = np.cumsum(probas, axis=0)
+    err_vote = (cum_votes.argmax(axis=2) != y_test).mean(axis=1)
+    err_prob = (cum_prob.argmax(axis=2) != y_test).mean(axis=1)
+    return err_vote, err_prob
