@@ -391,3 +391,46 @@ def bagging_error_curves(probas, y_test):
     err_vote = (cum_votes.argmax(axis=2) != y_test).mean(axis=1)
     err_prob = (cum_prob.argmax(axis=2) != y_test).mean(axis=1)
     return err_vote, err_prob
+
+
+def fit_stump(X, y, w=None):
+    """Souche de décision (arbre à une seule coupure) minimisant l'erreur pondérée.
+
+    Parameters
+    ----------
+    X : ndarray, shape (N, p)
+    y : ndarray, shape (N,)
+        Étiquettes dans {-1, +1}.
+    w : ndarray, shape (N,), optional
+        Poids positifs (uniformes par défaut).
+
+    Returns
+    -------
+    dict
+        ``feature``, ``threshold`` (on va à gauche si ``x_j <= threshold``),
+        ``p_left``, ``p_right`` (proportions pondérées de la classe +1 de
+        chaque côté) et ``error`` (erreur pondérée normalisée).
+    """
+    N, p = X.shape
+    w = np.full(N, 1.0 / N) if w is None else w / w.sum()
+    best = None
+    for j in range(p):
+        order = np.argsort(X[:, j], kind="mergesort")
+        xs, ys, ws = X[order, j], y[order], w[order]
+        pos = np.cumsum(ws * (ys > 0))
+        neg = np.cumsum(ws * (ys < 0))
+        P, Nn = pos[-1], neg[-1]
+        # coupure après la position k (k = 0..N-2) si xs[k] < xs[k+1]
+        valid = xs[:-1] < xs[1:]
+        if not valid.any():
+            continue
+        pl, nl = pos[:-1], neg[:-1]
+        err = np.minimum(pl, nl) + np.minimum(P - pl, Nn - nl)
+        err = np.where(valid, err, np.inf)
+        k = int(np.argmin(err))
+        if best is None or err[k] < best["error"] - 1e-12:
+            wl, wr = pl[k] + nl[k], (P - pl[k]) + (Nn - nl[k])
+            best = {"feature": j, "threshold": (xs[k] + xs[k + 1]) / 2,
+                    "p_left": pl[k] / wl, "p_right": (P - pl[k]) / wr,
+                    "error": err[k]}
+    return best
