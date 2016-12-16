@@ -440,3 +440,25 @@ def stump_proba(stump, X):
     """Probabilité estimée de la classe +1 donnée par une souche."""
     left = X[:, stump["feature"]] <= stump["threshold"]
     return np.where(left, stump["p_left"], stump["p_right"])
+
+
+def adaboost_stumps(X, y, M):
+    """AdaBoost.M1 (chapitre 10) avec des souches comme classifieurs de base.
+
+    Returns
+    -------
+    stumps : list of dict
+    alphas : ndarray, shape (M,)
+    """
+    N = len(y)
+    w = np.full(N, 1.0 / N)
+    stumps, alphas = [], []
+    for _ in range(M):
+        s = fit_stump(X, y, w)
+        pred = np.where(stump_proba(s, X) > 0.5, 1, -1)
+        err = np.clip(np.sum(w * (pred != y)) / w.sum(), 1e-10, 1 - 1e-10)
+        alpha = np.log((1 - err) / err)
+        w = w * np.exp(alpha * (pred != y))
+        stumps.append(s)
+        alphas.append(alpha)
+    return stumps, np.array(alphas)
