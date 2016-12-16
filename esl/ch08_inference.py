@@ -434,3 +434,9 @@ def fit_stump(X, y, w=None):
                     "p_left": pl[k] / wl, "p_right": (P - pl[k]) / wr,
                     "error": err[k]}
     return best
+
+
+def stump_proba(stump, X):
+    """Probabilité estimée de la classe +1 donnée par une souche."""
+    left = X[:, stump["feature"]] <= stump["threshold"]
+    return np.where(left, stump["p_left"], stump["p_right"])
