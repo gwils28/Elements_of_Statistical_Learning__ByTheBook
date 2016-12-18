@@ -462,3 +462,11 @@ def adaboost_stumps(X, y, M):
         stumps.append(s)
         alphas.append(alpha)
     return stumps, np.array(alphas)
+
+
+def adaboost_decision(stumps, alphas, X):
+    """Fonction de décision :math:`\\sum_m \\alpha_m G_m(x)` d'AdaBoost."""
+    out = np.zeros(len(X))
+    for s, a in zip(stumps, alphas):
+        out += a * np.where(stump_proba(s, X) > 0.5, 1, -1)
+    return out
