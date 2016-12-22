@@ -470,3 +470,31 @@ def adaboost_decision(stumps, alphas, X):
     for s, a in zip(stumps, alphas):
         out += a * np.where(stump_proba(s, X) > 0.5, 1, -1)
     return out
+
+
+def bumping(fit, loss, X, y, B, rng):
+    """Bumping (section 8.9) : recherche stochastique par bootstrap.
+
+    On ajuste le modèle sur l'échantillon original et sur ``B`` échantillons
+    bootstrap, puis on retient celui dont l'erreur sur l'échantillon
+    d'apprentissage **original** est la plus faible (éq. (8.60)).
+
+    Parameters
+    ----------
+    fit : callable
+        ``fit(X_b, y_b)`` renvoie un modèle ajusté.
+    loss : callable
+        ``loss(model, X, y)`` renvoie l'erreur d'apprentissage.
+
+    Returns
+    -------
+    best_model, best_index, losses
+        ``best_index = 0`` désigne l'échantillon original ; ``losses`` est
+        de longueur ``B + 1``.
+    """
+    models = [fit(X, y)]
+    for i in bootstrap_indices(len(y), B, rng):
+        models.append(fit(X[i], y[i]))
+    losses = np.array([loss(m, X, y) for m in models])
+    b = int(np.argmin(losses))
+    return models[b], b, losses
