@@ -498,3 +498,27 @@ def bumping(fit, loss, X, y, B, rng):
     losses = np.array([loss(m, X, y) for m in models])
     b = int(np.argmin(losses))
     return models[b], b, losses
+
+
+# ---------------------------------------------------------------------------
+# Stacking
+# ---------------------------------------------------------------------------
+
+def loo_residuals_linear(X, y):
+    """Résidus « leave-one-out » exacts d'une régression linéaire (avec constante).
+
+    Utilise :math:`y_i - \\hat f^{-i}(x_i) = \\frac{y_i - \\hat f(x_i)}{1 - h_{ii}}`,
+    où :math:`h_{ii}` est le levier (diagonale de la matrice chapeau).
+
+    Returns
+    -------
+    fitted : ndarray, shape (N,)
+        Valeurs ajustées sur toutes les données.
+    loo_res : ndarray, shape (N,)
+        Résidus de validation croisée.
+    """
+    N = len(y)
+    Xc = np.column_stack([np.ones(N), X])
+    Hat = Xc @ np.linalg.solve(Xc.T @ Xc, Xc.T)
+    fitted = Hat @ y
+    return fitted, (y - fitted) / (1 - np.diag(Hat))
