@@ -522,3 +522,37 @@ def loo_residuals_linear(X, y):
     Hat = Xc @ np.linalg.solve(Xc.T @ Xc, Xc.T)
     fitted = Hat @ y
     return fitted, (y - fitted) / (1 - np.diag(Hat))
+
+
+def stacking_weights(F, y, constraint="none"):
+    """Poids de combinaison de modèles par moindres carrés (éq. (8.59)).
+
+    Parameters
+    ----------
+    F : ndarray, shape (N, M)
+        Colonne ``m`` : prédictions du modèle ``m`` (idéalement les prédictions
+        « leave-one-out » :math:`\\hat f_m^{-i}(x_i)`).
+    y : ndarray, shape (N,)
+    constraint : {"none", "nonneg", "simplex"}
+        Aucune contrainte, poids positifs, ou poids positifs de somme 1.
+
+    Returns
+    -------
+    ndarray, shape (M,)
+    """
+    M = F.shape[1]
+    if constraint == "none":
+        return np.linalg.lstsq(F, y, rcond=None)[0]
+    if constraint == "nonneg":
+        return optimize.nnls(F, y)[0]
+    if constraint == "simplex":
+        res = optimize.minimize(
+            lambda w: np.sum((y - F @ w) ** 2), np.full(M, 1.0 / M),
+            jac=lambda w: -2 * F.T @ (y - F @ w),
+            bounds=[(0, 1)] * M,
+            constraints=[{"type": "eq", "fun": lambda w: w.sum() - 1,
+                          "jac": lambda w: np.ones(M)}],
+            method="SLSQP", options={"ftol": 1e-12, "maxiter": 500})
+        w = np.clip(res.x, 0, None)
+        return w / w.sum()
+    raise ValueError("contrainte inconnue : %s" % constraint)
