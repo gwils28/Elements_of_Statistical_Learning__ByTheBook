@@ -54,3 +54,14 @@ def test_loocv_shortcut_matches_refit():
         errs.append((y[i] - H[i] @ b) ** 2)
     assert inf.loocv_linear_smoother(S, y) == pytest.approx(np.mean(errs), rel=1e-8)
     assert inf.gcv_linear_smoother(S, y) > 0
+
+
+# --------------------------------------------------- moindres carrés, bootstrap, Bayes
+
+def test_ls_fit_matches_lstsq(smooth_data):
+    x, y, knots = smooth_data
+    H = inf.bspline_basis(x, knots)
+    beta, s2, cov = inf.ls_fit(H, y)
+    np.testing.assert_allclose(beta, np.linalg.lstsq(H, y, rcond=None)[0], atol=1e-10)
+    assert s2 == pytest.approx(np.mean((y - H @ beta) ** 2))
+    np.testing.assert_allclose(cov, np.linalg.inv(H.T @ H) * s2)
