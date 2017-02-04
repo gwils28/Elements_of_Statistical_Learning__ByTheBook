@@ -114,3 +114,14 @@ def test_em_monotone_and_book_estimates():
     g = res["gamma"]
     assert np.all((g >= 0) & (g <= 1))
     assert np.mean(g) == pytest.approx(pi, abs=1e-6)        # point fixe
+
+
+def test_em_is_stationary_point():
+    y = inf.MIXTURE_DATA
+    res = inf.em_mixture(y, (4.5, y.var(), 1.0, y.var(), 0.5), n_iter=500, tol=1e-14)
+    th = np.array(res["theta"])
+    eps = 1e-6
+    for j in range(5):
+        d = np.zeros(5); d[j] = eps
+        grad = (inf.mixture_loglik(y, th + d) - inf.mixture_loglik(y, th - d)) / (2 * eps)
+        assert abs(grad) < 1e-4
