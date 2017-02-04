@@ -65,3 +65,14 @@ def test_ls_fit_matches_lstsq(smooth_data):
     np.testing.assert_allclose(beta, np.linalg.lstsq(H, y, rcond=None)[0], atol=1e-10)
     assert s2 == pytest.approx(np.mean((y - H @ beta) ** 2))
     np.testing.assert_allclose(cov, np.linalg.inv(H.T @ H) * s2)
+
+
+def test_parametric_bootstrap_matches_formula(smooth_data):
+    x, y, knots = smooth_data
+    H = inf.bspline_basis(x, knots)
+    Hg = inf.bspline_basis(np.linspace(0, 3, 30), knots)
+    beta, _, cov = inf.ls_fit(H, y)
+    curves = inf.parametric_bootstrap_curves(H, y, Hg, 20000, np.random.RandomState(0))
+    se = inf.pointwise_se(Hg, cov)
+    np.testing.assert_allclose(curves.std(0), se, rtol=0.03)
+    assert np.max(np.abs(curves.mean(0) - Hg @ beta)) < 4 * se.max() / np.sqrt(20000) * 3
