@@ -125,3 +125,16 @@ def test_em_is_stationary_point():
         d = np.zeros(5); d[j] = eps
         grad = (inf.mixture_loglik(y, th + d) - inf.mixture_loglik(y, th - d)) / (2 * eps)
         assert abs(grad) < 1e-4
+
+
+def test_Q_minus_R_decomposition():
+    y = inf.MIXTURE_DATA
+    rng = np.random.RandomState(3)
+    for _ in range(20):
+        th = (rng.uniform(0, 6), rng.uniform(.3, 3), rng.uniform(0, 6), rng.uniform(.3, 3),
+              rng.uniform(.1, .9))
+        thp = (rng.uniform(0, 6), rng.uniform(.3, 3), rng.uniform(0, 6), rng.uniform(.3, 3),
+               rng.uniform(.1, .9))
+        g, gp = inf.responsibilities(y, th), inf.responsibilities(y, thp)
+        R = np.sum(g * np.log(gp) + (1 - g) * np.log(1 - gp))
+        assert inf.mixture_loglik(y, thp) == pytest.approx(inf.mixture_Q(y, thp, th) - R)
