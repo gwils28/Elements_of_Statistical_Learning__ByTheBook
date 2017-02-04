@@ -96,3 +96,21 @@ def test_posterior_limits(smooth_data):
 def test_bootstrap_indices_shape_and_range():
     idx = inf.bootstrap_indices(10, 5, np.random.RandomState(0))
     assert idx.shape == (5, 10) and idx.min() >= 0 and idx.max() <= 9
+
+
+# ----------------------------------------------------------------------------- EM, Gibbs
+
+def test_em_monotone_and_book_estimates():
+    y = inf.MIXTURE_DATA
+    res = inf.em_mixture(y, (4.5, y.var(), 1.0, y.var(), 0.5), n_iter=200, tol=1e-12)
+    assert np.all(np.diff(res["loglik"]) >= -1e-10)
+    mu1, v1, mu2, v2, pi = res["theta"]
+    # valeurs du livre : 4.62, 0.87, 1.06, 0.77, 0.546
+    assert mu1 == pytest.approx(4.62, abs=0.06)
+    assert mu2 == pytest.approx(1.06, abs=0.06)
+    assert v1 == pytest.approx(0.87, abs=0.08)
+    assert v2 == pytest.approx(0.77, abs=0.08)
+    assert pi == pytest.approx(0.546, abs=0.015)
+    g = res["gamma"]
+    assert np.all((g >= 0) & (g <= 1))
+    assert np.mean(g) == pytest.approx(pi, abs=1e-6)        # point fixe
