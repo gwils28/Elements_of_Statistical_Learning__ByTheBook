@@ -91,3 +91,8 @@ def test_posterior_limits(smooth_data):
     m1, _ = inf.gaussian_posterior(H, y, s2, 2.0)
     ridge = np.linalg.solve(H.T @ H + s2 / 2.0 * np.eye(7), H.T @ y)
     np.testing.assert_allclose(m1, ridge)
+
+
+def test_bootstrap_indices_shape_and_range():
+    idx = inf.bootstrap_indices(10, 5, np.random.RandomState(0))
+    assert idx.shape == (5, 10) and idx.min() >= 0 and idx.max() <= 9
