@@ -76,3 +76,18 @@ def test_parametric_bootstrap_matches_formula(smooth_data):
     se = inf.pointwise_se(Hg, cov)
     np.testing.assert_allclose(curves.std(0), se, rtol=0.03)
     assert np.max(np.abs(curves.mean(0) - Hg @ beta)) < 4 * se.max() / np.sqrt(20000) * 3
+
+
+def test_posterior_limits(smooth_data):
+    x, y, knots = smooth_data
+    H = inf.bspline_basis(x, knots)
+    beta, s2, cov = inf.ls_fit(H, y)
+    m, C = inf.gaussian_posterior(H, y, s2, 1e9)
+    np.testing.assert_allclose(m, beta, rtol=1e-5, atol=1e-6)
+    np.testing.assert_allclose(C, cov, rtol=1e-5, atol=1e-8)
+    m0, _ = inf.gaussian_posterior(H, y, s2, 1e-9)            # a priori très concentré
+    assert np.abs(m0).max() < 1e-6
+    # a priori N(0, tau I) : moyenne a posteriori = ridge de paramètre sigma2 / tau
+    m1, _ = inf.gaussian_posterior(H, y, s2, 2.0)
+    ridge = np.linalg.solve(H.T @ H + s2 / 2.0 * np.eye(7), H.T @ y)
+    np.testing.assert_allclose(m1, ridge)
