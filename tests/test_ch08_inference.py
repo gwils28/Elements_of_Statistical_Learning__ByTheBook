@@ -138,3 +138,14 @@ def test_Q_minus_R_decomposition():
         g, gp = inf.responsibilities(y, th), inf.responsibilities(y, thp)
         R = np.sum(g * np.log(gp) + (1 - g) * np.log(1 - gp))
         assert inf.mixture_loglik(y, thp) == pytest.approx(inf.mixture_Q(y, thp, th) - R)
+
+
+def test_gibbs_mixture_centered_on_em():
+    y = inf.MIXTURE_DATA
+    mu1, v1, mu2, v2, pi = inf.em_mixture(y, (4.5, y.var(), 1.0, y.var(), 0.5),
+                                          n_iter=200)["theta"]
+    mus, props = inf.gibbs_mixture(y, v1, v2, pi, (5.0, 1.0), 2000, np.random.RandomState(0))
+    assert mus.shape == (2000, 2) and props.shape == (2000,)
+    assert mus[200:, 0].mean() == pytest.approx(mu1, abs=0.2)
+    assert mus[200:, 1].mean() == pytest.approx(mu2, abs=0.2)
+    assert props[200:].mean() == pytest.approx(pi, abs=0.05)
