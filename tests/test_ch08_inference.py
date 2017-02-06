@@ -149,3 +149,16 @@ def test_gibbs_mixture_centered_on_em():
     assert mus[200:, 0].mean() == pytest.approx(mu1, abs=0.2)
     assert mus[200:, 1].mean() == pytest.approx(mu2, abs=0.2)
     assert props[200:].mean() == pytest.approx(pi, abs=0.05)
+
+
+# -------------------------------------------------------------- bagging, souches, bumping
+
+def test_bagging_error_curves_simple():
+    # 3 modèles, 2 points test, 2 classes
+    probas = np.array([[[0.9, 0.1], [0.4, 0.6]],
+                       [[0.0, 1.0], [0.3, 0.7]],
+                       [[0.3, 0.7], [0.45, 0.55]]])
+    y = np.array([1, 1])
+    ev, ep = inf.bagging_error_curves(probas, y)
+    np.testing.assert_allclose(ev, [0.5, 0.5, 0.0])    # b=2 : égalité -> classe 0 (argmax)
+    np.testing.assert_allclose(ep, [0.5, 0.0, 0.0])
