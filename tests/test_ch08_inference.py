@@ -162,3 +162,11 @@ def test_bagging_error_curves_simple():
     ev, ep = inf.bagging_error_curves(probas, y)
     np.testing.assert_allclose(ev, [0.5, 0.5, 0.0])    # b=2 : égalité -> classe 0 (argmax)
     np.testing.assert_allclose(ep, [0.5, 0.0, 0.0])
+
+
+def test_bagging_linear_smoother_parametric_converges(smooth_data):
+    x, y, knots = smooth_data
+    H = inf.bspline_basis(x, knots)
+    beta, _, _ = inf.ls_fit(H, y)
+    curves = inf.parametric_bootstrap_curves(H, y, H, 40000, np.random.RandomState(1))
+    assert np.max(np.abs(curves.mean(0) - H @ beta)) < 0.02
