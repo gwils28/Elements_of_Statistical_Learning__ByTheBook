@@ -189,3 +189,23 @@ def test_stump_matches_brute_force():
     assert s["error"] == pytest.approx(best)
     pred = np.where(inf.stump_proba(s, X) > 0.5, 1, -1)
     assert np.sum(wn * (pred != y)) == pytest.approx(best)
+
+
+def test_adaboost_reduces_training_error():
+    rng = np.random.RandomState(0)
+    X = rng.rand(200, 2)
+    y = np.where(X.sum(1) > 1, 1, -1)
+    stumps, alphas = inf.adaboost_stumps(X, y, 100)
+    err = np.mean(np.sign(inf.adaboost_decision(stumps, alphas, X)) != y)
+    assert err < inf.fit_stump(X, y)["error"] / 2
+
+
+def test_bumping_never_worse_than_original():
+    rng = np.random.RandomState(0)
+    X = rng.uniform(-1, 1, (100, 2))
+    y = np.where(X[:, 0] * X[:, 1] > 0, 1, -1)
+    fit = lambda Xb, yb: inf.fit_stump(Xb, yb)
+    loss = lambda s, X_, y_: np.mean(np.where(inf.stump_proba(s, X_) > 0.5, 1, -1) != y_)
+    model, b, losses = inf.bumping(fit, loss, X, y, 15, rng)
+    assert len(losses) == 16
+    assert losses[b] == losses.min() <= losses[0]
