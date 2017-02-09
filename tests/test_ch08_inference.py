@@ -170,3 +170,22 @@ def test_bagging_linear_smoother_parametric_converges(smooth_data):
     beta, _, _ = inf.ls_fit(H, y)
     curves = inf.parametric_bootstrap_curves(H, y, H, 40000, np.random.RandomState(1))
     assert np.max(np.abs(curves.mean(0) - H @ beta)) < 0.02
+
+
+def test_stump_matches_brute_force():
+    rng = np.random.RandomState(0)
+    X = rng.randn(40, 3)
+    y = np.where(X[:, 1] + 0.5 * rng.randn(40) > 0.2, 1, -1)
+    w = rng.rand(40)
+    s = inf.fit_stump(X, y, w)
+    wn = w / w.sum()
+    best = np.inf
+    for j in range(3):
+        for t in np.unique(X[:, j])[:-1]:
+            left = X[:, j] <= t
+            e = (min(wn[left & (y > 0)].sum(), wn[left & (y < 0)].sum())
+                 + min(wn[~left & (y > 0)].sum(), wn[~left & (y < 0)].sum()))
+            best = min(best, e)
+    assert s["error"] == pytest.approx(best)
+    pred = np.where(inf.stump_proba(s, X) > 0.5, 1, -1)
+    assert np.sum(wn * (pred != y)) == pytest.approx(best)
