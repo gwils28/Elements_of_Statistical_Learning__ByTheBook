@@ -223,3 +223,20 @@ def test_loo_residuals_linear_match_refit():
         Xc = np.column_stack([np.ones(24), X[m]])
         b = np.linalg.lstsq(Xc, y[m], rcond=None)[0]
         assert r[i] == pytest.approx(y[i] - np.r_[1.0, X[i]] @ b)
+
+
+def test_stacking_weights_constraints():
+    rng = np.random.RandomState(0)
+    F = rng.randn(60, 4)
+    y = F @ [0.5, 0.3, 0.2, 0.0] + 0.1 * rng.randn(60)
+    w_free = inf.stacking_weights(F, y, "none")
+    w_pos = inf.stacking_weights(F, y, "nonneg")
+    w_sx = inf.stacking_weights(F, y, "simplex")
+    np.testing.assert_allclose(w_free, np.linalg.lstsq(F, y, rcond=None)[0])
+    assert np.all(w_pos >= 0) and np.all(w_sx >= 0)
+    assert w_sx.sum() == pytest.approx(1.0)
+    np.testing.assert_allclose(w_sx, [0.5, 0.3, 0.2, 0.0], atol=0.05)
+    rss = lambda w: np.sum((y - F @ w) ** 2)
+    assert rss(w_free) <= rss(w_pos) + 1e-10 <= rss(w_sx) + 2e-10
+    with pytest.raises(ValueError):
+        inf.stacking_weights(F, y, "autre")
