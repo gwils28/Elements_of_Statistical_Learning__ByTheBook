@@ -209,3 +209,17 @@ def test_bumping_never_worse_than_original():
     model, b, losses = inf.bumping(fit, loss, X, y, 15, rng)
     assert len(losses) == 16
     assert losses[b] == losses.min() <= losses[0]
+
+
+# ----------------------------------------------------------------------------- stacking
+
+def test_loo_residuals_linear_match_refit():
+    rng = np.random.RandomState(0)
+    X = rng.randn(25, 3)
+    y = X @ [1.0, -2.0, 0.5] + rng.randn(25)
+    _, r = inf.loo_residuals_linear(X, y)
+    for i in range(25):
+        m = np.arange(25) != i
+        Xc = np.column_stack([np.ones(24), X[m]])
+        b = np.linalg.lstsq(Xc, y[m], rcond=None)[0]
+        assert r[i] == pytest.approx(y[i] - np.r_[1.0, X[i]] @ b)
