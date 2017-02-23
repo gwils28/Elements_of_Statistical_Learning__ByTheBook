@@ -54,8 +54,8 @@ Lancer les tests : `pytest tests/`.
 | 5 | [Expansions de bases et régularisation](notebooks/ch05_bases_et_regularisation) | ✅ |
 | 6 | [Méthodes de lissage par noyaux](notebooks/ch06_lissage_par_noyaux) | ✅ |
 | 7 | [Évaluation et sélection de modèles](notebooks/ch07_evaluation_selection_modeles) | ✅ |
-| 8 | Inférence et moyennage de modèles | 🚧 |
-| 9 | Modèles additifs, arbres et méthodes apparentées | - |
+| 8 | [Inférence et moyennage de modèles](notebooks/ch08_inference_et_moyennage) | ✅ |
+| 9 | Modèles additifs, arbres et méthodes apparentées | 🚧 |
 | 10 | Boosting et arbres additifs | - |
 | 11 | Réseaux de neurones | - |
 | 12 | SVM et discriminants flexibles | - |
