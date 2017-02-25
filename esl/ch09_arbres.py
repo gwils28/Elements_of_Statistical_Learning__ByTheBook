@@ -37,3 +37,25 @@ def _wmean(v, w):
     if w is None:
         return float(np.mean(v))
     return float(np.sum(w * v) / np.sum(w))
+
+
+# ---------------------------------------------------------------------------
+# Lisseurs linéaires
+# ---------------------------------------------------------------------------
+
+
+def _penalty_matrix(t, k=3):
+    """Matrice de pénalité :math:`\\Omega_{ab} = \\int B_a''(x) B_b''(x)\\,dx`.
+
+    Les dérivées secondes de B-splines cubiques sont affines par morceaux :
+    une quadrature de Gauss-Legendre à 2 points par intervalle est exacte.
+    """
+    K = len(t) - k - 1
+    bs = BSpline(t, np.eye(K), k).derivative(2)
+    nodes = np.unique(t)
+    g, gw = np.polynomial.legendre.leggauss(2)
+    a, b = nodes[:-1], nodes[1:]
+    pts = (0.5 * (b - a)[:, None] * g[None, :] + 0.5 * (a + b)[:, None]).ravel()
+    wts = (0.5 * (b - a)[:, None] * gw[None, :]).ravel()
+    D = bs(pts)  # (npts, K)
+    return D.T @ (wts[:, None] * D)
