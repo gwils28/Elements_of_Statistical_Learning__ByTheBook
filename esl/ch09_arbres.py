@@ -158,3 +158,13 @@ class SplineLisseur:
         Bw = self.B if w is None else self.B * w[:, None]
         G = self.B.T @ Bw
         return self.B @ np.linalg.solve(G + self._pen(self.lam), Bw.T)
+
+
+class MatriceLisseur:
+    """Lisseur linéaire défini directement par une matrice :math:`S` (N x N)."""
+
+    def __init__(self, S):
+        self.S = np.asarray(S, dtype=float)
+
+    def fit(self, y, w=None):
+        return self.S @ y
