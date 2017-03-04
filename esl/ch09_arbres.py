@@ -168,3 +168,30 @@ class MatriceLisseur:
 
     def fit(self, y, w=None):
         return self.S @ y
+
+
+def local_linear_matrix(x, bandwidth):
+    """Matrice de lissage de la régression linéaire locale (noyau gaussien).
+
+    La ligne :math:`i` contient les poids :math:`\\ell_k(x_i)` tels que
+    :math:`\\hat f(x_i) = \\sum_k \\ell_k(x_i) y_k` (éq. (6.8)-(6.9) du livre).
+
+    Parameters
+    ----------
+    x : ndarray, shape (N,)
+    bandwidth : float
+        Écart-type du noyau gaussien.
+
+    Returns
+    -------
+    ndarray, shape (N, N)
+    """
+    x = np.asarray(x, dtype=float)
+    N = len(x)
+    S = np.empty((N, N))
+    B = np.column_stack([np.ones(N), x])
+    for i, x0 in enumerate(x):
+        k = np.exp(-0.5 * ((x - x0) / bandwidth) ** 2)
+        BtW = B.T * k
+        S[i] = np.array([1.0, x0]) @ np.linalg.solve(BtW @ B, BtW)
+    return S
