@@ -195,3 +195,65 @@ def local_linear_matrix(x, bandwidth):
         BtW = B.T * k
         S[i] = np.array([1.0, x0]) @ np.linalg.solve(BtW @ B, BtW)
     return S
+
+
+# ---------------------------------------------------------------------------
+# Backfitting et modèles additifs
+# ---------------------------------------------------------------------------
+
+
+def backfitting(y, smoothers, w=None, intercept=True, tol=1e-6, max_iter=200,
+                F0=None, history=False):
+    """Algorithme de backfitting (algorithme 9.1 du livre).
+
+    Parameters
+    ----------
+    y : ndarray, shape (N,)
+    smoothers : list
+        Objets possédant une méthode ``fit(r, w)`` qui renvoie les valeurs
+        ajustées du lissage des résidus partiels ``r`` (un par terme).
+    w : ndarray, optional
+        Poids des observations (backfitting pondéré).
+    intercept : bool
+        Si vrai, :math:`\\hat\\alpha` = moyenne (pondérée) de ``y`` et chaque
+        :math:`\\hat f_j` est recentré (seconde ligne de l'étape 2).
+    tol : float
+        Arrêt lorsque la variation relative des fonctions est inférieure à ``tol``.
+    F0 : ndarray, shape (N, p), optional
+        Valeurs initiales des :math:`\\hat f_j` (zéro par défaut).
+    history : bool
+        Si vrai, renvoie aussi la liste des RSS après chaque cycle.
+
+    Returns
+    -------
+    alpha : float
+    F : ndarray, shape (N, p)
+        Colonne :math:`j` = :math:`\\hat f_j(x_{ij})`.
+    n_iter : int
+    hist : list (si ``history``)
+    """
+    y = np.asarray(y, dtype=float)
+    N, p = len(y), len(smoothers)
+    alpha = _wmean(y, w) if intercept else 0.0
+    F = np.zeros((N, p)) if F0 is None else np.array(F0, dtype=float)
+    total = F.sum(axis=1)
+    hist = []
+    it = 0
+    for it in range(1, max_iter + 1):
+        delta, norm = 0.0, 0.0
+        for j, sm in enumerate(smoothers):
+            r = y - alpha - total + F[:, j]
+            fj = sm.fit(r, w)
+            if intercept:
+                fj = fj - _wmean(fj, w)
+            delta += np.sum((fj - F[:, j]) ** 2)
+            norm += np.sum(fj ** 2)
+            total += fj - F[:, j]
+            F[:, j] = fj
+        if history:
+            hist.append(float(np.sum((y - alpha - total) ** 2)))
+        if delta <= tol ** 2 * max(norm, 1e-300):
+            break
+    if history:
+        return alpha, F, it, hist
+    return alpha, F, it
