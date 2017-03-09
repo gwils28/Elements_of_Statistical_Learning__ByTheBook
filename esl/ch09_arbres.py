@@ -257,3 +257,36 @@ def backfitting(y, smoothers, w=None, intercept=True, tol=1e-6, max_iter=200,
     if history:
         return alpha, F, it, hist
     return alpha, F, it
+
+
+def logistic_irls(X, y, w=None, max_iter=50, tol=1e-8):
+    """Régression logistique linéaire par moindres carrés repondérés (section 4.4.1).
+
+    Parameters
+    ----------
+    X : ndarray, shape (N, p)
+        Sans colonne de 1 (l'intercept est ajouté).
+    y : ndarray, shape (N,), valeurs 0/1
+    w : ndarray, optional
+        Poids des observations.
+
+    Returns
+    -------
+    beta : ndarray, shape (p + 1,)
+        Intercept puis coefficients.
+    """
+    X1 = np.column_stack([np.ones(len(y)), X])
+    w = np.ones(len(y)) if w is None else np.asarray(w, float)
+    beta = np.zeros(X1.shape[1])
+    for _ in range(max_iter):
+        eta = X1 @ beta
+        p = 1 / (1 + np.exp(-eta))
+        W = np.clip(p * (1 - p), 1e-10, None) * w
+        z = eta + (y - p) / np.clip(p * (1 - p), 1e-10, None)
+        A = X1.T @ (W[:, None] * X1) + 1e-8 * np.eye(X1.shape[1])
+        new = np.linalg.solve(A, X1.T @ (W * z))
+        if np.max(np.abs(new - beta)) < tol * (1 + np.max(np.abs(beta))):
+            beta = new
+            break
+        beta = new
+    return beta
