@@ -385,3 +385,28 @@ class GAM:
         if self.family == "binomial":
             return (self.decision_function(X) > 0).astype(int)
         return self.decision_function(X)
+
+
+# ---------------------------------------------------------------------------
+# Arbres CART
+# ---------------------------------------------------------------------------
+
+
+def impurity(p, criterion="gini"):
+    """Impureté d'un nœud à partir des proportions de classes (éq. (9.17)).
+
+    Parameters
+    ----------
+    p : ndarray, shape (..., K)
+        Proportions :math:`\\hat p_{mk}` (sommant à 1 sur le dernier axe).
+    criterion : {"gini", "entropy", "misclass"}
+    """
+    p = np.asarray(p, dtype=float)
+    if criterion == "gini":
+        return np.sum(p * (1 - p), axis=-1)
+    if criterion == "entropy":
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return -np.sum(np.where(p > 0, p * np.log(p), 0.0), axis=-1)
+    if criterion == "misclass":
+        return 1 - np.max(p, axis=-1)
+    raise ValueError(criterion)
