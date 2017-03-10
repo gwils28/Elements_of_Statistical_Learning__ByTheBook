@@ -290,3 +290,98 @@ def logistic_irls(X, y, w=None, max_iter=50, tol=1e-8):
             break
         beta = new
     return beta
+
+
+class GAM:
+    """Modèle additif généralisé à splines de lissage (gaussien ou logistique).
+
+    * ``family="gaussian"`` : backfitting (algorithme 9.1) ;
+    * ``family="binomial"`` : « local scoring » (algorithme 9.2), c'est-à-dire
+      Newton-Raphson dont chaque étape est un backfitting pondéré.
+
+    Parameters
+    ----------
+    df : float or sequence
+        Degrés de liberté *nominaux* de chaque terme, au sens du livre :
+        :math:`\\mathrm{df}_j = \\mathrm{tr}(S_j) - 1`.
+    n_knots : int or None
+        Nombre de nœuds intérieurs de chaque spline (``None`` = tous).
+    """
+
+    def __init__(self, df=4.0, n_knots=12, family="gaussian", tol=1e-6,
+                 max_iter=30, backfit_tol=1e-4, backfit_iter=50):
+        self.df, self.n_knots, self.family = df, n_knots, family
+        self.tol, self.max_iter = tol, max_iter
+        self.backfit_tol, self.backfit_iter = backfit_tol, backfit_iter
+
+    def fit(self, X, y, w=None):
+        X = np.asarray(X, dtype=float)
+        y = np.asarray(y, dtype=float)
+        N, p = X.shape
+        dfs = np.broadcast_to(np.asarray(self.df, float), (p,))
+        self.smoothers_ = []
+        for j in range(p):
+            sm = SplineLisseur(X[:, j], lam=1.0, n_knots=self.n_knots)
+            dmax = sm.df_for_lambda(1e-8 * sm._scale)
+            sm.lam = sm.lambda_for_df(min(dfs[j] + 1.0, dmax - 1e-3))
+            self.smoothers_.append(sm)
+        w0 = np.ones(N) if w is None else np.asarray(w, float)
+        if self.family == "gaussian":
+            self.alpha_, self.F_, self.n_iter_ = backfitting(
+                y, self.smoothers_, w=w0, tol=self.backfit_tol,
+                max_iter=self.backfit_iter)
+            z_fin, w_fin = y, w0
+        elif self.family == "binomial":
+            ybar = np.clip(_wmean(y, w0), 1e-6, 1 - 1e-6)
+            alpha = np.log(ybar / (1 - ybar))
+            F = np.zeros((N, p))
+            dev_old = np.inf
+            for it in range(1, self.max_iter + 1):
+                eta = alpha + F.sum(axis=1)
+                pr = np.clip(1 / (1 + np.exp(-eta)), 1e-6, 1 - 1e-6)
+                z = eta + (y - pr) / (pr * (1 - pr))
+                ww = w0 * pr * (1 - pr)
+                ww = ww / ww.mean()  # normalisation : lambda garde son sens
+                alpha, F, _ = backfitting(z, self.smoothers_, w=ww, F0=F,
+                                          tol=self.backfit_tol,
+                                          max_iter=self.backfit_iter)
+                z_fin, w_fin = z, ww
+                eta = alpha + F.sum(axis=1)
+                pr = np.clip(1 / (1 + np.exp(-eta)), 1e-12, 1 - 1e-12)
+                dev = -2 * np.sum(w0 * (y * np.log(pr) + (1 - y) * np.log(1 - pr)))
+                if abs(dev_old - dev) < self.tol * (abs(dev) + 1):
+                    break
+                dev_old = dev
+            self.alpha_, self.F_, self.n_iter_ = alpha, F, it
+            self.deviance_ = dev
+        else:
+            raise ValueError("family inconnue")
+        # coefficients de chaque spline : on relisse une dernière fois les résidus
+        # partiels ; les B-splines sommant à 1, le recentrage revient à retrancher
+        # une constante aux coefficients.
+        self.coefs_ = []
+        tot = self.F_.sum(axis=1)
+        for j, sm in enumerate(self.smoothers_):
+            r = z_fin - self.alpha_ - tot + self.F_[:, j]
+            fj = sm.fit(r, w_fin)
+            self.coefs_.append(sm.coef_ - _wmean(fj, w_fin))
+        return self
+
+    def partial(self, X):
+        """Matrice des contributions :math:`\\hat f_j(x_{ij})` pour de nouvelles données."""
+        X = np.asarray(X, dtype=float)
+        return np.column_stack([sm._basis(X[:, j]) @ self.coefs_[j]
+                                for j, sm in enumerate(self.smoothers_)])
+
+    def decision_function(self, X):
+        """Prédicteur additif :math:`\\hat\\alpha + \\sum_j \\hat f_j(x_j)`."""
+        return self.alpha_ + self.partial(X).sum(axis=1)
+
+    def predict_proba(self, X):
+        """Probabilité :math:`\\Pr(Y=1\\mid x)` (famille binomiale)."""
+        return 1 / (1 + np.exp(-self.decision_function(X)))
+
+    def predict(self, X):
+        if self.family == "binomial":
+            return (self.decision_function(X) > 0).astype(int)
+        return self.decision_function(X)
