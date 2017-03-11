@@ -711,3 +711,36 @@ class ArbreCART:
 
         rec(0, 0)
         return "\n".join(lines)
+
+
+def cart_cv(X, y, alphas, n_folds=10, rng=None, sample_weight=None, **tree_kw):
+    """Validation croisée de l'élagage coût-complexité.
+
+    Pour chaque pli, on fait croître un arbre maximal sur les autres plis, on
+    calcule sa suite d'élagage, et l'on évalue sur le pli retenu le sous-arbre
+    :math:`T_\\alpha` pour chaque valeur de ``alphas``.
+
+    Returns
+    -------
+    errors : ndarray, shape (n_folds, len(alphas))
+        Erreur de classement (classification) ou erreur quadratique moyenne
+        (régression) sur chaque pli.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y)
+    N = len(y)
+    rng = np.random.RandomState(0) if rng is None else rng
+    folds = rng.permutation(N) % n_folds
+    errors = np.empty((n_folds, len(alphas)))
+    for f in range(n_folds):
+        tr, te = folds != f, folds == f
+        sw = None if sample_weight is None else sample_weight[tr]
+        t = ArbreCART(**tree_kw).fit(X[tr], y[tr], sample_weight=sw)
+        path = t.pruning_path()
+        for a_i, a in enumerate(alphas):
+            pred = t.predict(X[te], t.subtree(a, path))
+            if t.task == "classification":
+                errors[f, a_i] = np.mean(pred != y[te])
+            else:
+                errors[f, a_i] = np.mean((pred - y[te]) ** 2)
+    return errors
