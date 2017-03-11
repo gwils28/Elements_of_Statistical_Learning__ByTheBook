@@ -410,3 +410,304 @@ def impurity(p, criterion="gini"):
     if criterion == "misclass":
         return 1 - np.max(p, axis=-1)
     raise ValueError(criterion)
+
+
+class ArbreCART:
+    """Arbre CART de régression ou de classification (section 9.2 du livre).
+
+    La croissance est gloutonne et « meilleur d'abord » : on découpe à chaque
+    étape la feuille dont la meilleure coupure fait le plus baisser le critère.
+    Sans ``max_leaves``, on obtient l'arbre maximal :math:`T_0` (on ne découpe plus
+    un nœud de moins de ``min_samples_split`` observations).
+
+    Parameters
+    ----------
+    task : {"classification", "regression"}
+    criterion : {"gini", "entropy", "mse"}
+        Critère de croissance (``"mse"`` pour la régression).
+    min_samples_split : int
+        Effectif minimal d'un nœud pour qu'on tente de le couper.
+    min_samples_leaf : int
+        Effectif minimal de chaque fils.
+    max_leaves : int, optional
+        Nombre maximal de feuilles (arbre de taille fixée).
+    max_depth : int, optional
+    """
+
+    def __init__(self, task="classification", criterion=None, min_samples_split=5,
+                 min_samples_leaf=1, max_leaves=None, max_depth=None, n_classes=None):
+        self.task = task
+        if criterion is None:
+            criterion = "gini" if task == "classification" else "mse"
+        self.criterion = criterion
+        self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
+        self.max_leaves = max_leaves
+        self.max_depth = max_depth
+        self.n_classes = n_classes
+
+    # -- recherche de la meilleure coupure d'un nœud -------------------------
+    def _node_cost(self, stats):
+        """Coût (impureté totale) d'un nœud à partir de ses statistiques suffisantes."""
+        if self.task == "regression":
+            W, S1, S2 = stats
+            return S2 - S1 ** 2 / W
+        c = stats
+        n = c.sum(-1)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            if self.criterion == "gini":
+                return n - np.sum(c ** 2, axis=-1) / n
+            if self.criterion == "entropy":
+                q = c / n[..., None]
+                return -np.sum(np.where(c > 0, c * np.log(np.where(q > 0, q, 1)), 0.0), axis=-1)
+        raise ValueError(self.criterion)
+
+    def _best_split(self, idx):
+        n = len(idx)
+        msl = self.min_samples_leaf
+        if n < self.min_samples_split or n < 2 * msl:
+            return None
+        Xn = self.X_[idx]
+        order = np.argsort(Xn, axis=0, kind="stable")
+        xs = np.take_along_axis(Xn, order, axis=0)
+        w = self.w_[idx]
+        if self.task == "regression":
+            y = self.y_[idx]
+            W = np.cumsum(w[order], axis=0)[:-1]
+            S1 = np.cumsum((w * y)[order], axis=0)[:-1]
+            S2 = np.cumsum((w * y * y)[order], axis=0)[:-1]
+            Wt, S1t, S2t = W[-1] + w[order[-1]], S1[-1] + (w * y)[order[-1]], \
+                S2[-1] + (w * y * y)[order[-1]]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                cost = (S2 - S1 ** 2 / W) + ((S2t - S2) - (S1t - S1) ** 2 / (Wt - W))
+            parent = S2t[0] - S1t[0] ** 2 / Wt[0]
+        else:
+            Yk = self.Y1_[idx] * w[:, None]  # (n, K)
+            C = np.cumsum(Yk[order], axis=0)  # (n, p, K)
+            tot = C[-1, 0]
+            L = C[:-1]
+            R = tot - L
+            cost = self._node_cost(L) + self._node_cost(R)
+            parent = float(self._node_cost(tot))
+        valid = xs[1:] > xs[:-1]
+        if msl > 1:
+            pos = np.arange(1, n)[:, None]
+            valid &= (pos >= msl) & (n - pos >= msl)
+        cost = np.where(valid & np.isfinite(cost), cost, np.inf)
+        k = np.argmin(cost)
+        i, j = np.unravel_index(k, cost.shape)
+        if not np.isfinite(cost[i, j]):
+            return None
+        gain = parent - cost[i, j]
+        thr = 0.5 * (xs[i, j] + xs[i + 1, j])
+        left = idx[Xn[:, j] <= thr]
+        right = idx[Xn[:, j] > thr]
+        return gain, j, thr, left, right
+
+    def _new_node(self, idx, depth, parent):
+        w = self.w_[idx]
+        node = len(self.feature)
+        self.feature.append(-1)
+        self.threshold.append(np.nan)
+        self.left.append(-1)
+        self.right.append(-1)
+        self.parent.append(parent)
+        self.depth.append(depth)
+        self.n_node.append(len(idx))
+        self.w_node.append(float(w.sum()))
+        if self.task == "regression":
+            y = self.y_[idx]
+            m = _wmean(y, w)
+            self.value.append(m)
+            self.risk.append(float(np.sum(w * (y - m) ** 2)))
+        else:
+            c = (self.Y1_[idx] * w[:, None]).sum(0)
+            self.value.append(c / c.sum())
+            self.counts.append((self.Y1_[idx]).sum(0))
+            self.risk.append(float(c.sum() - c.max()))
+        return node
+
+    def fit(self, X, y, sample_weight=None):
+        """Fait croître l'arbre sur ``(X, y)``."""
+        self.X_ = np.asarray(X, dtype=float)
+        N, self.p_ = self.X_.shape
+        self.w_ = np.ones(N) if sample_weight is None else np.asarray(sample_weight, float)
+        if self.task == "classification":
+            y = np.asarray(y).astype(int)
+            K = self.n_classes or int(y.max()) + 1
+            self.n_classes_ = K
+            self.Y1_ = np.eye(K)[y]
+        self.y_ = np.asarray(y, dtype=float)
+        self.feature, self.threshold, self.left, self.right = [], [], [], []
+        self.parent, self.depth, self.n_node, self.w_node = [], [], [], []
+        self.value, self.risk, self.counts = [], [], []
+        root = self._new_node(np.arange(N), 0, -1)
+        heap, cnt = [], 0
+
+        def push(node, idx):
+            nonlocal cnt
+            if self.max_depth is not None and self.depth[node] >= self.max_depth:
+                return
+            if self.risk[node] <= 1e-12:
+                return
+            s = self._best_split(idx)
+            if s is None or s[0] <= 1e-12:
+                return
+            heapq.heappush(heap, (-s[0], cnt, node, s))
+            cnt += 1
+
+        push(root, np.arange(N))
+        n_leaves = 1
+        while heap and (self.max_leaves is None or n_leaves < self.max_leaves):
+            _, _, node, (gain, j, thr, li, ri) = heapq.heappop(heap)
+            self.feature[node], self.threshold[node] = j, thr
+            d = self.depth[node] + 1
+            a = self._new_node(li, d, node)
+            b = self._new_node(ri, d, node)
+            self.left[node], self.right[node] = a, b
+            n_leaves += 1
+            push(a, li)
+            push(b, ri)
+        for name in ("feature", "left", "right", "parent", "depth", "n_node"):
+            setattr(self, name, np.array(getattr(self, name), dtype=int))
+        for name in ("threshold", "w_node", "risk"):
+            setattr(self, name, np.array(getattr(self, name), dtype=float))
+        self.value = np.array(self.value, dtype=float)
+        if self.task == "classification":
+            self.counts = np.array(self.counts)
+        self.is_leaf_ = self.left < 0
+        del self.X_, self.y_, self.w_
+        if self.task == "classification":
+            del self.Y1_
+        return self
+
+    # -- prédiction -----------------------------------------------------------
+    def apply(self, X, is_leaf=None):
+        """Indice du nœud terminal atteint par chaque observation.
+
+        ``is_leaf`` (masque booléen) permet d'utiliser un sous-arbre élagué.
+        """
+        X = np.asarray(X, dtype=float)
+        leaf = self.is_leaf_ if is_leaf is None else is_leaf
+        node = np.zeros(len(X), dtype=int)
+        active = ~leaf[node]
+        while active.any():
+            nd = node[active]
+            go_left = X[active, self.feature[nd]] <= self.threshold[nd]
+            node[active] = np.where(go_left, self.left[nd], self.right[nd])
+            active = ~leaf[node]
+        return node
+
+    def predict_value(self, X, is_leaf=None):
+        """Valeur du nœud terminal (moyenne, ou vecteur de proportions de classes)."""
+        return self.value[self.apply(X, is_leaf)]
+
+    def predict_proba(self, X, is_leaf=None):
+        return self.predict_value(X, is_leaf)
+
+    def predict(self, X, is_leaf=None):
+        v = self.predict_value(X, is_leaf)
+        if self.task == "classification":
+            return np.argmax(v, axis=1)
+        return v
+
+    def n_leaves(self, is_leaf=None):
+        """Nombre de feuilles du (sous-)arbre."""
+        leaf = self.is_leaf_ if is_leaf is None else is_leaf
+        return int(np.sum(leaf & self._reachable(leaf)))
+
+    def _reachable(self, is_leaf):
+        reach = np.zeros(len(self.feature), dtype=bool)
+        reach[0] = True
+        for t in range(len(self.feature)):  # les fils ont un indice > parent
+            if reach[t] and not is_leaf[t]:
+                reach[self.left[t]] = reach[self.right[t]] = True
+        return reach
+
+    # -- élagage coût-complexité ---------------------------------------------
+    def _subtree_stats(self, is_leaf):
+        """Risque :math:`R(T_t)` et nombre de feuilles :math:`|T_t|` de chaque branche."""
+        n = len(self.feature)
+        R = self.risk.copy()
+        L = np.ones(n)
+        for t in range(n - 1, -1, -1):
+            if not is_leaf[t]:
+                R[t] = R[self.left[t]] + R[self.right[t]]
+                L[t] = L[self.left[t]] + L[self.right[t]]
+        return R, L
+
+    def pruning_path(self):
+        """Suite des sous-arbres emboîtés de l'élagage du maillon le plus faible.
+
+        Returns
+        -------
+        alphas : ndarray
+            Seuils croissants :math:`0=\\alpha_0<\\alpha_1<\\dots` ; le sous-arbre
+            ``trees[k]`` minimise :math:`C_\\alpha(T)` (éq. (9.16)) pour
+            :math:`\\alpha\\in[\\alpha_k,\\alpha_{k+1})`.
+        trees : list of ndarray (bool)
+            Masques « est une feuille » de chaque sous-arbre.
+        """
+        is_leaf = self.is_leaf_.copy()
+        reach = self._reachable(is_leaf)
+        alphas, trees = [], []
+        first = True
+        while True:
+            R, L = self._subtree_stats(is_leaf)
+            internal = (~is_leaf) & reach
+            if not internal.any():
+                if first:
+                    alphas.append(0.0)
+                    trees.append(is_leaf.copy())
+                break
+            g = np.full(len(R), np.inf)
+            g[internal] = (self.risk[internal] - R[internal]) / (L[internal] - 1)
+            a = max(g.min(), 0.0)
+            if first and a > 1e-12:
+                alphas.append(0.0)
+                trees.append(is_leaf.copy())
+            first = False
+            cut = internal & (g <= a + 1e-10 * max(1.0, abs(a)))
+            is_leaf = is_leaf | cut
+            reach = self._reachable(is_leaf)
+            if alphas and abs(alphas[-1] - a) <= 1e-12 and len(trees) > 0 and a <= 1e-12:
+                trees[-1] = is_leaf.copy()
+            else:
+                alphas.append(a)
+                trees.append(is_leaf.copy())
+            if is_leaf[0]:
+                break
+        return np.array(alphas), trees
+
+    def subtree(self, alpha, path=None):
+        """Masque du sous-arbre :math:`T_\\alpha` (plus petit minimiseur de :math:`C_\\alpha`)."""
+        alphas, trees = self.pruning_path() if path is None else path
+        k = np.searchsorted(alphas, alpha, side="right") - 1
+        return trees[max(k, 0)]
+
+    def describe(self, names=None, is_leaf=None, classes=None, digits=3):
+        """Représentation textuelle (indentée) de l'arbre."""
+        leaf = self.is_leaf_ if is_leaf is None else is_leaf
+        names = names or ["x%d" % (j + 1) for j in range(self.p_)]
+        lines = []
+
+        def lab(t):
+            if self.task == "regression":
+                return "moyenne=%.*f" % (digits, self.value[t])
+            k = int(np.argmax(self.value[t]))
+            c = classes[k] if classes else str(k)
+            return "%s (n=%d, p=%s)" % (c, self.n_node[t],
+                                        np.array2string(self.value[t], precision=2))
+
+        def rec(t, ind):
+            if leaf[t]:
+                lines.append("  " * ind + "-> " + lab(t))
+                return
+            f, s = names[self.feature[t]], self.threshold[t]
+            lines.append("  " * ind + "%s < %.*g" % (f, digits + 1, s))
+            rec(self.left[t], ind + 1)
+            lines.append("  " * ind + "%s > %.*g" % (f, digits + 1, s))
+            rec(self.right[t], ind + 1)
+
+        rec(0, 0)
+        return "\n".join(lines)
