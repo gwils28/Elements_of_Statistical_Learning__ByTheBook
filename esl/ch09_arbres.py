@@ -755,3 +755,78 @@ def in_box(X, box):
     """Indicatrice d'appartenance à la boîte ``box = (lo, hi)`` (bornes incluses)."""
     lo, hi = box
     return np.all((X >= lo) & (X <= hi), axis=1)
+
+
+def prim_peel(X, y, alpha=0.1, min_count=10, mask=None):
+    """Phase descendante de PRIM (« épluchage », étapes 1-3 de l'algorithme 9.3).
+
+    À chaque étape on retire, sur une face de la boîte, la fraction ``alpha``
+    des observations ayant les plus petites (ou les plus grandes) valeurs d'une
+    variable, en choisissant l'épluchage qui maximise la moyenne de ``y`` dans
+    la boîte restante. En présence d'ex-aequo (variables discrètes ou
+    nombreuses valeurs nulles), un épluchage peut retirer plus que la fraction
+    prévue ; on compare alors les candidats par le gain de moyenne *par
+    observation retirée*, :math:`(\bar y_{\text{nouv}} - \bar y)/n_{\text{retirés}}`,
+    comme le proposent Friedman et Fisher (1999). Sans ex-aequo, ce critère
+    revient à maximiser la moyenne de la boîte restante.
+
+    Parameters
+    ----------
+    X : ndarray, shape (N, p)
+    y : ndarray, shape (N,)
+    alpha : float
+        Fraction épluchée à chaque étape.
+    min_count : int
+        On s'arrête quand la boîte contient moins de ``min_count`` points.
+    mask : ndarray of bool, optional
+        Observations disponibles (les autres sont ignorées).
+
+    Returns
+    -------
+    boxes : list of (lo, hi)
+        Suite des boîtes (la première est la boîte maximale).
+    means, counts : ndarray
+        Moyenne de ``y`` et effectif dans chaque boîte.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    p = X.shape[1]
+    avail = np.ones(len(y), bool) if mask is None else mask.copy()
+    lo, hi = np.full(p, -np.inf), np.full(p, np.inf)
+    inside = avail.copy()
+    boxes, means, counts = [(lo.copy(), hi.copy())], [y[inside].mean()], [inside.sum()]
+    while inside.sum() >= min_count:
+        Xi, yi = X[inside], y[inside]
+        n = len(yi)
+        k = max(1, int(np.ceil(alpha * n)))
+        cur = yi.mean()
+        best = None
+        for j in range(p):
+            xs = np.sort(Xi[:, j])
+            # face basse : on retire tout x <= v, v = k-ième plus petite valeur
+            v = xs[k - 1]
+            keep = Xi[:, j] > v
+            if 0 < keep.sum() < n:
+                m = (yi[keep].mean() - cur) / (n - keep.sum())
+                if best is None or m > best[0]:
+                    nxt = xs[xs > v][0]
+                    best = (m, j, "lo", 0.5 * (v + nxt), keep.sum())
+            v = xs[n - k]
+            keep = Xi[:, j] < v
+            if 0 < keep.sum() < n:
+                m = (yi[keep].mean() - cur) / (n - keep.sum())
+                if best is None or m > best[0]:
+                    prv = xs[xs < v][-1]
+                    best = (m, j, "hi", 0.5 * (v + prv), keep.sum())
+        if best is None or best[4] < min_count:
+            break
+        m, j, side, s, _ = best
+        if side == "lo":
+            lo[j] = s
+        else:
+            hi[j] = s
+        inside = avail & in_box(X, (lo, hi))
+        boxes.append((lo.copy(), hi.copy()))
+        means.append(y[inside].mean())
+        counts.append(inside.sum())
+    return boxes, np.array(means), np.array(counts)
