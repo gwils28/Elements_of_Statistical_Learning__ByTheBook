@@ -744,3 +744,14 @@ def cart_cv(X, y, alphas, n_folds=10, rng=None, sample_weight=None, **tree_kw):
             else:
                 errors[f, a_i] = np.mean((pred - y[te]) ** 2)
     return errors
+
+
+# ---------------------------------------------------------------------------
+# PRIM
+# ---------------------------------------------------------------------------
+
+
+def in_box(X, box):
+    """Indicatrice d'appartenance à la boîte ``box = (lo, hi)`` (bornes incluses)."""
+    lo, hi = box
+    return np.all((X >= lo) & (X <= hi), axis=1)
