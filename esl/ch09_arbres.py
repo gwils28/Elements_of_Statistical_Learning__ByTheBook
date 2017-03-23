@@ -830,3 +830,55 @@ def prim_peel(X, y, alpha=0.1, min_count=10, mask=None):
         means.append(y[inside].mean())
         counts.append(inside.sum())
     return boxes, np.array(means), np.array(counts)
+
+
+def prim_paste(X, y, box, alpha=0.1, mask=None):
+    """Phase ascendante de PRIM (« recollage », étape 4 de l'algorithme 9.3).
+
+    On élargit la boîte le long d'une face (en réintégrant environ ``alpha`` x
+    effectif observations) tant que cela augmente la moyenne de la boîte.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    avail = np.ones(len(y), bool) if mask is None else mask
+    lo, hi = box[0].copy(), box[1].copy()
+    inside = avail & in_box(X, (lo, hi))
+    cur = y[inside].mean()
+    while True:
+        n = inside.sum()
+        k = max(1, int(np.ceil(alpha * n)))
+        best = None
+        for j in range(X.shape[1]):
+            others = np.ones(len(y), bool)
+            for jj in range(X.shape[1]):
+                if jj != j:
+                    others &= (X[:, jj] >= lo[jj]) & (X[:, jj] <= hi[jj])
+            others &= avail
+            for side in ("lo", "hi"):
+                if side == "lo":
+                    cand = others & (X[:, j] < lo[j])
+                    if not cand.any():
+                        continue
+                    xs = np.sort(X[cand, j])[::-1]
+                    v = xs[min(k, len(xs)) - 1]
+                    rest = X[others, j][X[others, j] < v]
+                    new = 0.5 * (v + rest.max()) if len(rest) else -np.inf
+                    nlo, nhi = lo.copy(), hi.copy()
+                    nlo[j] = new
+                else:
+                    cand = others & (X[:, j] > hi[j])
+                    if not cand.any():
+                        continue
+                    xs = np.sort(X[cand, j])
+                    v = xs[min(k, len(xs)) - 1]
+                    rest = X[others, j][X[others, j] > v]
+                    new = 0.5 * (v + rest.min()) if len(rest) else np.inf
+                    nlo, nhi = lo.copy(), hi.copy()
+                    nhi[j] = new
+                ins = avail & in_box(X, (nlo, nhi))
+                m = y[ins].mean()
+                if m > cur + 1e-12 and (best is None or m > best[0]):
+                    best = (m, nlo, nhi, ins)
+        if best is None:
+            return (lo, hi)
+        cur, lo, hi, inside = best
