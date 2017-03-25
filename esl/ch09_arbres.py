@@ -932,3 +932,167 @@ def box_rules(box, names=None, digits=3):
         elif np.isfinite(hi[j]):
             rules.append("%s < %.*g" % (names[j], digits, hi[j]))
     return rules
+
+
+# ---------------------------------------------------------------------------
+# MARS (version simplifiée)
+# ---------------------------------------------------------------------------
+
+
+class MARS:
+    """Version simplifiée de MARS (section 9.4 du livre).
+
+    * passe avant : à chaque étape on ajoute la paire réfléchie
+      :math:`h_\\ell(X)(X_j-t)_+,\\; h_\\ell(X)(t-X_j)_+` qui fait le plus baisser
+      la somme des carrés résiduelle, avec :math:`h_\\ell` déjà dans le modèle,
+      :math:`X_j` absente de :math:`h_\\ell` et un degré d'interaction borné ;
+    * passe arrière : on retire un à un les termes les moins utiles et l'on
+      retient le modèle minimisant le critère GCV (éq. (9.20)) avec
+      :math:`M(\\lambda) = r + c\\,K`, :math:`K = (r-1)/2` nœuds.
+
+    Simplification : les nœuds candidats sont ``n_knots`` quantiles de chaque
+    variable (au lieu de toutes les valeurs observées).
+
+    Parameters
+    ----------
+    max_terms : int
+        Nombre maximal de fonctions de base (constante comprise) en passe avant.
+    max_degree : int
+        Degré maximal d'interaction (1 = modèle additif).
+    n_knots : int
+        Nombre de nœuds candidats par variable.
+    penalty : float
+        Coût :math:`c` d'un nœud dans le GCV (3 en général, 2 si additif).
+    min_nonzero : int, optional
+        Nombre minimal d'observations où une nouvelle fonction de base est non
+        nulle (par défaut :math:`\\max(5, N/20)`) ; évite des termes portés par
+        une poignée de points, qui extrapolent très mal.
+    """
+
+    def __init__(self, max_terms=21, max_degree=2, n_knots=20, penalty=None,
+                 min_nonzero=None):
+        self.min_nonzero = min_nonzero
+        self.max_terms = max_terms
+        self.max_degree = max_degree
+        self.n_knots = n_knots
+        self.penalty = penalty if penalty is not None else (2.0 if max_degree == 1 else 3.0)
+
+    @staticmethod
+    def _eval_term(X, term):
+        v = np.ones(len(X))
+        for (j, t, s) in term:
+            v = v * np.maximum(s * (X[:, j] - t), 0.0)
+        return v
+
+    def _design(self, X, terms):
+        return np.column_stack([self._eval_term(X, t) for t in terms])
+
+    def fit(self, X, y):
+        X = np.asarray(X, float)
+        y = np.asarray(y, float)
+        N, p = X.shape
+        knots = []
+        for j in range(p):
+            u = np.unique(X[:, j])
+            if len(u) > self.n_knots:
+                u = np.unique(np.quantile(X[:, j], np.linspace(0, 1, self.n_knots + 2)[1:-1]))
+            knots.append(u)
+        mnz = self.min_nonzero if self.min_nonzero is not None else max(5, N // 20)
+        terms = [[]]
+        B = np.ones((N, 1))
+        while len(terms) < self.max_terms:
+            Q, _ = np.linalg.qr(B)
+            r = y - Q @ (Q.T @ y)
+            best = None
+            for m, term in enumerate(terms):
+                if len(term) >= self.max_degree:
+                    continue
+                used = {f[0] for f in term}
+                hm = B[:, m]
+                for j in range(p):
+                    if j in used:
+                        continue
+                    t = knots[j]
+                    Cp = hm[:, None] * np.maximum(X[:, [j]] - t[None, :], 0)
+                    Cm = hm[:, None] * np.maximum(t[None, :] - X[:, [j]], 0)
+                    nzp = np.sum(Cp > 0, 0) >= mnz
+                    nzm = np.sum(Cm > 0, 0) >= mnz
+                    Cp = (Cp - Q @ (Q.T @ Cp)) * nzp
+                    Cm = (Cm - Q @ (Q.T @ Cm)) * nzm
+                    a = np.sum(Cp ** 2, 0)
+                    d = np.sum(Cm ** 2, 0)
+                    e = np.sum(Cp * Cm, 0)
+                    b1, b2 = Cp.T @ r, Cm.T @ r
+                    tiny = 1e-10 * np.sum(hm ** 2) + 1e-300
+                    det = a * d - e ** 2
+                    with np.errstate(divide="ignore", invalid="ignore"):
+                        both = (d * b1 ** 2 - 2 * e * b1 * b2 + a * b2 ** 2) / det
+                        only_p = np.where(a > tiny, b1 ** 2 / a, 0.0)
+                        only_m = np.where(d > tiny, b2 ** 2 / d, 0.0)
+                    ok = (a > tiny) & (d > tiny) & (det > 1e-8 * a * d)
+                    red = np.where(ok, both, np.maximum(only_p, only_m))
+                    red = np.where(np.isfinite(red), red, 0.0)
+                    k = int(np.argmax(red))
+                    if best is None or red[k] > best[0]:
+                        best = (red[k], m, j, t[k], a[k] > tiny, d[k] > tiny)
+            if best is None or best[0] <= 1e-12 * np.sum(r ** 2):
+                break
+            _, m, j, t, okp, okm = best
+            new = []
+            if okp:
+                new.append(terms[m] + [(j, t, 1.0)])
+            if okm:
+                new.append(terms[m] + [(j, t, -1.0)])
+            for nt in new:
+                if len(terms) < self.max_terms:
+                    terms.append(nt)
+                    B = np.column_stack([B, self._eval_term(X, nt)])
+        self.forward_terms_ = terms
+        # passe arrière
+        active = list(range(len(terms)))
+        Bf = B
+
+        def rss_of(cols):
+            beta, *_ = np.linalg.lstsq(Bf[:, cols], y, rcond=None)
+            return float(np.sum((y - Bf[:, cols] @ beta) ** 2))
+
+        def gcv(rss, r):
+            M = r + self.penalty * (r - 1) / 2.0
+            return rss / N / (1 - M / N) ** 2 if M < N else np.inf
+
+        rss = rss_of(active)
+        path = [(list(active), rss, gcv(rss, len(active)))]
+        while len(active) > 1:
+            cand = []
+            for c in active[1:]:
+                cols = [a for a in active if a != c]
+                cand.append((rss_of(cols), c))
+            rss, c = min(cand)
+            active = [a for a in active if a != c]
+            path.append((list(active), rss, gcv(rss, len(active))))
+        self.path_ = path
+        k = int(np.argmin([g for (_, _, g) in path]))
+        cols = path[k][0]
+        self.terms_ = [terms[c] for c in cols]
+        D = self._design(X, self.terms_)
+        self.coef_, *_ = np.linalg.lstsq(D, y, rcond=None)
+        return self
+
+    def predict(self, X):
+        X = np.asarray(X, float)
+        return self._design(X, self.terms_) @ self.coef_
+
+    def describe(self, names=None, digits=3):
+        """Liste lisible des termes retenus et de leurs coefficients."""
+        out = []
+        for c, term in zip(self.coef_, self.terms_):
+            if not term:
+                out.append("%+.4f" % c)
+                continue
+            fs = []
+            for (j, t, s) in term:
+                nm = names[j] if names else "x%d" % (j + 1)
+                fs.append("(%s - %.*g)+" % (nm, digits, t) if s > 0
+                          else "(%.*g - %s)+" % (digits, t, nm))
+            out.append("%+.4f * %s" % (c, " * ".join(fs)))
+        return out
