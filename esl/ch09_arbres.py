@@ -882,3 +882,38 @@ def prim_paste(X, y, box, alpha=0.1, mask=None):
         if best is None:
             return (lo, hi)
         cur, lo, hi, inside = best
+
+
+def prim(X, y, n_boxes=2, alpha=0.1, min_count=10, select=None, paste=True):
+    """PRIM complet : suite de boîtes :math:`B_1, B_2, \\dots` (algorithme 9.3).
+
+    Parameters
+    ----------
+    select : callable, optional
+        ``select(boxes, means, counts)`` renvoie l'indice de la boîte retenue
+        dans la trajectoire d'épluchage (étape 5 ; par défaut la dernière).
+
+    Returns
+    -------
+    list of dict
+        Pour chaque boîte : ``box`` (lo, hi), ``mean``, ``count`` et le masque
+        ``members`` des observations (parmi celles encore disponibles).
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    avail = np.ones(len(y), bool)
+    out = []
+    for _ in range(n_boxes):
+        if avail.sum() < min_count:
+            break
+        boxes, means, counts = prim_peel(X, y, alpha, min_count, mask=avail)
+        k = len(boxes) - 1 if select is None else select(boxes, means, counts)
+        box = boxes[k]
+        if paste:
+            box = prim_paste(X, y, box, alpha, mask=avail)
+        members = avail & in_box(X, box)
+        out.append({"box": box, "mean": float(y[members].mean()),
+                    "count": int(members.sum()), "members": members,
+                    "remain_mean": float(y[avail].mean())})
+        avail = avail & ~members
+    return out
