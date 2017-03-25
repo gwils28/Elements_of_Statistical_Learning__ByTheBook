@@ -917,3 +917,18 @@ def prim(X, y, n_boxes=2, alpha=0.1, min_count=10, select=None, paste=True):
                     "remain_mean": float(y[avail].mean())})
         avail = avail & ~members
     return out
+
+
+def box_rules(box, names=None, digits=3):
+    """Liste lisible des contraintes actives d'une boîte."""
+    lo, hi = box
+    names = names or ["x%d" % (j + 1) for j in range(len(lo))]
+    rules = []
+    for j in range(len(lo)):
+        if np.isfinite(lo[j]) and np.isfinite(hi[j]):
+            rules.append("%.*g < %s < %.*g" % (digits, lo[j], names[j], digits, hi[j]))
+        elif np.isfinite(lo[j]):
+            rules.append("%s > %.*g" % (names[j], digits, lo[j]))
+        elif np.isfinite(hi[j]):
+            rules.append("%s < %.*g" % (names[j], digits, hi[j]))
+    return rules
