@@ -1096,3 +1096,25 @@ class MARS:
                           else "(%.*g - %s)+" % (digits, t, nm))
             out.append("%+.4f * %s" % (c, " * ".join(fs)))
         return out
+
+
+# ---------------------------------------------------------------------------
+# Évaluation : courbe ROC
+# ---------------------------------------------------------------------------
+
+
+def roc_curve(scores, y):
+    """Courbe ROC : (spécificité, sensibilité) pour tous les seuils possibles.
+
+    On prédit la classe 1 lorsque ``scores >= seuil``.
+
+    Returns
+    -------
+    specificity, sensitivity : ndarray
+    """
+    scores = np.asarray(scores, float)
+    y = np.asarray(y).astype(int)
+    thr = np.r_[np.inf, np.unique(scores)[::-1], -np.inf]
+    sens = np.array([np.mean(scores[y == 1] >= t) for t in thr])
+    spec = np.array([np.mean(scores[y == 0] < t) for t in thr])
+    return spec, sens
