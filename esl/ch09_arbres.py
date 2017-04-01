@@ -1133,3 +1133,64 @@ def auc(scores, y):
     r = rankdata(scores)
     n1, n0 = np.sum(y == 1), np.sum(y == 0)
     return float((r[y == 1].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
+
+
+# ---------------------------------------------------------------------------
+# Représentation graphique d'un arbre
+# ---------------------------------------------------------------------------
+
+
+def trace_arbre(ax, tree, is_leaf=None, names=None, classes=None, leaf_text=None,
+                colors=("#2a78d6", "#eb6834"), fontsize=8):
+    """Dessine un arbre CART (nœuds internes : règle de coupure ; feuilles : classe).
+
+    Parameters
+    ----------
+    ax : matplotlib Axes
+    tree : ArbreCART
+    is_leaf : ndarray of bool, optional
+        Sous-arbre élagué à dessiner.
+    names : list of str, optional
+        Noms des variables.
+    classes : list of str, optional
+        Noms des classes (classification).
+    leaf_text : dict, optional
+        Texte supplémentaire affiché sous chaque feuille ``{nœud: texte}``.
+    """
+    leaf = tree.is_leaf_ if is_leaf is None else is_leaf
+    names = names or ["x%d" % (j + 1) for j in range(tree.p_)]
+    pos, order = {}, []
+
+    def layout(t, d):
+        if leaf[t]:
+            pos[t] = (len(order), -d)
+            order.append(t)
+            return pos[t][0]
+        a = layout(tree.left[t], d + 1)
+        b = layout(tree.right[t], d + 1)
+        pos[t] = (0.5 * (a + b), -d)
+        return pos[t][0]
+
+    layout(0, 0)
+    for t, (x, yy) in pos.items():
+        if not leaf[t]:
+            for ch, sym in ((tree.left[t], "<"), (tree.right[t], ">")):
+                xc, yc = pos[ch]
+                ax.plot([x, xc], [yy, yc], color="#898781", lw=1, zorder=1)
+            ax.text(x, yy + 0.18, "%s < %.3g" % (names[tree.feature[t]], tree.threshold[t]),
+                    ha="center", va="bottom", fontsize=fontsize, color=colors[0])
+        if tree.task == "classification":
+            k = int(np.argmax(tree.value[t]))
+            lab = classes[k] if classes else str(k)
+            col = colors[k % len(colors)]
+        else:
+            lab, col = "%.3g" % tree.value[t], colors[0]
+        ax.text(x, yy, lab, ha="center", va="center", fontsize=fontsize,
+                bbox=dict(boxstyle="round,pad=0.25", fc="white", ec=col,
+                          lw=1.5 if leaf[t] else 0.8), zorder=2)
+        if leaf[t] and leaf_text and t in leaf_text:
+            ax.text(x, yy - 0.3, leaf_text[t], ha="center", va="top", fontsize=fontsize - 1)
+    ax.set_xlim(-0.7, len(order) - 0.3)
+    ax.set_ylim(min(v[1] for v in pos.values()) - 0.8, 0.6)
+    ax.axis("off")
+    return pos
