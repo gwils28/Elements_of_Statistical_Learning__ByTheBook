@@ -1118,3 +1118,18 @@ def roc_curve(scores, y):
     sens = np.array([np.mean(scores[y == 1] >= t) for t in thr])
     spec = np.array([np.mean(scores[y == 0] < t) for t in thr])
     return spec, sens
+
+
+def auc(scores, y):
+    """Aire sous la courbe ROC via la statistique de Mann-Whitney.
+
+    :math:`\\mathrm{AUC} = \\Pr(S_1 > S_0) + \\tfrac12 \\Pr(S_1 = S_0)` où
+    :math:`S_1` (resp. :math:`S_0`) est le score d'un individu de classe 1
+    (resp. 0) tiré au hasard.
+    """
+    from scipy.stats import rankdata
+    scores = np.asarray(scores, float)
+    y = np.asarray(y).astype(int)
+    r = rankdata(scores)
+    n1, n0 = np.sum(y == 1), np.sum(y == 0)
+    return float((r[y == 1].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
