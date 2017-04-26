@@ -25,3 +25,13 @@ def test_spline_reproduit_les_droites(rng):
     assert np.allclose(S @ lin, lin, atol=1e-6)
     assert np.allclose(S, S.T, atol=1e-8)
     assert abs(np.trace(S) - 5) < 1e-3
+
+
+def test_spline_egale_spline_de_lissage_scipy(rng):
+    from scipy.interpolate import make_smoothing_spline
+    x = np.sort(rng.uniform(0, 1, 40))
+    y = np.sin(6 * x) + 0.3 * rng.randn(40)
+    lam = 1e-4
+    ours = SplineLisseur(x, lam=lam).fit(y)
+    ref = make_smoothing_spline(x, y, lam=lam)(x)
+    assert np.allclose(ours, ref, atol=1e-5)
