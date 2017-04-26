@@ -35,3 +35,10 @@ def test_spline_egale_spline_de_lissage_scipy(rng):
     ours = SplineLisseur(x, lam=lam).fit(y)
     ref = make_smoothing_spline(x, y, lam=lam)(x)
     assert np.allclose(ours, ref, atol=1e-5)
+
+
+def test_spline_valeurs_propres_ridge(rng):
+    x = rng.uniform(0, 1, 30)
+    S = SplineLisseur(x, lam=1e-3, ridge=1e-2).matrix()
+    ev = np.linalg.eigvalsh(0.5 * (S + S.T))
+    assert ev.max() < 1 and ev.min() > -1e-8
