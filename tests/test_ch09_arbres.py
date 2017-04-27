@@ -66,3 +66,29 @@ def test_backfitting_projections_egal_mco(rng):
     D = np.column_stack([D1, D2])
     beta = np.linalg.lstsq(D, y - y.mean(), rcond=None)[0]
     assert np.allclose(F.sum(1), D @ beta, atol=1e-6)
+
+
+def test_backfitting_deux_lisseurs_formule_fermee(rng):
+    N = 50
+    x1, x2 = rng.uniform(size=N), rng.uniform(size=N)
+    y = rng.randn(N)
+    S1 = SplineLisseur(x1, lam=1e-3, ridge=0.05).matrix()
+    S2 = SplineLisseur(x2, lam=1e-3, ridge=0.05).matrix()
+    _, F, _ = backfitting(y, [MatriceLisseur(S1), MatriceLisseur(S2)],
+                          intercept=False, tol=1e-13, max_iter=10000)
+    I = np.eye(N)
+    f2 = np.linalg.solve(I - S2 @ S1, S2 @ (I - S1) @ y)
+    f1 = np.linalg.solve(I - S1 @ S2, S1 @ (I - S2) @ y)
+    assert np.allclose(F[:, 0], f1, atol=1e-7)
+    assert np.allclose(F[:, 1], f2, atol=1e-7)
+
+
+def test_gam_gaussien_retrouve_fonctions(rng):
+    N = 400
+    X = rng.uniform(-1, 1, (N, 2))
+    f1, f2 = np.sin(3 * X[:, 0]), X[:, 1] ** 2
+    y = f1 + f2 + 0.1 * rng.randn(N)
+    g = GAM(df=5, n_knots=15).fit(X, y)
+    assert np.corrcoef(g.F_[:, 0], f1)[0, 1] > 0.99
+    assert np.corrcoef(g.F_[:, 1], f2)[0, 1] > 0.99
+    assert np.allclose(g.decision_function(X), g.alpha_ + g.F_.sum(1), atol=1e-8)
