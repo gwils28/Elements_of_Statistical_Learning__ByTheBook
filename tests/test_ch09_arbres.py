@@ -49,3 +49,20 @@ def test_lineaire_local_reproduit_les_droites(rng):
     S = local_linear_matrix(x, 0.1)
     assert np.allclose(S @ (1 + 4 * x), 1 + 4 * x)
     assert np.allclose(S.sum(1), 1)
+
+
+# --- backfitting --------------------------------------------------------------
+
+def test_backfitting_projections_egal_mco(rng):
+    N = 80
+    x1, x2 = rng.randn(N), rng.randn(N)
+    x2 = 0.6 * x1 + 0.8 * x2
+    y = 1 + x1 - 2 * x2 ** 2 + 0.5 * rng.randn(N)
+    D1 = np.column_stack([x1, x1 ** 2])
+    D2 = np.column_stack([x2, x2 ** 2, x2 ** 3])
+    P = lambda D: D @ np.linalg.solve(D.T @ D, D.T)
+    alpha, F, _ = backfitting(y - y.mean(), [MatriceLisseur(P(D1)), MatriceLisseur(P(D2))],
+                              intercept=False, tol=1e-12, max_iter=5000)
+    D = np.column_stack([D1, D2])
+    beta = np.linalg.lstsq(D, y - y.mean(), rcond=None)[0]
+    assert np.allclose(F.sum(1), D @ beta, atol=1e-6)
