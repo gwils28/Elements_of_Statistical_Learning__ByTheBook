@@ -92,3 +92,12 @@ def test_gam_gaussien_retrouve_fonctions(rng):
     assert np.corrcoef(g.F_[:, 0], f1)[0, 1] > 0.99
     assert np.corrcoef(g.F_[:, 1], f2)[0, 1] > 0.99
     assert np.allclose(g.decision_function(X), g.alpha_ + g.F_.sum(1), atol=1e-8)
+
+
+def test_irls_vs_sklearn(rng):
+    from sklearn.linear_model import LogisticRegression
+    X = rng.randn(300, 3)
+    y = (X @ [1, -1, 0.5] + rng.randn(300) > 0).astype(int)
+    b = logistic_irls(X, y)
+    sk = LogisticRegression(C=1e10, tol=1e-10, max_iter=1000).fit(X, y)
+    assert np.allclose(b, np.r_[sk.intercept_, sk.coef_[0]], atol=1e-4)
