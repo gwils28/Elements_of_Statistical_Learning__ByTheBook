@@ -101,3 +101,26 @@ def test_irls_vs_sklearn(rng):
     b = logistic_irls(X, y)
     sk = LogisticRegression(C=1e10, tol=1e-10, max_iter=1000).fit(X, y)
     assert np.allclose(b, np.r_[sk.intercept_, sk.coef_[0]], atol=1e-4)
+
+
+# --- arbres ---------------------------------------------------------------------
+
+def test_impuretes_deux_classes():
+    p = np.array([[0.5, 0.5], [1.0, 0.0], [0.2, 0.8]])
+    assert np.allclose(impurity(p, "gini"), [0.5, 0, 2 * 0.2 * 0.8])
+    assert np.allclose(impurity(p, "misclass"), [0.5, 0, 0.2])
+    assert np.allclose(impurity(p, "entropy")[0], np.log(2))
+
+
+def test_souche_optimale_par_force_brute(rng):
+    x = rng.uniform(size=(60, 2))
+    y = (x[:, 1] > 0.3) * 2.0 + 0.3 * rng.randn(60)
+    t = ArbreCART(task="regression", max_leaves=2).fit(x, y)
+    best = np.inf
+    for j in range(2):
+        for s in np.unique(x[:, j])[:-1]:
+            L, R = y[x[:, j] <= s], y[x[:, j] > s]
+            best = min(best, ((L - L.mean()) ** 2).sum() + ((R - R.mean()) ** 2).sum())
+    R_tree = t.risk[t.is_leaf_].sum()
+    assert np.isclose(R_tree, best)
+    assert t.n_leaves() == 2
