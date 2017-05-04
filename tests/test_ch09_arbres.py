@@ -141,3 +141,23 @@ def test_arbre_regression_comme_sklearn(rng):
     a, trees = ours.pruning_path()
     ref = sk.cost_complexity_pruning_path(X, y).ccp_alphas
     assert np.allclose(a[1:] / len(y), ref[1:], rtol=1e-6, atol=1e-10)
+
+
+def test_elagage_emboite(rng):
+    X = rng.randn(300, 4)
+    y = ((X[:, 0] > 0) ^ (X[:, 1] > 0.5)).astype(int)
+    flip = rng.rand(300) < 0.1
+    y[flip] = 1 - y[flip]
+    t = ArbreCART(criterion="entropy").fit(X, y)
+    a, trees = t.pruning_path()
+    assert np.all(np.diff(a) > 0)
+    sizes = [t.n_leaves(m) for m in trees]
+    assert all(s1 > s2 for s1, s2 in zip(sizes, sizes[1:]))
+    assert sizes[-1] == 1
+    # les sous-arbres sont emboîtés : une feuille le reste
+    for m1, m2 in zip(trees, trees[1:]):
+        assert np.all(m2[m1])
+    # pour chaque alpha, T_alpha minimise C_alpha parmi les arbres de la suite
+    for k, alpha in enumerate(a):
+        C = [t._subtree_stats(m)[0][0] + alpha * t.n_leaves(m) for m in trees]
+        assert C[k] <= min(C) + 1e-9
