@@ -161,3 +161,12 @@ def test_elagage_emboite(rng):
     for k, alpha in enumerate(a):
         C = [t._subtree_stats(m)[0][0] + alpha * t.n_leaves(m) for m in trees]
         assert C[k] <= min(C) + 1e-9
+
+
+def test_classification_poids_et_proba(rng):
+    X = rng.randn(100, 2)
+    y = (X[:, 0] > 0).astype(int)
+    t = ArbreCART(criterion="gini").fit(X, y)
+    assert np.all(t.predict(X) == y)
+    pr = t.predict_proba(X)
+    assert np.allclose(pr.sum(1), 1)
