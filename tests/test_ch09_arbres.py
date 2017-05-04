@@ -124,3 +124,20 @@ def test_souche_optimale_par_force_brute(rng):
     R_tree = t.risk[t.is_leaf_].sum()
     assert np.isclose(R_tree, best)
     assert t.n_leaves() == 2
+
+
+def test_arbre_regression_comme_sklearn(rng):
+    from sklearn.tree import DecisionTreeRegressor
+    X = rng.randn(200, 3)
+    y = X[:, 0] * np.sin(X[:, 1]) + 0.2 * rng.randn(200)
+    ours = ArbreCART(task="regression", min_samples_split=5).fit(X, y)
+    sk = DecisionTreeRegressor(min_samples_split=5, random_state=0).fit(X, y)
+    Xt = rng.randn(100, 3)
+    # mêmes coupures, aux ex-aequo près (petits nœuds profonds)
+    assert np.mean(np.isclose(ours.predict(Xt), sk.predict(Xt))) > 0.95
+    assert np.allclose(ours.predict(X), sk.predict(X))
+    assert ours.n_leaves() == sk.get_n_leaves()
+    # chemin d'élagage : sklearn mesure le risque divisé par N
+    a, trees = ours.pruning_path()
+    ref = sk.cost_complexity_pruning_path(X, y).ccp_alphas
+    assert np.allclose(a[1:] / len(y), ref[1:], rtol=1e-6, atol=1e-10)
