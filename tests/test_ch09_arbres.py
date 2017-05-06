@@ -170,3 +170,16 @@ def test_classification_poids_et_proba(rng):
     assert np.all(t.predict(X) == y)
     pr = t.predict_proba(X)
     assert np.allclose(pr.sum(1), 1)
+
+
+# --- PRIM, MARS, ROC -------------------------------------------------------------
+
+def test_prim_isole_la_bosse(rng):
+    X = rng.uniform(size=(200, 2))
+    y = ((X[:, 0] > 0.5) & (X[:, 0] < 0.8) & (X[:, 1] > 0.4) & (X[:, 1] < 0.6)).astype(float)
+    boxes, means, counts = prim_peel(X, y, alpha=0.1, min_count=10)
+    assert means[-1] == 1.0
+    assert np.all(np.diff(counts) < 0)
+    res = prim(X, y, n_boxes=1)
+    assert res[0]["mean"] == 1.0
+    assert np.all(in_box(X, res[0]["box"]) <= (y == 1))
