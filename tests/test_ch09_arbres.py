@@ -183,3 +183,24 @@ def test_prim_isole_la_bosse(rng):
     res = prim(X, y, n_boxes=1)
     assert res[0]["mean"] == 1.0
     assert np.all(in_box(X, res[0]["box"]) <= (y == 1))
+
+
+def test_mars_retrouve_produit_tensoriel(rng):
+    N = 200
+    X = rng.randn(N, 2)
+    mu = np.maximum(X[:, 0] - 1, 0) + np.maximum(X[:, 0] - 1, 0) * np.maximum(X[:, 1] - 0.8, 0)
+    y = mu + 0.05 * rng.randn(N)
+    m = MARS(max_terms=11, max_degree=2, n_knots=30).fit(X, y)
+    Xt = rng.randn(1000, 2)
+    mut = np.maximum(Xt[:, 0] - 1, 0) * (1 + np.maximum(Xt[:, 1] - 0.8, 0))
+    r2 = 1 - np.mean((m.predict(Xt) - mut) ** 2) / np.var(mut)
+    assert r2 > 0.9
+
+
+def test_auc_mann_whitney(rng):
+    from sklearn.metrics import roc_auc_score
+    s = rng.randn(200)
+    y = (s + rng.randn(200) > 0).astype(int)
+    assert np.isclose(auc(s, y), roc_auc_score(y, s))
+    spec, sens = roc_curve(s, y)
+    assert sens[0] == 0 and sens[-1] == 1 and spec[0] == 1 and spec[-1] == 0
