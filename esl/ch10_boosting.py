@@ -67,3 +67,13 @@ def simulate_nested_spheres(n, p=10, rng=None):
     thr = CHI2_10_MEDIAN if p == 10 else stats.chi2.median(p)
     y = np.where((X ** 2).sum(1) > thr, 1, -1)
     return X, y
+
+
+# ---------------------------------------------------------------------------
+# Fonctions de perte (en fonction de la marge y*f, y dans {-1,+1})
+# ---------------------------------------------------------------------------
+
+def loss_misclassification(m):
+    """Perte 0-1 : :math:`I(yf < 0)` (on compte 1/2 en cas d'égalité ``m = 0``)."""
+    m = np.asarray(m, float)
+    return np.where(m < 0, 1.0, np.where(m == 0, 0.5, 0.0))
