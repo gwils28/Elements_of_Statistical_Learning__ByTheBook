@@ -77,3 +77,8 @@ def loss_misclassification(m):
     """Perte 0-1 : :math:`I(yf < 0)` (on compte 1/2 en cas d'égalité ``m = 0``)."""
     m = np.asarray(m, float)
     return np.where(m < 0, 1.0, np.where(m == 0, 0.5, 0.0))
+
+
+def loss_exponential(m):
+    """Perte exponentielle (10.8) : :math:`e^{-yf}`."""
+    return np.exp(-np.asarray(m, float))
