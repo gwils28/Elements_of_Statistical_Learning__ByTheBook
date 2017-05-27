@@ -82,3 +82,13 @@ def loss_misclassification(m):
 def loss_exponential(m):
     """Perte exponentielle (10.8) : :math:`e^{-yf}`."""
     return np.exp(-np.asarray(m, float))
+
+
+def loss_binomial_deviance(m, scaled=True):
+    """Déviance binomiale (10.18) : :math:`\\log(1+e^{-2yf})`.
+
+    Si ``scaled``, divisée par :math:`\\log 2` pour passer par (0, 1) comme
+    dans la figure 10.4.
+    """
+    v = np.logaddexp(0.0, -2.0 * np.asarray(m, float))
+    return v / np.log(2.0) if scaled else v
