@@ -92,3 +92,8 @@ def loss_binomial_deviance(m, scaled=True):
     """
     v = np.logaddexp(0.0, -2.0 * np.asarray(m, float))
     return v / np.log(2.0) if scaled else v
+
+
+def loss_squared_margin(m):
+    """Perte quadratique écrite avec la marge : :math:`(y-f)^2 = (1-yf)^2`."""
+    return (1.0 - np.asarray(m, float)) ** 2
