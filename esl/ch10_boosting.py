@@ -97,3 +97,8 @@ def loss_binomial_deviance(m, scaled=True):
 def loss_squared_margin(m):
     """Perte quadratique écrite avec la marge : :math:`(y-f)^2 = (1-yf)^2`."""
     return (1.0 - np.asarray(m, float)) ** 2
+
+
+def loss_hinge(m):
+    """Perte « support vector » : :math:`(1-yf)_+`."""
+    return np.maximum(0.0, 1.0 - np.asarray(m, float))
