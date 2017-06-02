@@ -102,3 +102,9 @@ def loss_squared_margin(m):
 def loss_hinge(m):
     """Perte « support vector » : :math:`(1-yf)_+`."""
     return np.maximum(0.0, 1.0 - np.asarray(m, float))
+
+
+def loss_huber(r, delta):
+    """Perte de Huber (10.23) en fonction du résidu :math:`r = y - f`."""
+    a = np.abs(np.asarray(r, float))
+    return np.where(a <= delta, a ** 2, 2 * delta * a - delta ** 2)
