@@ -342,3 +342,80 @@ class RegressionTree:
                 stack.append((L, rows, wt * pl))
                 stack.append((R, rows, wt * (1 - pl)))
         return out
+
+
+# ---------------------------------------------------------------------------
+# AdaBoost.M1 (algorithme 10.1)
+# ---------------------------------------------------------------------------
+
+class AdaBoostM1:
+    """AdaBoost discret (algorithme 10.1) avec des arbres à ``n_leaves`` feuilles.
+
+    Le classifieur faible :math:`G_m` est un arbre de classification pondéré :
+    arbre de moindres carrés pondérés sur :math:`y\\in\\{-1,1\\}` puis signe de
+    la valeur de chaque feuille (vote majoritaire pondéré).
+
+    Attributes
+    ----------
+    trees_ : list of RegressionTree
+    alphas_ : ndarray
+        :math:`\\alpha_m = \\log((1-\\mathrm{err}_m)/\\mathrm{err}_m)`.
+    errs_ : ndarray
+        Erreurs pondérées :math:`\\mathrm{err}_m`.
+    """
+
+    def __init__(self, n_estimators=100, n_leaves=2, min_leaf=1):
+        self.n_estimators = n_estimators
+        self.n_leaves = n_leaves
+        self.min_leaf = min_leaf
+
+    def fit(self, X, y):
+        """Apprentissage ; ``y`` à valeurs dans {-1, +1}."""
+        X = np.asarray(X, float)
+        y = np.asarray(y, float)
+        N = len(y)
+        order = RegressionTree.presort(X)
+        w = np.full(N, 1.0 / N)
+        self.trees_, alphas, errs = [], [], []
+        self.weights_history_ = []
+        for m in range(self.n_estimators):
+            tree = RegressionTree(self.n_leaves, self.min_leaf).fit(X, y, w, order=order)
+            tree.value = np.where(tree.value >= 0, 1.0, -1.0)
+            G = tree.predict(X)
+            miss = G != y
+            err = np.clip(w[miss].sum() / w.sum(), 1e-12, 1 - 1e-12)
+            alpha = np.log((1 - err) / err)
+            w = w * np.exp(alpha * miss)
+            w = w / w.sum()  # normalisation sans effet sur l'algorithme
+            self.trees_.append(tree)
+            alphas.append(alpha)
+            errs.append(err)
+            if m < 5:
+                self.weights_history_.append(w.copy())
+        self.alphas_ = np.array(alphas)
+        self.errs_ = np.array(errs)
+        return self
+
+    def staged_decision_function(self, X):
+        """Itérateur sur :math:`F_m(x)=\\sum_{k\\le m}\\alpha_k G_k(x)`, m = 1..M."""
+        F = np.zeros(np.asarray(X).shape[0])
+        for a, t in zip(self.alphas_, self.trees_):
+            F = F + a * t.predict(X)
+            yield F
+
+    def decision_function(self, X):
+        """:math:`F_M(x)=\\sum_m \\alpha_m G_m(x)`."""
+        F = None
+        for F in self.staged_decision_function(X):
+            pass
+        return F
+
+    def predict(self, X):
+        """:math:`G(x) = \\mathrm{signe}(F_M(x))` (égalité tranchée vers +1)."""
+        return np.where(self.decision_function(X) >= 0, 1, -1)
+
+    def staged_errors(self, X, y):
+        """Taux d'erreur après chaque itération (tableau de taille M)."""
+        y = np.asarray(y)
+        return np.array([np.mean(np.where(F >= 0, 1, -1) != y)
+                         for F in self.staged_decision_function(X)])
