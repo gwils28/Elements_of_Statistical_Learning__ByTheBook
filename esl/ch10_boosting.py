@@ -419,3 +419,11 @@ class AdaBoostM1:
         y = np.asarray(y)
         return np.array([np.mean(np.where(F >= 0, 1, -1) != y)
                          for F in self.staged_decision_function(X)])
+
+
+# ---------------------------------------------------------------------------
+# Gradient boosting (algorithme 10.3)
+# ---------------------------------------------------------------------------
+
+def _sigmoid(f):
+    return 0.5 * (1.0 + np.tanh(0.5 * f))
