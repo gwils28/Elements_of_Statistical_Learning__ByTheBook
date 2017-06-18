@@ -625,3 +625,24 @@ class GradientBoosting:
         """
         XS = np.atleast_2d(np.asarray(XS, float))
         return self.f0_ + sum(t.partial_dependence(XS, S, X) for t in self.trees_)
+
+
+def partial_dependence_bruteforce(predict, X, S, XS):
+    """Dépendance partielle empirique (10.48) : :math:`\\frac1N\\sum_i f(x_S, x_{iC})`.
+
+    Parameters
+    ----------
+    predict : callable
+        Fonction :math:`x \\mapsto f(x)` vectorisée.
+    X : ndarray (N, p)
+        Données d'apprentissage (fournissent les :math:`x_{iC}`).
+    S : list of int
+    XS : ndarray (n, |S|)
+    """
+    XS = np.atleast_2d(np.asarray(XS, float))
+    out = np.empty(XS.shape[0])
+    Z = np.array(X, float, copy=True)
+    for k, xs in enumerate(XS):
+        Z[:, S] = xs
+        out[k] = predict(Z).mean()
+    return out
