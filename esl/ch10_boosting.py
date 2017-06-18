@@ -431,3 +431,197 @@ def _sigmoid(f):
 
 def _weighted_median(v):
     return np.median(v) if v.size else 0.0
+
+
+class GradientBoosting:
+    """Gradient boosting d'arbres (algorithme 10.3, « MART »).
+
+    Parameters
+    ----------
+    loss : {'ls', 'lad', 'huber', 'deviance'}
+        Perte quadratique :math:`\\frac12(y-f)^2`, absolue :math:`|y-f|`, de
+        Huber, ou déviance binomiale. Pour ``'deviance'``, ``y`` est codé 0/1 et
+        :math:`f` est le log-rapport de cotes
+        :math:`\\log\\frac{P(Y=1|x)}{P(Y=0|x)}`.
+    n_estimators : int
+        Nombre :math:`M` d'arbres.
+    n_leaves : int
+        Nombre :math:`J` de feuilles de chaque arbre.
+    learning_rate : float
+        Coefficient de rétrécissement :math:`\\nu` (éq. 10.41).
+    subsample : float
+        Fraction :math:`\\eta` d'observations tirées sans remise pour chaque
+        arbre (gradient boosting stochastique).
+    huber_alpha : float
+        Quantile définissant :math:`\\delta_m` pour la perte de Huber.
+    min_leaf : int
+    random_state : int
+    max_step : float
+        Borne sur la valeur absolue du pas de Newton dans une feuille (déviance).
+        Sans elle, une feuille ne contenant que des observations très mal
+        classées et très « sûres » (:math:`p_i(1-p_i)\\approx 0`) recevrait une
+        valeur gigantesque.
+    """
+
+    def __init__(self, loss="ls", n_estimators=100, n_leaves=6, learning_rate=0.1,
+                 subsample=1.0, huber_alpha=0.9, min_leaf=1, random_state=0,
+                 max_step=4.0):
+        self.loss = loss
+        self.n_estimators = n_estimators
+        self.n_leaves = n_leaves
+        self.learning_rate = learning_rate
+        self.subsample = subsample
+        self.huber_alpha = huber_alpha
+        self.min_leaf = min_leaf
+        self.random_state = random_state
+        self.max_step = max_step
+
+    # -- briques dépendant de la perte ------------------------------------------
+    def _init(self, y):
+        if self.loss == "ls":
+            return y.mean()
+        if self.loss in ("lad", "huber"):
+            return np.median(y)
+        if self.loss == "deviance":
+            p = np.clip(y.mean(), 1e-6, 1 - 1e-6)
+            return np.log(p / (1 - p))
+        raise ValueError("perte inconnue : %s" % self.loss)
+
+    def _neg_gradient(self, y, f):
+        r = y - f
+        if self.loss == "ls":
+            return r
+        if self.loss == "lad":
+            return np.sign(r)
+        if self.loss == "huber":
+            self._delta = np.quantile(np.abs(r), self.huber_alpha)
+            return np.where(np.abs(r) <= self._delta, r, self._delta * np.sign(r))
+        return y - _sigmoid(f)  # déviance
+
+    def _leaf_value(self, y, f, g):
+        """Étape 2(c) : constante optimale (ou approchée) dans une feuille."""
+        r = y - f
+        if self.loss == "ls":
+            return r.mean()
+        if self.loss == "lad":
+            return _weighted_median(r)
+        if self.loss == "huber":
+            med = np.median(r)
+            d = r - med
+            return med + np.mean(np.sign(d) * np.minimum(self._delta, np.abs(d)))
+        p = _sigmoid(f)  # un pas de Newton–Raphson, borné (voir max_step)
+        step = g.sum() / max((p * (1 - p)).sum(), 1e-12)
+        return float(np.clip(step, -self.max_step, self.max_step))
+
+    def loss_value(self, y, f):
+        """Perte moyenne :math:`\\frac1N\\sum_i L(y_i, f(x_i))`.
+
+        Pour ``'deviance'`` on renvoie :math:`-2\\times` la log-vraisemblance
+        moyenne (déviance binomiale moyenne).
+        """
+        y = np.asarray(y, float)
+        if self.loss == "ls":
+            return np.mean((y - f) ** 2)
+        if self.loss == "lad":
+            return np.mean(np.abs(y - f))
+        if self.loss == "huber":
+            return np.mean(loss_huber(y - f, getattr(self, "_delta", 1.0)))
+        return 2 * np.mean(np.logaddexp(0.0, f) - y * f)
+
+    # -- apprentissage ---------------------------------------------------------
+    def fit(self, X, y):
+        """Ajuste le modèle :math:`f_M = f_0 + \\nu\\sum_m T_m`."""
+        X = np.asarray(X, float)
+        y = np.asarray(y, float)
+        N = len(y)
+        rng = np.random.RandomState(self.random_state)
+        order = RegressionTree.presort(X)
+        self.f0_ = self._init(y)
+        f = np.full(N, self.f0_)
+        self.trees_ = []
+        self.train_loss_ = np.empty(self.n_estimators)
+        self.oob_improvement_ = np.full(self.n_estimators, np.nan)
+        n_sub = int(round(self.subsample * N))
+        for m in range(self.n_estimators):
+            if self.subsample < 1:
+                mask = np.zeros(N, bool)
+                mask[rng.choice(N, n_sub, replace=False)] = True
+            else:
+                mask = np.ones(N, bool)
+            g = self._neg_gradient(y, f)
+            tree = RegressionTree(self.n_leaves, self.min_leaf).fit(
+                X, g, order=order, mask=mask)
+            leaf = tree.apply(X)
+            for j in tree.leaves:
+                inleaf = (leaf == j) & mask
+                if inleaf.any():
+                    tree.value[j] = self._leaf_value(y[inleaf], f[inleaf], g[inleaf])
+                else:
+                    tree.value[j] = 0.0
+            tree.value *= self.learning_rate
+            f_new = f + tree.value[leaf]
+            if self.subsample < 1 and (~mask).any():
+                oob = ~mask
+                self.oob_improvement_[m] = (self.loss_value(y[oob], f[oob])
+                                            - self.loss_value(y[oob], f_new[oob]))
+            f = f_new
+            self.trees_.append(tree)
+            self.train_loss_[m] = self.loss_value(y, f)
+        return self
+
+    # -- prédiction ------------------------------------------------------------
+    def staged_decision_function(self, X):
+        """Itérateur sur :math:`f_m(x)`, m = 1..M."""
+        X = np.asarray(X, float)
+        f = np.full(X.shape[0], self.f0_)
+        for t in self.trees_:
+            f = f + t.predict(X)
+            yield f
+
+    def decision_function(self, X):
+        """:math:`f_M(x)`."""
+        X = np.asarray(X, float)
+        return self.f0_ + sum(t.predict(X) for t in self.trees_)
+
+    def predict(self, X):
+        """Prédiction : :math:`f_M(x)` (régression) ou classe 0/1 (déviance)."""
+        f = self.decision_function(X)
+        return (f > 0).astype(int) if self.loss == "deviance" else f
+
+    def predict_proba(self, X):
+        """:math:`\\hat P(Y=1|x)` pour la déviance."""
+        return _sigmoid(self.decision_function(X))
+
+    def staged_scores(self, X, y, every=1):
+        """Perte moyenne et taux d'erreur (déviance) sur ``(X, y)`` au fil des itérations.
+
+        Returns
+        -------
+        iters : ndarray
+        loss : ndarray
+        err : ndarray (taux de mauvaise classification ; NaN en régression)
+        """
+        y = np.asarray(y, float)
+        iters, L, E = [], [], []
+        for m, f in enumerate(self.staged_decision_function(X), start=1):
+            if m % every and m != len(self.trees_):
+                continue
+            iters.append(m)
+            L.append(self.loss_value(y, f))
+            E.append(np.mean((f > 0) != (y > 0.5)) if self.loss == "deviance" else np.nan)
+        return np.array(iters), np.array(L), np.array(E)
+
+    # -- interprétation --------------------------------------------------------
+    def feature_importances(self):
+        """Importance relative (10.43) : racine de la moyenne des :math:`I^2_\\ell(T_m)`, max = 100."""
+        imp = np.mean([t.importance() for t in self.trees_], axis=0)
+        imp = np.sqrt(imp)
+        return 100 * imp / imp.max()
+
+    def partial_dependence(self, XS, S, X=None):
+        """Dépendance partielle :math:`\\bar f_S` par parcours des arbres (ex. 10.11).
+
+        Voir :meth:`RegressionTree.partial_dependence` (``X`` fourni : exact).
+        """
+        XS = np.atleast_2d(np.asarray(XS, float))
+        return self.f0_ + sum(t.partial_dependence(XS, S, X) for t in self.trees_)
