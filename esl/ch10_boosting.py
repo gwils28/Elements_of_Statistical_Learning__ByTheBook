@@ -427,3 +427,7 @@ class AdaBoostM1:
 
 def _sigmoid(f):
     return 0.5 * (1.0 + np.tanh(0.5 * f))
+
+
+def _weighted_median(v):
+    return np.median(v) if v.size else 0.0
