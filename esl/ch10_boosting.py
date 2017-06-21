@@ -646,3 +646,85 @@ def partial_dependence_bruteforce(predict, X, S, XS):
         Z[:, S] = xs
         out[k] = predict(Z).mean()
     return out
+
+
+# ---------------------------------------------------------------------------
+# Gradient boosting à K classes (algorithme 10.4)
+# ---------------------------------------------------------------------------
+
+class GradientBoostingMulticlass:
+    """Gradient boosting pour K classes (algorithme 10.4 du livre).
+
+    À chaque itération, K arbres sont ajustés aux résidus
+    :math:`r_{ik} = y_{ik} - p_k(x_i)` et la valeur de la feuille vaut
+
+    .. math:: \\gamma_{jk} = \\frac{K-1}{K}\\,
+              \\frac{\\sum r_{ik}}{\\sum |r_{ik}|(1-|r_{ik}|)} .
+
+    Parameters
+    ----------
+    n_estimators, n_leaves, learning_rate, min_leaf, max_step : voir :class:`GradientBoosting`.
+    """
+
+    def __init__(self, n_estimators=100, n_leaves=6, learning_rate=0.1, min_leaf=1,
+                 max_step=4.0):
+        self.max_step = max_step
+        self.n_estimators = n_estimators
+        self.n_leaves = n_leaves
+        self.learning_rate = learning_rate
+        self.min_leaf = min_leaf
+
+    @staticmethod
+    def _proba(F):
+        F = F - F.max(1, keepdims=True)
+        E = np.exp(F)
+        return E / E.sum(1, keepdims=True)
+
+    def fit(self, X, y):
+        """``y`` : entiers 0..K-1."""
+        X = np.asarray(X, float)
+        y = np.asarray(y, int)
+        self.K_ = K = y.max() + 1
+        N = len(y)
+        Y = np.eye(K)[y]
+        order = RegressionTree.presort(X)
+        F = np.zeros((N, K))
+        self.trees_ = []
+        self.train_deviance_ = []
+        for m in range(self.n_estimators):
+            P = self._proba(F)
+            row = []
+            for k in range(K):
+                r = Y[:, k] - P[:, k]
+                tree = RegressionTree(self.n_leaves, self.min_leaf).fit(X, r, order=order)
+                leaf = tree.apply(X)
+                for j in tree.leaves:
+                    rr = r[leaf == j]
+                    den = max(np.sum(np.abs(rr) * (1 - np.abs(rr))), 1e-12)
+                    tree.value[j] = np.clip((K - 1) / K * rr.sum() / den,
+                                            -self.max_step, self.max_step)
+                tree.value *= self.learning_rate
+                F[:, k] += tree.value[leaf]
+                row.append(tree)
+            self.trees_.append(row)
+            P = self._proba(F)
+            self.train_deviance_.append(-2 * np.mean(np.log(P[np.arange(N), y] + 1e-300)))
+        self.train_deviance_ = np.array(self.train_deviance_)
+        return self
+
+    def decision_function(self, X):
+        """Matrice (n, K) des :math:`f_k(x)`."""
+        X = np.asarray(X, float)
+        F = np.zeros((X.shape[0], self.K_))
+        for row in self.trees_:
+            for k, t in enumerate(row):
+                F[:, k] += t.predict(X)
+        return F
+
+    def predict_proba(self, X):
+        """Probabilités :math:`p_k(x)` (10.21)."""
+        return self._proba(self.decision_function(X))
+
+    def predict(self, X):
+        """Classe de probabilité maximale (10.20)."""
+        return self.decision_function(X).argmax(1)
