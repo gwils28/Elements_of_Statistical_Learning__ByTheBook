@@ -16,3 +16,9 @@ def spheres():
     X, y = simulate_nested_spheres(400, rng=rng)
     Xt, yt = simulate_nested_spheres(1000, rng=rng)
     return X, y, Xt, yt
+
+
+def test_simulation_equilibree():
+    X, y = simulate_nested_spheres(20000, rng=np.random.RandomState(1))
+    assert X.shape == (20000, 10)
+    assert abs(np.mean(y == 1) - 0.5) < 0.02
