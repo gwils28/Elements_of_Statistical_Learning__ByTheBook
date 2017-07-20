@@ -42,3 +42,14 @@ def test_souche_trouve_le_seuil():
     assert t.feature[0] == 1
     assert abs(t.threshold[0] - 0.37) < 0.02
     assert np.allclose(t.predict(X), y)
+
+
+def test_arbre_egal_sklearn():
+    from sklearn.tree import DecisionTreeRegressor
+    rng = np.random.RandomState(1)
+    X = rng.randn(200, 4)
+    y = np.sin(2 * X[:, 0]) + X[:, 2] ** 2 + 0.1 * rng.randn(200)
+    w = rng.rand(200)
+    t = RegressionTree(8).fit(X, y, w)
+    sk = DecisionTreeRegressor(max_leaf_nodes=8, random_state=0).fit(X, y, sample_weight=w)
+    assert np.allclose(t.predict(X), sk.predict(X))
