@@ -32,3 +32,13 @@ def test_pertes_passent_par_0_1():
     assert np.allclose(loss_huber(r, 10.0), r ** 2)
     # raccord C^1 au point delta
     assert np.isclose(loss_huber(1.0, 1.0), 1.0)
+
+
+def test_souche_trouve_le_seuil():
+    rng = np.random.RandomState(0)
+    X = rng.rand(300, 3)
+    y = np.where(X[:, 1] > 0.37, 2.0, -1.0)
+    t = RegressionTree(2).fit(X, y)
+    assert t.feature[0] == 1
+    assert abs(t.threshold[0] - 0.37) < 0.02
+    assert np.allclose(t.predict(X), y)
