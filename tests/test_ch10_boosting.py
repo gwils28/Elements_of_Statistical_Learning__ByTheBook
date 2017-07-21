@@ -75,3 +75,12 @@ def test_adaboost_egal_sklearn(spheres):
     assert np.allclose(ab.alphas_, sk.estimator_weights_)
     assert np.all(ab.predict(Xt) == sk.predict(Xt))
     assert np.all(ab.errs_ < 0.5)
+
+
+def test_adaboost_poids_mal_classes_moitie(spheres):
+    """Après la mise à jour, les mal classés portent exactement la moitié du poids."""
+    X, y, _, _ = spheres
+    ab = AdaBoostM1(3).fit(X, y)
+    w = ab.weights_history_[0]
+    miss = ab.trees_[0].predict(X) != y
+    assert np.isclose(w[miss].sum(), 0.5)
