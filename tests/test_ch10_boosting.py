@@ -53,3 +53,13 @@ def test_arbre_egal_sklearn():
     t = RegressionTree(8).fit(X, y, w)
     sk = DecisionTreeRegressor(max_leaf_nodes=8, random_state=0).fit(X, y, sample_weight=w)
     assert np.allclose(t.predict(X), sk.predict(X))
+
+
+def test_gain_egal_baisse_somme_carres():
+    rng = np.random.RandomState(2)
+    X = rng.randn(150, 3)
+    y = X[:, 0] + rng.randn(150)
+    t = RegressionTree(5).fit(X, y)
+    sse0 = np.sum((y - y.mean()) ** 2)
+    sse = np.sum((y - t.predict(X)) ** 2)
+    assert np.isclose(t.improvement.sum(), sse0 - sse)
