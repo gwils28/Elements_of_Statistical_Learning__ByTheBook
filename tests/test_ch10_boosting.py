@@ -63,3 +63,15 @@ def test_gain_egal_baisse_somme_carres():
     sse0 = np.sum((y - y.mean()) ** 2)
     sse = np.sum((y - t.predict(X)) ** 2)
     assert np.isclose(t.improvement.sum(), sse0 - sse)
+
+
+def test_adaboost_egal_sklearn(spheres):
+    from sklearn.ensemble import AdaBoostClassifier
+    from sklearn.tree import DecisionTreeClassifier
+    X, y, Xt, yt = spheres
+    ab = AdaBoostM1(30).fit(X, y)
+    sk = AdaBoostClassifier(DecisionTreeClassifier(max_depth=1), n_estimators=30).fit(X, y)
+    # SAMME avec K = 2 classes coïncide avec AdaBoost.M1
+    assert np.allclose(ab.alphas_, sk.estimator_weights_)
+    assert np.all(ab.predict(Xt) == sk.predict(Xt))
+    assert np.all(ab.errs_ < 0.5)
