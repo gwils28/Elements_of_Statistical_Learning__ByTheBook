@@ -84,3 +84,14 @@ def test_adaboost_poids_mal_classes_moitie(spheres):
     w = ab.weights_history_[0]
     miss = ab.trees_[0].predict(X) != y
     assert np.isclose(w[miss].sum(), 0.5)
+
+
+@pytest.mark.parametrize("loss", ["ls", "lad", "huber"])
+def test_gb_regression_perte_decroit(loss):
+    rng = np.random.RandomState(3)
+    X = rng.rand(300, 2)
+    y = np.sin(6 * X[:, 0]) + 0.2 * rng.randn(300)
+    gb = GradientBoosting(loss, 60, 4, 0.5).fit(X, y)
+    if loss == "ls":
+        assert np.all(np.diff(gb.train_loss_) <= 1e-10)
+    assert gb.train_loss_[-1] < gb.loss_value(y, np.full(300, gb.f0_))
