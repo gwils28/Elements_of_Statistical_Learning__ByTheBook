@@ -105,3 +105,13 @@ def test_gb_ls_egal_sklearn():
     gb = GradientBoosting("ls", 20, 2, 0.3).fit(X, y)
     sk = GradientBoostingRegressor(n_estimators=20, max_depth=1, learning_rate=0.3).fit(X, y)
     assert np.allclose(gb.predict(X), sk.predict(X), atol=1e-8)
+
+
+def test_gb_deviance_init_et_proba(spheres):
+    X, y, Xt, yt = spheres
+    y01 = (y + 1) // 2
+    gb = GradientBoosting("deviance", 50, 4, 0.2).fit(X, y01)
+    assert np.isclose(gb.f0_, np.log(y01.mean() / (1 - y01.mean())))
+    p = gb.predict_proba(Xt)
+    assert np.all((p > 0) & (p < 1))
+    assert np.mean(gb.predict(Xt) != (yt + 1) // 2) < 0.4
