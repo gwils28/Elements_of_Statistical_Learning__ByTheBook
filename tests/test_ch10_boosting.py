@@ -95,3 +95,13 @@ def test_gb_regression_perte_decroit(loss):
     if loss == "ls":
         assert np.all(np.diff(gb.train_loss_) <= 1e-10)
     assert gb.train_loss_[-1] < gb.loss_value(y, np.full(300, gb.f0_))
+
+
+def test_gb_ls_egal_sklearn():
+    from sklearn.ensemble import GradientBoostingRegressor
+    rng = np.random.RandomState(4)
+    X = rng.randn(200, 3)
+    y = X[:, 0] * X[:, 1] + rng.randn(200) * 0.3
+    gb = GradientBoosting("ls", 20, 2, 0.3).fit(X, y)
+    sk = GradientBoostingRegressor(n_estimators=20, max_depth=1, learning_rate=0.3).fit(X, y)
+    assert np.allclose(gb.predict(X), sk.predict(X), atol=1e-8)
