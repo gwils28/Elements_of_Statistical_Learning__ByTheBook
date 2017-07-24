@@ -115,3 +115,16 @@ def test_gb_deviance_init_et_proba(spheres):
     p = gb.predict_proba(Xt)
     assert np.all((p > 0) & (p < 1))
     assert np.mean(gb.predict(Xt) != (yt + 1) // 2) < 0.4
+
+
+def test_dependance_partielle_arbres_egale_moyenne(spheres):
+    X, y, _, _ = spheres
+    gb = GradientBoosting("ls", 15, 6, 0.5).fit(X, y.astype(float))
+    for S in ([0], [2, 5]):
+        XS = np.random.RandomState(5).randn(7, len(S))
+        exact = gb.partial_dependence(XS, S, X=X)
+        slow = partial_dependence_bruteforce(gb.decision_function, X, S, XS)
+        assert np.allclose(exact, slow)
+        # le parcours pondéré de Friedman n'est qu'approché (X_S, X_C indépendants ici)
+        fast = gb.partial_dependence(XS, S)
+        assert np.max(np.abs(fast - slow)) < 0.1
