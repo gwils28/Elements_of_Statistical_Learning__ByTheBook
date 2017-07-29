@@ -146,3 +146,14 @@ def test_sous_echantillonnage():
     gb = GradientBoosting("ls", 20, 3, 0.1, subsample=0.5).fit(X, y)
     assert np.all(np.isfinite(gb.oob_improvement_))
     assert gb.train_loss_[-1] < gb.train_loss_[0]
+
+
+def test_multiclasse():
+    rng = np.random.RandomState(8)
+    X = rng.randn(300, 2)
+    y = (X[:, 0] > 0).astype(int) + (X[:, 1] > 0.5).astype(int)
+    gb = GradientBoostingMulticlass(30, 4, 0.3).fit(X, y)
+    P = gb.predict_proba(X)
+    assert np.allclose(P.sum(1), 1)
+    assert np.mean(gb.predict(X) == y) > 0.9
+    assert gb.train_deviance_[-1] < gb.train_deviance_[0]
