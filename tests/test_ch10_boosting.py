@@ -128,3 +128,12 @@ def test_dependance_partielle_arbres_egale_moyenne(spheres):
         # le parcours pondéré de Friedman n'est qu'approché (X_S, X_C indépendants ici)
         fast = gb.partial_dependence(XS, S)
         assert np.max(np.abs(fast - slow)) < 0.1
+
+
+def test_importances():
+    rng = np.random.RandomState(6)
+    X = rng.randn(400, 5)
+    y = 3 * X[:, 3] + 0.1 * rng.randn(400)
+    gb = GradientBoosting("ls", 30, 4, 0.3).fit(X, y)
+    imp = gb.feature_importances()
+    assert imp.max() == 100 and np.argmax(imp) == 3
