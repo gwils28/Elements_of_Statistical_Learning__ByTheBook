@@ -137,3 +137,12 @@ def test_importances():
     gb = GradientBoosting("ls", 30, 4, 0.3).fit(X, y)
     imp = gb.feature_importances()
     assert imp.max() == 100 and np.argmax(imp) == 3
+
+
+def test_sous_echantillonnage():
+    rng = np.random.RandomState(7)
+    X = rng.randn(300, 2)
+    y = X[:, 0] + 0.5 * rng.randn(300)
+    gb = GradientBoosting("ls", 20, 3, 0.1, subsample=0.5).fit(X, y)
+    assert np.all(np.isfinite(gb.oob_improvement_))
+    assert gb.train_loss_[-1] < gb.train_loss_[0]
