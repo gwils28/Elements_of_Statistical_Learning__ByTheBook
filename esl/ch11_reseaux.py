@@ -53,3 +53,16 @@ def limit_blas_threads(n=1):
 
 
 limit_blas_threads(1)
+
+# ---------------------------------------------------------------------------
+# Fonctions d'activation
+# ---------------------------------------------------------------------------
+
+
+def sigmoid(v):
+    """Sigmoïde :math:`\\sigma(v) = 1/(1+e^{-v})`.
+
+    On utilise l'identité :math:`\\sigma(v) = (1 + \\tanh(v/2))/2`, qui est
+    numériquement stable pour les grandes valeurs de :math:`|v|`.
+    """
+    return 0.5 * (1.0 + np.tanh(0.5 * np.asarray(v, dtype=float)))
