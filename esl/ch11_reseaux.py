@@ -66,3 +66,15 @@ def sigmoid(v):
     numériquement stable pour les grandes valeurs de :math:`|v|`.
     """
     return 0.5 * (1.0 + np.tanh(0.5 * np.asarray(v, dtype=float)))
+
+
+def softmax(T):
+    """Softmax ligne par ligne, éq. (11.6) : :math:`e^{T_k}/\\sum_l e^{T_l}`.
+
+    On retranche le maximum de chaque ligne avant l'exponentielle, ce qui ne
+    change pas le résultat (invariance par translation) mais évite les
+    dépassements numériques.
+    """
+    T = np.asarray(T, dtype=float)
+    E = np.exp(T - T.max(axis=1, keepdims=True))
+    return E / E.sum(axis=1, keepdims=True)
