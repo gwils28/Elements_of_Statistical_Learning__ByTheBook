@@ -78,3 +78,13 @@ def softmax(T):
     T = np.asarray(T, dtype=float)
     E = np.exp(T - T.max(axis=1, keepdims=True))
     return E / E.sum(axis=1, keepdims=True)
+
+
+def one_hot(y, K=None):
+    """Codage 0/1 d'un vecteur de classes ``y`` à valeurs dans {0, ..., K-1}."""
+    y = np.asarray(y, dtype=int)
+    if K is None:
+        K = y.max() + 1
+    Y = np.zeros((len(y), K))
+    Y[np.arange(len(y)), y] = 1.0
+    return Y
