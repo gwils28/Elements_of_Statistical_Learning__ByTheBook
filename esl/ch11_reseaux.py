@@ -88,3 +88,31 @@ def one_hot(y, K=None):
     Y = np.zeros((len(y), K))
     Y[np.arange(len(y)), y] = 1.0
     return Y
+
+
+# ---------------------------------------------------------------------------
+# Paramètres : initialisation, empaquetage
+# ---------------------------------------------------------------------------
+
+
+def init_params(p, M, K, rng, scale=0.7):
+    """Poids initiaux uniformes sur [-scale, scale] (section 11.5.3).
+
+    Parameters
+    ----------
+    p, M, K : int
+        Nombre d'entrées, d'unités cachées (éventuellement 0) et de sorties.
+    rng : numpy.random.RandomState
+        Générateur aléatoire.
+    scale : float
+        Demi-largeur de l'intervalle des poids initiaux.
+
+    Returns
+    -------
+    dict
+        ``{"alpha": (M, p+1) ou None, "beta": (K, M+1)}``.
+    """
+    if M == 0:
+        return {"alpha": None, "beta": rng.uniform(-scale, scale, (K, p + 1))}
+    return {"alpha": rng.uniform(-scale, scale, (M, p + 1)),
+            "beta": rng.uniform(-scale, scale, (K, M + 1))}
