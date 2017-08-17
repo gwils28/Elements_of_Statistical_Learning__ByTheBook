@@ -116,3 +116,11 @@ def init_params(p, M, K, rng, scale=0.7):
         return {"alpha": None, "beta": rng.uniform(-scale, scale, (K, p + 1))}
     return {"alpha": rng.uniform(-scale, scale, (M, p + 1)),
             "beta": rng.uniform(-scale, scale, (K, M + 1))}
+
+
+def pack(params):
+    """Concatène ``alpha`` puis ``beta`` en un seul vecteur :math:`\\theta`."""
+    parts = [params["beta"].ravel()]
+    if params["alpha"] is not None:
+        parts.insert(0, params["alpha"].ravel())
+    return np.concatenate(parts)
