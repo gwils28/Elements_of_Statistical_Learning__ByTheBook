@@ -124,3 +124,13 @@ def pack(params):
     if params["alpha"] is not None:
         parts.insert(0, params["alpha"].ravel())
     return np.concatenate(parts)
+
+
+def unpack(theta, p, M, K):
+    """Opération inverse de :func:`pack`."""
+    theta = np.asarray(theta, dtype=float)
+    if M == 0:
+        return {"alpha": None, "beta": theta.reshape(K, p + 1)}
+    na = M * (p + 1)
+    return {"alpha": theta[:na].reshape(M, p + 1),
+            "beta": theta[na:].reshape(K, M + 1)}
