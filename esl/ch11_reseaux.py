@@ -134,3 +134,10 @@ def unpack(theta, p, M, K):
     na = M * (p + 1)
     return {"alpha": theta[:na].reshape(M, p + 1),
             "beta": theta[na:].reshape(K, M + 1)}
+
+
+def n_weights(p, M, K):
+    """Nombre total de poids, éq. (11.8) : M(p+1) + K(M+1)."""
+    if M == 0:
+        return K * (p + 1)
+    return M * (p + 1) + K * (M + 1)
