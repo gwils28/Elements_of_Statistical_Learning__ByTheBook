@@ -141,3 +141,19 @@ def n_weights(p, M, K):
     if M == 0:
         return K * (p + 1)
     return M * (p + 1) + K * (M + 1)
+
+
+# ---------------------------------------------------------------------------
+# Propagation avant et rétropropagation
+# ---------------------------------------------------------------------------
+
+
+def output_function(T, output):
+    """Fonction de sortie :math:`g` : ``identity``, ``sigmoid`` ou ``softmax``."""
+    if output == "identity":
+        return T
+    if output == "sigmoid":
+        return sigmoid(T)
+    if output == "softmax":
+        return softmax(T)
+    raise ValueError("sortie inconnue : %s" % output)
