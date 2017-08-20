@@ -157,3 +157,24 @@ def output_function(T, output):
     if output == "softmax":
         return softmax(T)
     raise ValueError("sortie inconnue : %s" % output)
+
+
+def forward(params, X, output="identity"):
+    """Passe avant : calcule toutes les quantités intermédiaires.
+
+    Returns
+    -------
+    dict
+        ``Z`` (N, M) unités cachées (``X`` si M = 0), ``T`` (N, K)
+        combinaisons linéaires de sortie et ``F`` (N, K) sorties
+        :math:`f_k(x_i)`.
+    """
+    X = np.asarray(X, dtype=float)
+    if params["alpha"] is None:
+        Z = X
+    else:
+        alpha = params["alpha"]
+        Z = sigmoid(X @ alpha[:, 1:].T + alpha[:, 0])  # alpha_0m + alpha_m^T x_i
+    beta = params["beta"]
+    T = Z @ beta[:, 1:].T + beta[:, 0]                 # beta_0k + beta_k^T z_i
+    return {"Z": Z, "T": T, "F": output_function(T, output)}
