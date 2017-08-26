@@ -178,3 +178,12 @@ def forward(params, X, output="identity"):
     beta = params["beta"]
     T = Z @ beta[:, 1:].T + beta[:, 0]                 # beta_0k + beta_k^T z_i
     return {"Z": Z, "T": T, "F": output_function(T, output)}
+
+
+def data_loss(F, Y, loss="squared"):
+    """Erreur d'ajustement R : somme des carrés (11.9) ou entropie croisée (11.10)."""
+    if loss == "squared":
+        return float(np.sum((Y - F) ** 2))
+    if loss == "cross_entropy":
+        return float(-np.sum(Y * np.log(np.clip(F, 1e-300, None))))
+    raise ValueError("perte inconnue : %s" % loss)
