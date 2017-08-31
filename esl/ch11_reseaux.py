@@ -187,3 +187,14 @@ def data_loss(F, Y, loss="squared"):
     if loss == "cross_entropy":
         return float(-np.sum(Y * np.log(np.clip(F, 1e-300, None))))
     raise ValueError("perte inconnue : %s" % loss)
+
+
+def penalty(params):
+    """Pénalité de weight decay (11.16), **hors termes constants** (biais).
+
+    :math:`J(\\theta) = \\sum_{k,m\\ge 1} \\beta_{km}^2 + \\sum_{m,\\ell\\ge 1} \\alpha_{m\\ell}^2`.
+    """
+    J = np.sum(params["beta"][:, 1:] ** 2)
+    if params["alpha"] is not None:
+        J += np.sum(params["alpha"][:, 1:] ** 2)
+    return float(J)
