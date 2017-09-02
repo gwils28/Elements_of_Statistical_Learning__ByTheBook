@@ -198,3 +198,74 @@ def penalty(params):
     if params["alpha"] is not None:
         J += np.sum(params["alpha"][:, 1:] ** 2)
     return float(J)
+
+
+def backprop(params, X, Y, output="identity", loss="squared", weight_decay=0.0):
+    """Erreur pénalisée et son gradient par rétropropagation.
+
+    Calcule :math:`R(\\theta) + \\lambda J(\\theta)` et son gradient.
+    La passe arrière suit les éq. (11.14)–(11.15) du livre :
+
+    * erreurs de sortie :math:`\\delta_{ki} = \\partial R_i / \\partial T_{ki}` ;
+    * erreurs cachées :math:`s_{mi} = \\sigma'(\\alpha_{0m}+\\alpha_m^T x_i)
+      \\sum_k \\beta_{km} \\delta_{ki}` ;
+    * :math:`\\partial R / \\partial \\beta_{km} = \\sum_i \\delta_{ki} z_{mi}`,
+      :math:`\\partial R / \\partial \\alpha_{m\\ell} = \\sum_i s_{mi} x_{i\\ell}`.
+
+    Parameters
+    ----------
+    params : dict
+        Poids ``alpha`` et ``beta`` (voir :func:`init_params`).
+    X, Y : ndarray
+        Entrées (N, p) et sorties (N, K).
+    output : {"identity", "sigmoid", "softmax"}
+        Fonction de sortie :math:`g`.
+    loss : {"squared", "cross_entropy"}
+        Erreur (11.9) ou (11.10).
+    weight_decay : float
+        Paramètre :math:`\\lambda \\ge 0`.
+
+    Returns
+    -------
+    R : float
+        Valeur de l'erreur pénalisée.
+    grads : dict
+        Gradients de même forme que ``params``.
+    """
+    X = np.asarray(X, dtype=float)
+    Y = np.asarray(Y, dtype=float)
+    fw = forward(params, X, output)
+    Z, F = fw["Z"], fw["F"]
+    R = data_loss(F, Y, loss) + weight_decay * penalty(params)
+
+    # --- dérivée par rapport aux sorties T (les "delta") ---------------------
+    if output == "softmax" and loss == "cross_entropy":
+        delta = F - Y                                  # simplification (Ex. 11.3)
+    else:
+        if loss == "squared":
+            dF = -2.0 * (Y - F)
+        else:
+            dF = -Y / np.clip(F, 1e-300, None)
+        if output == "identity":
+            delta = dF
+        elif output == "sigmoid":
+            delta = dF * F * (1.0 - F)
+        else:  # softmax : jacobienne diag(f) - f f^T
+            delta = F * (dF - np.sum(dF * F, axis=1, keepdims=True))
+
+    # --- gradient de la couche de sortie -------------------------------------
+    g_beta = np.empty_like(params["beta"])             # (K, M+1)
+    g_beta[:, 0] = delta.sum(axis=0)
+    g_beta[:, 1:] = delta.T @ Z
+    g_beta[:, 1:] += 2.0 * weight_decay * params["beta"][:, 1:]
+    grads = {"alpha": None, "beta": g_beta}
+
+    # --- rétropropagation vers la couche cachée ------------------------------
+    if params["alpha"] is not None:
+        s = (delta @ params["beta"][:, 1:]) * Z * (1.0 - Z)   # sigma' = sigma(1-sigma)
+        g_alpha = np.empty_like(params["alpha"])       # (M, p+1)
+        g_alpha[:, 0] = s.sum(axis=0)
+        g_alpha[:, 1:] = s.T @ X
+        g_alpha[:, 1:] += 2.0 * weight_decay * params["alpha"][:, 1:]
+        grads["alpha"] = g_alpha
+    return R, grads
