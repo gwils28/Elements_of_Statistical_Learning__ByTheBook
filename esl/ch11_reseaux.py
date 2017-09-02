@@ -290,3 +290,24 @@ def numerical_gradient(fun, theta, eps=1e-6):
         e[j] = eps
         g[j] = (fun(theta + e) - fun(theta - e)) / (2 * eps)
     return g
+
+
+def gradient_check(params, X, Y, output="identity", loss="squared",
+                   weight_decay=0.0, eps=1e-6):
+    """Compare le gradient de :func:`backprop` à :func:`numerical_gradient`.
+
+    Returns
+    -------
+    float
+        Erreur relative :math:`\\|g - g_{num}\\| / \\max(\\|g\\| + \\|g_{num}\\|, 10^{-12})`.
+    """
+    p = X.shape[1]
+    K = params["beta"].shape[0]
+    M = 0 if params["alpha"] is None else params["alpha"].shape[0]
+
+    def fun(th):
+        return backprop(unpack(th, p, M, K), X, Y, output, loss, weight_decay)[0]
+
+    g = pack(backprop(params, X, Y, output, loss, weight_decay)[1])
+    gn = numerical_gradient(fun, pack(params), eps)
+    return float(np.linalg.norm(g - gn) / max(np.linalg.norm(g) + np.linalg.norm(gn), 1e-12))
