@@ -269,3 +269,24 @@ def backprop(params, X, Y, output="identity", loss="squared", weight_decay=0.0):
         g_alpha[:, 1:] += 2.0 * weight_decay * params["alpha"][:, 1:]
         grads["alpha"] = g_alpha
     return R, grads
+
+
+# ---------------------------------------------------------------------------
+# Vérification numérique du gradient
+# ---------------------------------------------------------------------------
+
+
+def numerical_gradient(fun, theta, eps=1e-6):
+    """Gradient de ``fun`` en ``theta`` par différences finies centrées.
+
+    :math:`\\partial_j f(\\theta) \\approx
+    [f(\\theta + \\varepsilon e_j) - f(\\theta - \\varepsilon e_j)] / (2\\varepsilon)`,
+    avec une erreur en :math:`O(\\varepsilon^2)`.
+    """
+    theta = np.asarray(theta, dtype=float)
+    g = np.zeros_like(theta)
+    for j in range(theta.size):
+        e = np.zeros_like(theta)
+        e[j] = eps
+        g[j] = (fun(theta + e) - fun(theta - e)) / (2 * eps)
+    return g
