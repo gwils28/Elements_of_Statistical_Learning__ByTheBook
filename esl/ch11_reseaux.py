@@ -554,3 +554,20 @@ class SmoothingSpline:
         """Dérivée g'(x) (constante hors du support des données)."""
         x = np.clip(np.asarray(x, dtype=float), self.x_[0], self.x_[-1])
         return self._spline.derivative()(x)
+
+
+def df_to_lambda(d, df):
+    """λ tel que :math:`\\sum_j 1/(1+\\lambda d_j) = df` (recherche dichotomique en log λ).
+
+    Les deux valeurs propres nulles (fonctions affines, non pénalisées)
+    imposent :math:`df > 2`.
+    """
+    n = len(d)
+    if not 2.0 < df < n:
+        raise ValueError("df doit être strictement entre 2 et N")
+
+    def f(loglam):
+        return np.sum(1.0 / (1.0 + np.exp(loglam) * d)) - df
+
+    lo, hi = -40.0, 40.0
+    return float(np.exp(optimize.brentq(f, lo, hi, xtol=1e-10)))
