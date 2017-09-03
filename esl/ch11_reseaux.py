@@ -469,3 +469,29 @@ class MLP:
     def predict_class(self, X):
         """Classe prédite :math:`G(x) = \\arg\\max_k f_k(x)`."""
         return np.argmax(self.predict(X), axis=1)
+
+
+# ---------------------------------------------------------------------------
+# Splines de lissage (pour la PPR)
+# ---------------------------------------------------------------------------
+
+
+def _reinsch_QR(x):
+    """Matrices Q (N, N-2) et R (N-2, N-2) de Reinsch pour des x triés distincts.
+
+    Pour une spline cubique naturelle de valeurs f aux nœuds x, on a
+    :math:`\\int f''(t)^2 dt = f^T Q R^{-1} Q^T f`.
+    """
+    h = np.diff(x)
+    n = len(x)
+    Q = np.zeros((n, n - 2))
+    R = np.zeros((n - 2, n - 2))
+    for j in range(1, n - 1):
+        c = j - 1
+        Q[j - 1, c] = 1.0 / h[j - 1]
+        Q[j, c] = -1.0 / h[j - 1] - 1.0 / h[j]
+        Q[j + 1, c] = 1.0 / h[j]
+        R[c, c] = (h[j - 1] + h[j]) / 3.0
+        if c + 1 < n - 2:
+            R[c, c + 1] = R[c + 1, c] = h[j] / 6.0
+    return Q, R
