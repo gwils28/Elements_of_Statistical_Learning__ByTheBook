@@ -571,3 +571,149 @@ def df_to_lambda(d, df):
 
     lo, hi = -40.0, 40.0
     return float(np.exp(optimize.brentq(f, lo, hi, xtol=1e-10)))
+
+
+# ---------------------------------------------------------------------------
+# Projection pursuit regression
+# ---------------------------------------------------------------------------
+
+
+class PPR:
+    """Projection pursuit regression, modèle (11.1) : :math:`f(X)=\\sum_m g_m(\\omega_m^T X)`.
+
+    Ajustement progressif (*forward stagewise*) : on ajoute un terme
+    :math:`(\\omega_m, g_m)` à la fois, en alternant
+
+    1. lissage : :math:`g` = spline de lissage (ddl fixés) des résidus en
+       fonction de :math:`v_i = \\omega^T x_i` ;
+    2. mise à jour de ω par Gauss–Newton (éq. (11.3)–(11.4)) : moindres
+       carrés pondérés de la cible
+       :math:`\\omega_{old}^T x_i + (r_i - g(\\omega_{old}^T x_i))/g'(\\omega_{old}^T x_i)`
+       sur :math:`x_i`, poids :math:`g'(\\omega_{old}^T x_i)^2`, sans
+       constante, puis normalisation :math:`\\|\\omega\\|=1`.
+
+    Parameters
+    ----------
+    n_terms : int
+        Nombre M de fonctions ridge.
+    df : float
+        Degrés de liberté de chaque spline de lissage.
+    n_iter : int
+        Nombre maximal d'alternances par terme.
+    n_starts : int
+        Nombre de directions initiales essayées pour chaque terme (la
+        première est la direction des moindres carrés, les autres sont
+        aléatoires) ; on garde la meilleure.
+    backfit : bool
+        Réajuster les :math:`g_m` précédents par *backfitting* après l'ajout
+        de chaque terme (les :math:`\\omega_m` restent fixés).
+    refit_directions : bool
+        Si vrai, après l'ajout de chaque terme, on effectue quelques cycles
+        où **chaque** couple :math:`(\\omega_l, g_l)` est réajusté (par
+        l'algorithme alterné, en partant du :math:`\\omega_l` courant) aux
+        résidus partiels :math:`y - \\bar y - \\sum_{l' \\ne l} g_{l'}`.
+        Le livre note que c'est possible « en principe » mais rarement fait.
+    random_state : int
+        Graine.
+    """
+
+    def __init__(self, n_terms=2, df=5.0, n_iter=30, n_starts=4, backfit=True,
+                 refit_directions=False, random_state=0):
+        self.n_terms = n_terms
+        self.df = df
+        self.n_iter = n_iter
+        self.n_starts = n_starts
+        self.backfit = backfit
+        self.refit_directions = refit_directions
+        self.random_state = random_state
+
+    def _fit_term(self, X, r, w):
+        """Ajuste un seul terme (ω, g) aux résidus r à partir de la direction w."""
+        w = w / np.linalg.norm(w)
+        g = SmoothingSpline(df=self.df).fit(X @ w, r)
+        rss = np.sum((r - g.predict(X @ w)) ** 2)
+        for _ in range(self.n_iter):
+            v = X @ w
+            gv, dg = g.predict(v), g.derivative(v)
+            # moindres carrés sans constante : lignes g'(v_i) x_i,
+            # réponse g'(v_i) v_i + (r_i - g(v_i))  (forme (11.4) sans division)
+            A = dg[:, None] * X
+            b = dg * v + (r - gv)
+            w_gn = np.linalg.lstsq(A, b, rcond=None)[0]
+            if not np.all(np.isfinite(w_gn)) or np.linalg.norm(w_gn) == 0:
+                break
+            step, improved = 1.0, False
+            for _ in range(8):                         # demi-pas si nécessaire
+                w_new = w + step * (w_gn - w)
+                w_new /= np.linalg.norm(w_new)
+                g_new = SmoothingSpline(df=self.df).fit(X @ w_new, r)
+                rss_new = np.sum((r - g_new.predict(X @ w_new)) ** 2)
+                if rss_new < rss:
+                    improved = True
+                    break
+                step /= 2
+            if not improved:
+                break
+            converged = rss - rss_new < 1e-8 * max(rss, 1e-12)
+            w, g, rss = w_new, g_new, rss_new
+            if converged:
+                break
+        return w, g, rss
+
+    def fit(self, X, y):
+        X = np.asarray(X, dtype=float)
+        y = np.asarray(y, dtype=float)
+        rng = np.random.RandomState(self.random_state)
+        N, p = X.shape
+        self.mean_ = y.mean()
+        self.omegas_, self.smoothers_ = [], []
+        r = y - self.mean_
+        self.rss_path_ = [float(np.sum(r ** 2))]
+        for m in range(self.n_terms):
+            starts = [np.linalg.lstsq(X, r, rcond=None)[0]]
+            starts += [rng.randn(p) for _ in range(self.n_starts - 1)]
+            best = None
+            for w0 in starts:
+                if np.linalg.norm(w0) == 0:
+                    continue
+                cand = self._fit_term(X, r, w0)
+                if best is None or cand[2] < best[2]:
+                    best = cand
+            w, g, _ = best
+            self.omegas_.append(w)
+            self.smoothers_.append(g)
+            if self.refit_directions and m > 0:
+                self._refit(X, y)
+            elif self.backfit and m > 0:
+                self._backfit(X, y)
+            r = y - self.predict(X)
+            self.rss_path_.append(float(np.sum(r ** 2)))
+        return self
+
+    def _backfit(self, X, y, n_cycles=5):
+        """Backfitting des g_m à directions fixées (chapitre 9)."""
+        V = np.column_stack([X @ w for w in self.omegas_])
+        for _ in range(n_cycles):
+            for m in range(len(self.omegas_)):
+                partial = y - self.mean_ - sum(self.smoothers_[l].predict(V[:, l])
+                                               for l in range(len(self.omegas_)) if l != m)
+                self.smoothers_[m] = SmoothingSpline(df=self.df).fit(V[:, m], partial)
+
+    def _refit(self, X, y, n_cycles=5):
+        """Réajustement cyclique des couples (ω_l, g_l) sur les résidus partiels."""
+        for _ in range(n_cycles):
+            for m in range(len(self.omegas_)):
+                partial = y - self.mean_ - sum(
+                    self.smoothers_[l].predict(X @ self.omegas_[l])
+                    for l in range(len(self.omegas_)) if l != m)
+                w, g, _ = self._fit_term(X, partial, self.omegas_[m])
+                self.omegas_[m], self.smoothers_[m] = w, g
+
+    def ridge_functions(self, X):
+        """Matrice (N, M) des contributions :math:`g_m(\\omega_m^T x_i)`."""
+        X = np.asarray(X, dtype=float)
+        return np.column_stack([g.predict(X @ w) for w, g in zip(self.omegas_, self.smoothers_)])
+
+    def predict(self, X):
+        """Prédiction :math:`\\bar y + \\sum_m g_m(\\omega_m^T x)`."""
+        return self.mean_ + self.ridge_functions(X).sum(axis=1)
