@@ -311,3 +311,161 @@ def gradient_check(params, X, Y, output="identity", loss="squared",
     g = pack(backprop(params, X, Y, output, loss, weight_decay)[1])
     gn = numerical_gradient(fun, pack(params), eps)
     return float(np.linalg.norm(g - gn) / max(np.linalg.norm(g) + np.linalg.norm(gn), 1e-12))
+
+
+# ---------------------------------------------------------------------------
+# Le réseau de neurones
+# ---------------------------------------------------------------------------
+
+
+class MLP:
+    """Réseau de neurones à une couche cachée (modèle (11.5) du livre).
+
+    Parameters
+    ----------
+    n_hidden : int
+        Nombre M d'unités cachées (0 = pas de couche cachée).
+    output : {"identity", "sigmoid", "softmax"}
+        Fonction de sortie.
+    loss : {"squared", "cross_entropy"}
+        Erreur minimisée.
+    weight_decay : float
+        Paramètre :math:`\\lambda` de la pénalité (11.16).
+    init_scale : float
+        Poids initiaux uniformes sur [-init_scale, init_scale].
+    random_state : int ou RandomState
+        Graine des poids initiaux.
+
+    Attributes
+    ----------
+    params_ : dict
+        Poids ajustés.
+    history_ : list of float
+        Erreur pénalisée au cours des itérations / époques.
+    """
+
+    def __init__(self, n_hidden=10, output="identity", loss="squared",
+                 weight_decay=0.0, init_scale=0.7, random_state=0):
+        self.n_hidden = n_hidden
+        self.output = output
+        self.loss = loss
+        self.weight_decay = weight_decay
+        self.init_scale = init_scale
+        self.random_state = random_state
+
+    def _rng(self):
+        if isinstance(self.random_state, np.random.RandomState):
+            return self.random_state
+        return np.random.RandomState(self.random_state)
+
+    def init(self, p, K):
+        """Initialise ``params_`` (appelé automatiquement par :meth:`fit`)."""
+        self.p_, self.K_ = p, K
+        self.params_ = init_params(p, self.n_hidden, K, self._rng(), self.init_scale)
+        self.history_ = []
+        return self
+
+    def objective(self, X, Y):
+        """Erreur pénalisée :math:`R(\\theta) + \\lambda J(\\theta)` actuelle."""
+        Y = np.asarray(Y, dtype=float)
+        if Y.ndim == 1:
+            Y = Y[:, None]
+        return backprop(self.params_, X, Y, self.output, self.loss, self.weight_decay)[0]
+
+    def fit(self, X, Y, method="lbfgs", max_iter=500, lr=0.1, momentum=0.0,
+            n_epochs=100, batch_size=None, callback=None, warm_start=False, tol=1e-10):
+        """Ajuste les poids.
+
+        Parameters
+        ----------
+        X : ndarray (N, p)
+        Y : ndarray (N, K) ou (N,)
+            Un vecteur est transformé en colonne.
+        method : {"lbfgs", "gd", "sgd"}
+            * ``"lbfgs"`` : quasi-Newton à mémoire limitée (``scipy``), une
+              méthode « à métrique variable » recommandée en fin de 11.4 ;
+            * ``"gd"`` : descente de gradient par lots (11.13), une époque =
+              une mise à jour ; le pas est appliqué au gradient **moyen**
+              (gradient de R/N) ;
+            * ``"sgd"`` : descente de gradient par mini-lots de taille
+              ``batch_size`` (1 = apprentissage « en ligne »), une époque =
+              un passage sur toutes les données (ordre aléatoire).
+        max_iter : int
+            Nombre maximal d'itérations de L-BFGS.
+        lr, momentum : float
+            Pas d'apprentissage et coefficient d'inertie (``gd``/``sgd``).
+        n_epochs : int
+            Nombre d'époques (``gd``/``sgd``).
+        batch_size : int ou None
+            Taille des mini-lots pour ``sgd``.
+        callback : callable ou None
+            ``callback(model, epoch)`` appelé après chaque époque
+            (``gd``/``sgd``) ou itération (``lbfgs``).
+        warm_start : bool
+            Si vrai, repart des poids actuels.
+        """
+        X = np.asarray(X, dtype=float)
+        Y = np.asarray(Y, dtype=float)
+        if Y.ndim == 1:
+            Y = Y[:, None]
+        N, p = X.shape
+        K = Y.shape[1]
+        if not (warm_start and hasattr(self, "params_")):
+            self.init(p, K)
+        M = self.n_hidden
+        args = (self.output, self.loss, self.weight_decay)
+
+        if method == "lbfgs":
+            last = {}
+
+            def fun(th):
+                R, g = backprop(unpack(th, p, M, K), X, Y, *args)
+                last["R"] = R
+                return R, pack(g)
+
+            it = [0]
+
+            def cb(th):
+                self.params_ = unpack(th.copy(), p, M, K)
+                self.history_.append(last["R"])
+                it[0] += 1
+                if callback is not None:
+                    callback(self, it[0])
+
+            res = optimize.minimize(fun, pack(self.params_), jac=True, method="L-BFGS-B",
+                                    callback=cb, options={"maxiter": max_iter,
+                                                          "ftol": tol, "gtol": 1e-8})
+            self.params_ = unpack(res.x, p, M, K)
+            self.n_iter_ = res.nit
+            return self
+
+        rng = self._rng()
+        theta = pack(self.params_)
+        vel = np.zeros_like(theta)
+        bs = N if (method == "gd" or batch_size is None) else batch_size
+        for epoch in range(1, n_epochs + 1):
+            order = np.arange(N) if method == "gd" else rng.permutation(N)
+            for start in range(0, N, bs):
+                idx = order[start:start + bs]
+                # la pénalité est répartie au prorata de la taille du lot
+                _, g = backprop(unpack(theta, p, M, K), X[idx], Y[idx], self.output,
+                                self.loss, self.weight_decay * len(idx) / N)
+                vel = momentum * vel - lr * pack(g) / len(idx)
+                theta = theta + vel
+            self.params_ = unpack(theta, p, M, K)
+            self.history_.append(self.objective(X, Y))
+            if callback is not None:
+                callback(self, epoch)
+        return self
+
+    def predict(self, X):
+        """Sorties :math:`f_k(x)` (matrice (N, K))."""
+        return forward(self.params_, X, self.output)["F"]
+
+    def hidden(self, X):
+        """Valeurs des unités cachées :math:`z_{mi}` (matrice (N, M))."""
+        return forward(self.params_, X, self.output)["Z"]
+
+    def predict_class(self, X):
+        """Classe prédite :math:`G(x) = \\arg\\max_k f_k(x)`."""
+        return np.argmax(self.predict(X), axis=1)
