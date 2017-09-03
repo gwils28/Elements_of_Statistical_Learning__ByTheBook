@@ -495,3 +495,62 @@ def _reinsch_QR(x):
         if c + 1 < n - 2:
             R[c, c + 1] = R[c + 1, c] = h[j] / 6.0
     return Q, R
+
+
+class SmoothingSpline:
+    """Spline de lissage cubique (chapitre 5), paramétrée par λ ou par ddl.
+
+    Minimise :math:`\\sum_i (y_i - g(x_i))^2 + \\lambda \\int g''(t)^2 dt`.
+    La solution est une spline cubique naturelle à nœuds aux :math:`x_i` dont
+    les valeurs ajustées sont :math:`\\hat g = (I + \\lambda K)^{-1} y` avec
+    :math:`K = Q R^{-1} Q^T`. Le nombre de degrés de liberté effectifs est
+    :math:`\\mathrm{tr}(I+\\lambda K)^{-1} = \\sum_j 1/(1+\\lambda d_j)` où les
+    :math:`d_j` sont les valeurs propres de K.
+
+    Parameters
+    ----------
+    df : float ou None
+        Degrés de liberté visés (entre 2 et N) ; prioritaire sur ``lam``.
+    lam : float ou None
+        Paramètre de lissage λ.
+    """
+
+    def __init__(self, df=5.0, lam=None):
+        self.df = df
+        self.lam = lam
+
+    def fit(self, x, y):
+        x = np.asarray(x, dtype=float)
+        y = np.asarray(y, dtype=float)
+        order = np.argsort(x)
+        xs, ys = x[order], y[order]
+        if np.any(np.diff(xs) <= 1e-12 * max(1.0, np.ptp(xs))):
+            raise ValueError("les abscisses doivent être distinctes")
+        Q, R = _reinsch_QR(xs)
+        Kmat = Q @ np.linalg.solve(R, Q.T)
+        Kmat = (Kmat + Kmat.T) / 2
+        d, U = np.linalg.eigh(Kmat)
+        d = np.clip(d, 0.0, None)
+        lam = self.lam if self.df is None else df_to_lambda(d, self.df)
+        self.lam_ = lam
+        shrink = 1.0 / (1.0 + lam * d)
+        self.df_ = float(shrink.sum())
+        fitted = U @ (shrink * (U.T @ ys))
+        self.x_, self.fitted_ = xs, fitted
+        self._spline = CubicSpline(xs, fitted, bc_type="natural")
+        return self
+
+    def predict(self, x):
+        """Valeurs de la spline ; extrapolation linéaire hors de [min x, max x]."""
+        x = np.asarray(x, dtype=float)
+        out = self._spline(np.clip(x, self.x_[0], self.x_[-1]))
+        lo, hi = x < self.x_[0], x > self.x_[-1]
+        d1 = self._spline.derivative()
+        out[lo] += d1(self.x_[0]) * (x[lo] - self.x_[0])
+        out[hi] += d1(self.x_[-1]) * (x[hi] - self.x_[-1])
+        return out
+
+    def derivative(self, x):
+        """Dérivée g'(x) (constante hors du support des données)."""
+        x = np.clip(np.asarray(x, dtype=float), self.x_[0], self.x_[-1])
+        return self._spline.derivative()(x)
