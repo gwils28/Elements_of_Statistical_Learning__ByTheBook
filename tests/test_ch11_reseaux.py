@@ -26,3 +26,9 @@ def _data(N=15, p=3, K=2, seed=0, classif=False):
     ("sigmoid", "squared", True),
     ("sigmoid", "cross_entropy", True),
 ])
+@pytest.mark.parametrize("M", [0, 1, 4])
+@pytest.mark.parametrize("lam", [0.0, 0.3])
+def test_gradient_check(output, loss, classif, M, lam):
+    X, Y = _data(K=3, classif=classif)
+    params = init_params(X.shape[1], M, Y.shape[1], np.random.RandomState(1))
+    assert gradient_check(params, X, Y, output, loss, lam) < 1e-7
