@@ -17,3 +17,12 @@ def _data(N=15, p=3, K=2, seed=0, classif=False):
     else:
         Y = rng.randn(N, K)
     return X, Y
+
+
+@pytest.mark.parametrize("output,loss,classif", [
+    ("identity", "squared", False),
+    ("softmax", "cross_entropy", True),
+    ("softmax", "squared", True),
+    ("sigmoid", "squared", True),
+    ("sigmoid", "cross_entropy", True),
+])
