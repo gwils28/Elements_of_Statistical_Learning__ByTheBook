@@ -32,3 +32,13 @@ def test_gradient_check(output, loss, classif, M, lam):
     X, Y = _data(K=3, classif=classif)
     params = init_params(X.shape[1], M, Y.shape[1], np.random.RandomState(1))
     assert gradient_check(params, X, Y, output, loss, lam) < 1e-7
+
+
+def test_pack_unpack_roundtrip():
+    rng = np.random.RandomState(0)
+    for M in (0, 3):
+        params = init_params(5, M, 2, rng)
+        theta = pack(params)
+        assert theta.size == n_weights(5, M, 2)
+        back = unpack(theta, 5, M, 2)
+        assert np.allclose(pack(back), theta)
