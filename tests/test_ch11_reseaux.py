@@ -42,3 +42,9 @@ def test_pack_unpack_roundtrip():
         assert theta.size == n_weights(5, M, 2)
         back = unpack(theta, 5, M, 2)
         assert np.allclose(pack(back), theta)
+
+
+def test_n_weights_formula():
+    # éq. (11.8) et réseau Net-2 du tableau 11.1 : 256 entrées, 12 cachées, 10 sorties
+    assert n_weights(256, 12, 10) == 3214
+    assert n_weights(256, 0, 10) == 2570
