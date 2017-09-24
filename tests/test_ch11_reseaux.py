@@ -77,3 +77,13 @@ def test_small_weights_nearly_linear():
         errs.append(np.max(np.abs(A @ coef - f)))
     # sigma''(0) = 0 : l'écart à la linéarité décroît comme eps^3 (facteur 1000 attendu)
     assert errs[1] < errs[0] * 3e-3
+
+
+def test_training_decreases_objective():
+    X, Y = _data(N=60, p=2, K=1)
+    for method in ("gd", "sgd", "lbfgs"):
+        net = MLP(n_hidden=3, weight_decay=0.01, random_state=0)
+        net.init(2, 1)
+        R0 = net.objective(X, Y)
+        net.fit(X, Y, method=method, lr=0.05, n_epochs=50, batch_size=10, max_iter=100)
+        assert net.objective(X, Y) < R0
