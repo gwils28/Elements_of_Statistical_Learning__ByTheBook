@@ -87,3 +87,17 @@ def test_training_decreases_objective():
         R0 = net.objective(X, Y)
         net.fit(X, Y, method=method, lr=0.05, n_epochs=50, batch_size=10, max_iter=100)
         assert net.objective(X, Y) < R0
+
+
+def test_no_hidden_layer_equals_multinomial_logistic():
+    """Ex. 11.4 : M = 0, softmax et entropie croisée = logistique multinomiale."""
+    from sklearn.linear_model import LogisticRegression
+    rng = np.random.RandomState(0)
+    X = rng.randn(120, 3)
+    y = np.argmax(X @ rng.randn(3, 3) + rng.randn(120, 3), axis=1)
+    C = 2.0
+    net = MLP(n_hidden=0, output="softmax", loss="cross_entropy",
+              weight_decay=1.0 / (2 * C), random_state=0)
+    net.fit(X, one_hot(y, 3), max_iter=2000)
+    lr = LogisticRegression(C=C, tol=1e-10, max_iter=10000).fit(X, y)
+    assert np.allclose(net.predict(X), lr.predict_proba(X), atol=1e-5)
