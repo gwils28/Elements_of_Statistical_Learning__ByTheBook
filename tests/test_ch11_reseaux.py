@@ -101,3 +101,15 @@ def test_no_hidden_layer_equals_multinomial_logistic():
     net.fit(X, one_hot(y, 3), max_iter=2000)
     lr = LogisticRegression(C=C, tol=1e-10, max_iter=10000).fit(X, y)
     assert np.allclose(net.predict(X), lr.predict_proba(X), atol=1e-5)
+
+
+def test_smoothing_spline_matches_scipy():
+    rng = np.random.RandomState(0)
+    x = np.sort(rng.uniform(0, 1, 40))
+    y = np.sin(6 * x) + 0.2 * rng.randn(40)
+    lam = 1e-3
+    ss = SmoothingSpline(df=None, lam=lam).fit(x, y)
+    ref = make_smoothing_spline(x, y, lam=lam)
+    assert np.allclose(ss.fitted_, ref(x), atol=1e-6)
+    xx = np.linspace(0.05, 0.95, 30)
+    assert np.allclose(ss.predict(xx), ref(xx), atol=1e-6)
