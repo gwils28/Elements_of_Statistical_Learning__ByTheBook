@@ -132,3 +132,13 @@ def test_smoothing_spline_reproduces_lines():
     y = 3 * x - 1
     ss = SmoothingSpline(df=2.5).fit(x, y)
     assert np.allclose(ss.fitted_, y, atol=1e-8)
+
+
+def test_ppr_recovers_single_ridge_direction():
+    rng = np.random.RandomState(0)
+    X = rng.randn(200, 3)
+    w_true = np.array([1.0, 2.0, -2.0]) / 3.0
+    y = np.tanh(2 * X @ w_true) + 0.05 * rng.randn(200)
+    ppr = PPR(n_terms=1, df=6, random_state=0).fit(X, y)
+    assert abs(abs(ppr.omegas_[0] @ w_true) - 1) < 1e-2
+    assert np.mean((ppr.predict(X) - y) ** 2) < 0.01
