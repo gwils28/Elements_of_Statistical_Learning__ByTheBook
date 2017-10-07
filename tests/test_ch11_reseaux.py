@@ -124,3 +124,11 @@ def test_df_to_lambda():
         assert abs(ss.df_ - df) < 1e-6
     with pytest.raises(ValueError):
         df_to_lambda(np.ones(10), 1.5)
+
+
+def test_smoothing_spline_reproduces_lines():
+    """Les fonctions affines ne sont pas pénalisées."""
+    x = np.linspace(0, 1, 30)
+    y = 3 * x - 1
+    ss = SmoothingSpline(df=2.5).fit(x, y)
+    assert np.allclose(ss.fitted_, y, atol=1e-8)
