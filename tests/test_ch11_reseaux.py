@@ -113,3 +113,14 @@ def test_smoothing_spline_matches_scipy():
     assert np.allclose(ss.fitted_, ref(x), atol=1e-6)
     xx = np.linspace(0.05, 0.95, 30)
     assert np.allclose(ss.predict(xx), ref(xx), atol=1e-6)
+
+
+def test_df_to_lambda():
+    rng = np.random.RandomState(0)
+    x = rng.uniform(-2, 2, 50)
+    y = x ** 2 + rng.randn(50)
+    for df in (3.0, 5.0, 10.0):
+        ss = SmoothingSpline(df=df).fit(x, y)
+        assert abs(ss.df_ - df) < 1e-6
+    with pytest.raises(ValueError):
+        df_to_lambda(np.ones(10), 1.5)
