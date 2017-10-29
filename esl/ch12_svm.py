@@ -41,3 +41,32 @@ def polynomial_kernel(X, Z, degree=2, coef0=1.0, gamma=1.0):
     Avec ``coef0=1`` et ``gamma=1`` on retrouve le noyau (12.22) du livre.
     """
     return (coef0 + gamma * linear_kernel(X, Z)) ** degree
+
+
+def rbf_kernel(X, Z, gamma=1.0):
+    """Noyau radial (gaussien) :math:`K(x, z) = \\exp(-\\gamma\\|x - z\\|^2)`."""
+    X = np.asarray(X, float)
+    Z = np.asarray(Z, float)
+    d2 = (X ** 2).sum(1)[:, None] + (Z ** 2).sum(1)[None, :] - 2 * X @ Z.T
+    return np.exp(-gamma * np.maximum(d2, 0.0))
+
+
+def make_kernel(kernel="rbf", gamma=1.0, degree=3, coef0=1.0):
+    """Renvoie une fonction ``K(X, Z)`` correspondant au noyau demandé.
+
+    Parameters
+    ----------
+    kernel : {"linear", "poly", "rbf"} ou fonction
+        Nom du noyau, ou directement une fonction ``K(X, Z)``.
+    gamma, degree, coef0 : float
+        Paramètres du noyau (voir :func:`polynomial_kernel`, :func:`rbf_kernel`).
+    """
+    if callable(kernel):
+        return kernel
+    if kernel == "linear":
+        return linear_kernel
+    if kernel == "poly":
+        return lambda X, Z: polynomial_kernel(X, Z, degree, coef0, gamma)
+    if kernel == "rbf":
+        return lambda X, Z: rbf_kernel(X, Z, gamma)
+    raise ValueError("noyau inconnu : %r" % kernel)
