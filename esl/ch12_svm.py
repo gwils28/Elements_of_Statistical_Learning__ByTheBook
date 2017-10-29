@@ -70,3 +70,20 @@ def make_kernel(kernel="rbf", gamma=1.0, degree=3, coef0=1.0):
     if kernel == "rbf":
         return lambda X, Z: rbf_kernel(X, Z, gamma)
     raise ValueError("noyau inconnu : %r" % kernel)
+
+
+def poly2_features(X):
+    """Plongement explicite associé au noyau :math:`(1 + \\langle x, z\\rangle)^2`.
+
+    Pour :math:`x \\in \\mathbb{R}^p`, renvoie le vecteur
+    :math:`(1, \\sqrt2 x_j, x_j^2, \\sqrt2 x_j x_k \\ (j<k))` de sorte que
+    :math:`\\langle h(x), h(z)\\rangle = (1 + \\langle x, z\\rangle)^2`
+    (éq. (12.23) du livre pour :math:`p = 2`).
+    """
+    X = np.asarray(X, float)
+    n, p = X.shape
+    cols = [np.ones(n)]
+    cols += [np.sqrt(2) * X[:, j] for j in range(p)]
+    cols += [X[:, j] ** 2 for j in range(p)]
+    cols += [np.sqrt(2) * X[:, j] * X[:, k] for j in range(p) for k in range(j + 1, p)]
+    return np.column_stack(cols)
