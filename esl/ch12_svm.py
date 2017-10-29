@@ -33,3 +33,11 @@ def linear_kernel(X, Z):
     ndarray (n, m)
     """
     return np.asarray(X, float) @ np.asarray(Z, float).T
+
+
+def polynomial_kernel(X, Z, degree=2, coef0=1.0, gamma=1.0):
+    """Noyau polynomial :math:`K(x, z) = (\\text{coef0} + \\gamma\\langle x, z\\rangle)^d`.
+
+    Avec ``coef0=1`` et ``gamma=1`` on retrouve le noyau (12.22) du livre.
+    """
+    return (coef0 + gamma * linear_kernel(X, Z)) ** degree
