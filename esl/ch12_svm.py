@@ -180,3 +180,60 @@ def smo_solve(Q, p, s, C, tol=1e-3, max_iter=200000):
         low = (pos & (a > 0)) | (~pos & (a < Cv))
         b = 0.5 * (v[up].max() + v[low].min())
     return a, b, it
+
+
+def qp_interior_point(Q, p, s, C, tol=1e-10, max_iter=100):
+    """Même problème que :func:`smo_solve`, résolu par points intérieurs.
+
+    On applique la méthode de Newton aux conditions KKT « perturbées »
+    (:math:`a_t z_t = \\mu`, :math:`(C - a_t) w_t = \\mu`) en faisant
+    décroître :math:`\\mu` vers 0. Chaque itération résout un système
+    linéaire de taille :math:`n + 1` : la méthode est donc réservée aux
+    problèmes de taille modérée (quelques centaines de points), mais elle est
+    très précise et insensible au mauvais conditionnement (grands :math:`C`).
+
+    Returns
+    -------
+    a : ndarray (n,)
+    b : float
+        Multiplicateur de la contrainte d'égalité (égal à :math:`\\beta_0`).
+    n_iter : int
+    """
+    Q = np.asarray(Q, float)
+    p = np.asarray(p, float)
+    s = np.asarray(s, float)
+    n = len(p)
+    Cv = np.broadcast_to(np.asarray(C, float), (n,)).copy()
+    a = Cv / 2
+    z = np.ones(n)
+    w = np.ones(n)
+    nu = 0.0
+    scale = 1 + np.abs(Q).max() * Cv.max() + np.abs(p).max()
+    it = 0
+    for it in range(1, max_iter + 1):
+        u = Cv - a
+        mu = (a @ z + u @ w) / (2 * n)
+        rd = Q @ a + p + s * nu - z + w
+        re = s @ a
+        if mu < tol and np.abs(rd).max() < 1e-8 * scale and abs(re) < 1e-8 * Cv.max() * n:
+            break
+        sig = 0.1
+        D = z / a + w / u
+        rhs = -rd + (sig * mu / a - z) - (sig * mu / u - w)
+        M = np.zeros((n + 1, n + 1))
+        M[:n, :n] = Q + np.diag(D)
+        M[:n, n] = s
+        M[n, :n] = s
+        sol = np.linalg.solve(M, np.r_[rhs, -re])
+        da, dnu = sol[:n], sol[n]
+        dz = (sig * mu - a * z - z * da) / a
+        dw = (sig * mu - u * w + w * da) / u
+        # pas maximal gardant a dans ]0, C[ et z, w > 0
+        steps = [1.0]
+        for v, dv in ((a, da), (u, -da), (z, dz), (w, dw)):
+            neg = dv < 0
+            if neg.any():
+                steps.append(np.min(-v[neg] / dv[neg]))
+        t = min(1.0, 0.99 * min(steps))
+        a, z, w, nu = a + t * da, z + t * dz, w + t * dw, nu + t * dnu
+    return np.clip(a, 0, Cv), float(nu), it
