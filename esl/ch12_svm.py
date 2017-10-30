@@ -87,3 +87,96 @@ def poly2_features(X):
     cols += [X[:, j] ** 2 for j in range(p)]
     cols += [np.sqrt(2) * X[:, j] * X[:, k] for j in range(p) for k in range(j + 1, p)]
     return np.column_stack(cols)
+
+
+# ---------------------------------------------------------------------------
+# Solveur SMO
+# ---------------------------------------------------------------------------
+
+
+def smo_solve(Q, p, s, C, tol=1e-3, max_iter=200000):
+    """Résout le problème quadratique dual « générique » des SVM par SMO.
+
+    Le problème est
+
+    .. math::
+        \\min_a \\tfrac12 a^T Q a + p^T a
+        \\quad\\text{s.c.}\\quad s^T a = 0,\\quad 0 \\le a_t \\le C,
+
+    avec :math:`s_t \\in \\{-1, +1\\}`. À chaque itération on choisit une
+    paire :math:`(i, j)` : :math:`i` viole le plus les conditions KKT, puis
+    :math:`j` est la variable qui, associée à :math:`i`, fait le plus
+    décroître l'objectif (règle « du second ordre » de Fan, Chen et Lin,
+    utilisée par LIBSVM). On optimise alors exactement l'objectif selon ces
+    deux coordonnées, en respectant la contrainte d'égalité et les bornes.
+
+    Parameters
+    ----------
+    Q : ndarray (n, n)
+        Matrice symétrique semi-définie positive.
+    p : ndarray (n,)
+    s : ndarray (n,)
+        Signes :math:`\\pm 1`.
+    C : float ou ndarray (n,)
+        Borne supérieure des variables.
+    tol : float
+        Tolérance sur l'écart KKT :math:`m(a) - M(a)`.
+    max_iter : int
+        Nombre maximal d'itérations.
+
+    Returns
+    -------
+    a : ndarray (n,)
+        Solution duale.
+    b : float
+        Constante :math:`\\beta_0` telle que, pour toute variable « libre »
+        (:math:`0 < a_t < C`), :math:`(Qa + p)_t + s_t b = 0`.
+    n_iter : int
+        Nombre d'itérations effectuées.
+    """
+    Q = np.asarray(Q, float)
+    p = np.asarray(p, float)
+    s = np.asarray(s, float)
+    n = len(p)
+    Cv = np.broadcast_to(np.asarray(C, float), (n,)).copy()
+    a = np.zeros(n)
+    G = p.copy()  # gradient Q a + p (a = 0 au départ)
+    diag = np.diag(Q).copy()
+    pos = s > 0
+    eps_b = 1e-12
+    it = 0
+    for it in range(1, max_iter + 1):
+        up = (pos & (a < Cv - eps_b)) | (~pos & (a > eps_b))
+        low = (pos & (a > eps_b)) | (~pos & (a < Cv - eps_b))
+        v = -s * G
+        vu = np.where(up, v, -np.inf)
+        vl = np.where(low, v, np.inf)
+        i = int(np.argmax(vu))
+        if vu[i] - vl.min() < tol:
+            break
+        # choix de j au second ordre (Fan, Chen et Lin, 2005) : on prend le j
+        # qui fait le plus décroître l'objectif parmi les candidats violants
+        bij = vu[i] - vl
+        aij = np.maximum(diag[i] + diag - 2 * s[i] * s * Q[i], 1e-12)
+        gain = np.where(low & (bij > 0), bij ** 2 / aij, -np.inf)
+        j = int(np.argmax(gain))
+        eta = aij[j]
+        t = bij[j] / eta
+        # bornes : a_i <- a_i + s_i t, a_j <- a_j - s_j t, avec t > 0
+        ti = Cv[i] - a[i] if s[i] > 0 else a[i]
+        tj = a[j] if s[j] > 0 else Cv[j] - a[j]
+        t = min(t, ti, tj)
+        a[i] += s[i] * t
+        a[j] -= s[j] * t
+        G += t * (s[i] * Q[:, i] - s[j] * Q[:, j])
+    a = np.clip(a, 0, Cv)
+    v = -s * G
+    thr = 1e-5 * np.minimum(Cv, max(a.max(), 1e-300))
+    free = (a > thr) & (a < Cv * (1 - 1e-5))
+    if free.any():
+        b = float(np.mean(v[free]))
+    else:
+        up = (pos & (a < Cv)) | (~pos & (a > 0))
+        low = (pos & (a > 0)) | (~pos & (a < Cv))
+        b = 0.5 * (v[up].max() + v[low].min())
+    return a, b, it
