@@ -237,3 +237,14 @@ def qp_interior_point(Q, p, s, C, tol=1e-10, max_iter=100):
         t = min(1.0, 0.99 * min(steps))
         a, z, w, nu = a + t * da, z + t * dz, w + t * dw, nu + t * dnu
     return np.clip(a, 0, Cv), float(nu), it
+
+
+def solve_svm_dual(Q, p, s, C, solver="ip", tol=None, max_iter=None):
+    """Aiguillage entre :func:`smo_solve` (``"smo"``) et :func:`qp_interior_point` (``"ip"``)."""
+    if solver == "smo":
+        return smo_solve(Q, p, s, C, tol=1e-3 if tol is None else tol,
+                         max_iter=200000 if max_iter is None else max_iter)
+    if solver == "ip":
+        return qp_interior_point(Q, p, s, C, tol=1e-10 if tol is None else tol,
+                                 max_iter=200 if max_iter is None else max_iter)
+    raise ValueError("solveur inconnu : %r" % solver)
