@@ -326,3 +326,51 @@ class SVMClassifier:
         f = K @ w + self.b_
         xi = np.maximum(0, 1 - self.y_ * f)
         return 0.5 * w @ K @ w + self.C * xi.sum()
+
+
+class SVMRegressor:
+    """Régression à vecteurs de support avec perte :math:`\\varepsilon`-insensible.
+
+    Résout le dual (12.41) (avec :math:`C = 1/\\lambda`) par SMO, en empilant
+    :math:`a = (\\alpha^*, \\alpha)`.
+
+    Attributes
+    ----------
+    alpha_star_, alpha_ : ndarray (N,)
+    dual_coef_ : ndarray (N,)
+        :math:`\\hat\\alpha_i^* - \\hat\\alpha_i`.
+    b_ : float
+    support_ : ndarray
+        Indices des vecteurs de support (coefficient dual non nul).
+    """
+
+    def __init__(self, C=1.0, epsilon=0.1, kernel="rbf", gamma=1.0, degree=3,
+                 coef0=1.0, solver="ip", tol=None, max_iter=None):
+        self.C, self.epsilon = C, epsilon
+        self.solver = solver
+        self.kernel = kernel
+        self.gamma, self.degree, self.coef0 = gamma, degree, coef0
+        self.tol, self.max_iter = tol, max_iter
+
+    def fit(self, X, y):
+        X = np.asarray(X, float)
+        y = np.asarray(y, float)
+        n = len(y)
+        self.K_ = make_kernel(self.kernel, self.gamma, self.degree, self.coef0)
+        K = self.K_(X, X)
+        s = np.r_[np.ones(n), -np.ones(n)]
+        Q = np.block([[K, -K], [-K, K]])
+        p = np.r_[self.epsilon - y, self.epsilon + y]
+        a, b, it = solve_svm_dual(Q, p, s, self.C, self.solver, self.tol, self.max_iter)
+        self.alpha_star_, self.alpha_ = a[:n], a[n:]
+        self.dual_coef_ = self.alpha_star_ - self.alpha_
+        self.b_, self.n_iter_ = b, it
+        thr = 1e-5 * min(self.C, max(np.abs(self.dual_coef_).max(), 1e-300))
+        self.support_ = np.flatnonzero(np.abs(self.dual_coef_) > thr)
+        self.X_ = X
+        return self
+
+    def predict(self, X):
+        """:math:`\\hat f(x) = \\sum_i (\\hat\\alpha_i^*-\\hat\\alpha_i) K(x, x_i) + \\hat\\beta_0` (12.40)."""
+        sv = self.support_
+        return self.K_(np.asarray(X, float), self.X_[sv]) @ self.dual_coef_[sv] + self.b_
