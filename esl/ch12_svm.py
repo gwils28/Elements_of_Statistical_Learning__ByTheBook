@@ -248,3 +248,81 @@ def solve_svm_dual(Q, p, s, C, solver="ip", tol=None, max_iter=None):
         return qp_interior_point(Q, p, s, C, tol=1e-10 if tol is None else tol,
                                  max_iter=200 if max_iter is None else max_iter)
     raise ValueError("solveur inconnu : %r" % solver)
+
+
+# ---------------------------------------------------------------------------
+# SVM de classification et de régression
+# ---------------------------------------------------------------------------
+
+
+class SVMClassifier:
+    """Classifieur à vecteurs de support (problème dual (12.13)/(12.19)).
+
+    Parameters
+    ----------
+    C : float
+        Paramètre de coût de (12.8) (:math:`\\lambda = 1/C` dans (12.25)).
+    kernel : {"linear", "poly", "rbf"} ou fonction
+    gamma, degree, coef0 : paramètres du noyau (voir :func:`make_kernel`).
+    solver : {"ip", "smo"}
+        Solveur du dual : points intérieurs (défaut, précis) ou SMO.
+    tol, max_iter : réglages du solveur (None = valeurs par défaut).
+
+    Attributes
+    ----------
+    alpha_ : ndarray (N,)
+        Multiplicateurs de Lagrange :math:`\\hat\\alpha_i \\in [0, C]`.
+    b_ : float
+        Constante :math:`\\hat\\beta_0`.
+    support_ : ndarray
+        Indices des vecteurs de support (:math:`\\hat\\alpha_i > 0`).
+    margin_ : ndarray
+        Indices des points exactement sur la marge (:math:`0<\\hat\\alpha_i<C`).
+    coef_ : ndarray (p,)
+        :math:`\\hat\\beta = \\sum_i \\hat\\alpha_i y_i x_i` (noyau linéaire).
+    """
+
+    def __init__(self, C=1.0, kernel="linear", gamma=1.0, degree=3, coef0=1.0,
+                 solver="ip", tol=None, max_iter=None):
+        self.C = C
+        self.solver = solver
+        self.kernel = kernel
+        self.gamma, self.degree, self.coef0 = gamma, degree, coef0
+        self.tol, self.max_iter = tol, max_iter
+
+    def fit(self, X, y):
+        """Ajuste le SVM ; ``y`` à valeurs dans {-1, +1} (ou {0, 1})."""
+        X = np.asarray(X, float)
+        y = np.asarray(y)
+        y = np.where(y > 0, 1.0, -1.0) if set(np.unique(y)) <= {0, 1} else y.astype(float)
+        self.K_ = make_kernel(self.kernel, self.gamma, self.degree, self.coef0)
+        K = self.K_(X, X)
+        Q = (y[:, None] * y[None, :]) * K
+        a, b, it = solve_svm_dual(Q, -np.ones(len(y)), y, self.C, self.solver,
+                                  self.tol, self.max_iter)
+        self.alpha_, self.b_, self.n_iter_ = a, b, it
+        thr = 1e-5 * min(self.C, a.max() if a.max() > 0 else 1.0)
+        self.support_ = np.flatnonzero(a > thr)
+        self.margin_ = np.flatnonzero((a > thr) & (a < self.C * (1 - 1e-5)))
+        self.X_, self.y_ = X, y
+        if self.kernel == "linear":
+            self.coef_ = (a * y) @ X
+        return self
+
+    def decision_function(self, X):
+        """Valeurs :math:`\\hat f(x) = \\sum_i \\hat\\alpha_i y_i K(x, x_i) + \\hat\\beta_0` (12.24)."""
+        sv = self.support_
+        K = self.K_(np.asarray(X, float), self.X_[sv])
+        return K @ (self.alpha_[sv] * self.y_[sv]) + self.b_
+
+    def predict(self, X):
+        """Classe prédite dans {-1, +1} : :math:`\\mathrm{sign}\\,\\hat f(x)`."""
+        return np.where(self.decision_function(X) >= 0, 1, -1)
+
+    def primal_objective(self):
+        """Valeur du critère primal (12.8) : :math:`\\tfrac12\\|\\beta\\|^2 + C\\sum\\xi_i`."""
+        K = self.K_(self.X_, self.X_)
+        w = self.alpha_ * self.y_
+        f = K @ w + self.b_
+        xi = np.maximum(0, 1 - self.y_ * f)
+        return 0.5 * w @ K @ w + self.C * xi.sum()
