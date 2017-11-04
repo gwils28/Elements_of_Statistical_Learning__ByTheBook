@@ -374,3 +374,18 @@ class SVMRegressor:
         """:math:`\\hat f(x) = \\sum_i (\\hat\\alpha_i^*-\\hat\\alpha_i) K(x, x_i) + \\hat\\beta_0` (12.40)."""
         sv = self.support_
         return self.K_(np.asarray(X, float), self.X_[sv]) @ self.dual_coef_[sv] + self.b_
+
+
+def kernel_ridge(K, y, lam):
+    """Coefficients :math:`\\hat\\alpha = (K + \\lambda I)^{-1} y` de (12.49)."""
+    return np.linalg.solve(K + lam * np.eye(len(y)), y)
+
+
+# ---------------------------------------------------------------------------
+# Fonctions de perte (figures 12.4 et 12.8)
+# ---------------------------------------------------------------------------
+
+
+def hinge_loss(m):
+    """Perte charnière :math:`[1 - yf]_+`, en fonction de la marge :math:`m = yf`."""
+    return np.maximum(0.0, 1.0 - np.asarray(m, float))
