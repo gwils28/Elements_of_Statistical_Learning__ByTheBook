@@ -389,3 +389,8 @@ def kernel_ridge(K, y, lam):
 def hinge_loss(m):
     """Perte charnière :math:`[1 - yf]_+`, en fonction de la marge :math:`m = yf`."""
     return np.maximum(0.0, 1.0 - np.asarray(m, float))
+
+
+def binomial_deviance(m):
+    """Déviance binomiale :math:`\\log(1 + e^{-yf})`."""
+    return np.logaddexp(0.0, -np.asarray(m, float))
