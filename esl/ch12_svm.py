@@ -394,3 +394,8 @@ def hinge_loss(m):
 def binomial_deviance(m):
     """Déviance binomiale :math:`\\log(1 + e^{-yf})`."""
     return np.logaddexp(0.0, -np.asarray(m, float))
+
+
+def squared_error_loss(m):
+    """Perte quadratique :math:`(y - f)^2 = (1 - yf)^2` pour :math:`y = \\pm1`."""
+    return (1.0 - np.asarray(m, float)) ** 2
