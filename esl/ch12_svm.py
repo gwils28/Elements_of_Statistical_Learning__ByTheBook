@@ -399,3 +399,17 @@ def binomial_deviance(m):
 def squared_error_loss(m):
     """Perte quadratique :math:`(y - f)^2 = (1 - yf)^2` pour :math:`y = \\pm1`."""
     return (1.0 - np.asarray(m, float)) ** 2
+
+
+def huberized_hinge(m):
+    """Perte charnière quadratique « hubérisée » (tableau 12.1).
+
+    :math:`-4yf` si :math:`yf < -1`, :math:`[1 - yf]_+^2` sinon.
+    """
+    m = np.asarray(m, float)
+    return np.where(m < -1, -4.0 * m, np.maximum(0.0, 1.0 - m) ** 2)
+
+
+def eps_insensitive(r, eps):
+    """Perte :math:`\\varepsilon`-insensible (12.37) : :math:`\\max(|r| - \\varepsilon, 0)`."""
+    return np.maximum(np.abs(np.asarray(r, float)) - eps, 0.0)
