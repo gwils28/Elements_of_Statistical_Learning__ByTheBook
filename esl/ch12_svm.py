@@ -413,3 +413,9 @@ def huberized_hinge(m):
 def eps_insensitive(r, eps):
     """Perte :math:`\\varepsilon`-insensible (12.37) : :math:`\\max(|r| - \\varepsilon, 0)`."""
     return np.maximum(np.abs(np.asarray(r, float)) - eps, 0.0)
+
+
+def huber_loss(r, c):
+    """Perte de Huber (12.38)."""
+    r = np.abs(np.asarray(r, float))
+    return np.where(r <= c, r ** 2 / 2, c * r - c ** 2 / 2)
