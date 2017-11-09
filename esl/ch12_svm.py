@@ -419,3 +419,30 @@ def huber_loss(r, c):
     """Perte de Huber (12.38)."""
     r = np.abs(np.asarray(r, float))
     return np.where(r <= c, r ** 2 / 2, c * r - c ** 2 / 2)
+
+
+# ---------------------------------------------------------------------------
+# Simulations
+# ---------------------------------------------------------------------------
+
+
+def simulate_mixture(n_per_class, means, rng, sd=np.sqrt(1 / 5)):
+    """Simule la « mixture » du chapitre 2 à partir des 20 centres.
+
+    Les 10 premiers centres engendrent la classe 0, les 10 suivants la
+    classe 1 ; chaque observation choisit un centre au hasard (probabilité
+    1/10) puis on tire :math:`x \\sim N(m, \\sigma^2 I)` avec
+    :math:`\\sigma^2 = 1/5`.
+
+    Returns
+    -------
+    X : ndarray (2 n, 2)
+    y : ndarray (2 n,) à valeurs dans {0, 1}
+    """
+    means = np.asarray(means, float)
+    X, y = [], []
+    for k in (0, 1):
+        idx = rng.randint(0, 10, size=n_per_class) + 10 * k
+        X.append(means[idx] + sd * rng.randn(n_per_class, 2))
+        y.append(np.full(n_per_class, k))
+    return np.vstack(X), np.concatenate(y)
