@@ -446,3 +446,11 @@ def simulate_mixture(n_per_class, means, rng, sd=np.sqrt(1 / 5)):
         X.append(means[idx] + sd * rng.randn(n_per_class, 2))
         y.append(np.full(n_per_class, k))
     return np.vstack(X), np.concatenate(y)
+
+
+def mixture_bayes_prob(X, means, sd=np.sqrt(1 / 5)):
+    """Probabilité bayésienne :math:`P(Y=1 \\mid x)` pour la simulation « mixture »."""
+    X = np.asarray(X, float)
+    d2 = ((X[:, None, :] - np.asarray(means)[None]) ** 2).sum(-1)
+    dens = np.exp(-d2 / (2 * sd ** 2))
+    return dens[:, 10:].sum(1) / dens.sum(1)
