@@ -454,3 +454,12 @@ def mixture_bayes_prob(X, means, sd=np.sqrt(1 / 5)):
     d2 = ((X[:, None, :] - np.asarray(means)[None]) ** 2).sum(-1)
     dens = np.exp(-d2 / (2 * sd ** 2))
     return dens[:, 10:].sum(1) / dens.sum(1)
+
+
+def waveform_h():
+    """Les trois formes triangulaires :math:`h_1, h_2, h_3` (tableau (3, 21))."""
+    j = np.arange(1, 22)
+    h1 = np.maximum(6 - np.abs(j - 11), 0)
+    h2 = np.maximum(6 - np.abs(j - 4 - 11), 0)   # h2(j) = h1(j - 4)
+    h3 = np.maximum(6 - np.abs(j + 4 - 11), 0)   # h3(j) = h1(j + 4)
+    return np.vstack([h1, h2, h3]).astype(float)
