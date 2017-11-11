@@ -463,3 +463,23 @@ def waveform_h():
     h2 = np.maximum(6 - np.abs(j - 4 - 11), 0)   # h2(j) = h1(j - 4)
     h3 = np.maximum(6 - np.abs(j + 4 - 11), 0)   # h3(j) = h1(j + 4)
     return np.vstack([h1, h2, h3]).astype(float)
+
+
+def simulate_waveform(n, rng, noise=True):
+    """Simule le modèle *waveform* (12.64) avec des classes équiprobables.
+
+    Returns
+    -------
+    X : ndarray (n, 21)
+    g : ndarray (n,) à valeurs dans {1, 2, 3}
+    """
+    h = waveform_h()
+    pairs = {1: (0, 1), 2: (0, 2), 3: (1, 2)}
+    g = rng.randint(1, 4, size=n)
+    u = rng.rand(n, 1)
+    A = np.array([h[pairs[k][0]] for k in g])
+    B = np.array([h[pairs[k][1]] for k in g])
+    X = u * A + (1 - u) * B
+    if noise:
+        X = X + rng.randn(n, 21)
+    return X, g
