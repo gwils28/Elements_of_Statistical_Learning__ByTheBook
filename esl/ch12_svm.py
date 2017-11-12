@@ -512,3 +512,48 @@ def waveform_bayes_posterior(X, n_grid=200):
 
 MIXTURE_XLIM = (-2.6, 4.2)
 MIXTURE_YLIM = (-2.0, 2.9)
+
+
+def plot_mixture_boundary(ax, X, y, f, means, margins=False, support=None,
+                          on_margin=None, title=None, n=200):
+    """Trace une frontière de décision sur la simulation « mixture ».
+
+    Parameters
+    ----------
+    ax : axes matplotlib
+    X, y : données d'apprentissage (``y`` dans {0, 1} ou {-1, +1})
+    f : fonction ``Z -> valeurs`` ; la frontière est la ligne de niveau 0
+    means : centres du mélange (pour la frontière de Bayes, en violet pointillé)
+    margins : bool
+        Trace aussi les niveaux :math:`f = \\pm 1`.
+    support, on_margin : indices de points à entourer (vecteurs de support,
+        points exactement sur la marge).
+    """
+    from esl.plotting import BLUE, ORANGE, COLORS, TWO_CLASS, decision_grid
+    xx, yy, grid = decision_grid(MIXTURE_XLIM, MIXTURE_YLIM, n)
+    F = f(grid).reshape(xx.shape)
+    pb = mixture_bayes_prob(grid, means).reshape(xx.shape)
+    yb = (np.asarray(y) > 0).astype(int)
+    ax.contourf(xx, yy, (F > 0).astype(float), levels=[-0.5, 0.5, 1.5],
+                colors=[BLUE, ORANGE], alpha=0.12)
+    ax.contour(xx, yy, F, levels=[0], colors="k", linewidths=1.6)
+    if margins:
+        ax.contour(xx, yy, F, levels=[-1, 1], colors="k", linewidths=1,
+                   linestyles="--")
+    ax.contour(xx, yy, pb, levels=[0.5], colors=COLORS[6], linewidths=1.2,
+               linestyles=":")
+    ax.scatter(X[:, 0], X[:, 1], c=yb, cmap=TWO_CLASS, s=14, edgecolor="white",
+               linewidth=0.4, zorder=3)
+    if support is not None:
+        ax.scatter(X[support, 0], X[support, 1], s=40, facecolor="none",
+                   edgecolor="k", linewidth=0.6, zorder=4)
+    if on_margin is not None:
+        ax.scatter(X[on_margin, 0], X[on_margin, 1], s=22, color="k", zorder=5)
+    ax.set_xlim(MIXTURE_XLIM)
+    ax.set_ylim(MIXTURE_YLIM)
+    ax.set_xlabel("$X_1$")
+    ax.set_ylabel("$X_2$")
+    ax.grid(False)
+    if title:
+        ax.set_title(title)
+    return ax
