@@ -557,3 +557,19 @@ def plot_mixture_boundary(ax, X, y, f, means, margins=False, support=None,
     if title:
         ax.set_title(title)
     return ax
+
+
+# ---------------------------------------------------------------------------
+# Outils divers : bases, k-means, splines naturelles
+# ---------------------------------------------------------------------------
+
+
+def poly_basis(X, degree):
+    """Tous les monômes de degré 1 à ``degree`` des colonnes de ``X`` (sans constante)."""
+    from itertools import combinations_with_replacement
+    X = np.asarray(X, float)
+    cols = []
+    for d in range(1, degree + 1):
+        for comb in combinations_with_replacement(range(X.shape[1]), d):
+            cols.append(np.prod(X[:, comb], axis=1))
+    return np.column_stack(cols)
