@@ -483,3 +483,32 @@ def simulate_waveform(n, rng, noise=True):
     if noise:
         X = X + rng.randn(n, 21)
     return X, g
+
+
+def waveform_bayes_posterior(X, n_grid=200):
+    """Probabilités a posteriori bayésiennes du modèle *waveform* (classes équiprobables).
+
+    La densité de la classe :math:`k` (formes :math:`h_a, h_b`) est
+    :math:`\\int_0^1 \\varphi(x; u h_a + (1-u) h_b, I)\\,du`, intégrale
+    calculée par la méthode du point milieu sur ``n_grid`` valeurs de :math:`u`.
+
+    Returns
+    -------
+    ndarray (n, 3)
+    """
+    X = np.asarray(X, float)
+    h = waveform_h()
+    u = (np.arange(n_grid) + 0.5) / n_grid
+    logs = []
+    for a, b in ((0, 1), (0, 2), (1, 2)):
+        C = u[:, None] * h[a] + (1 - u[:, None]) * h[b]          # (n_grid, 21)
+        d2 = ((X[:, None, :] - C[None]) ** 2).sum(-1)            # (n, n_grid)
+        logs.append(np.logaddexp.reduce(-0.5 * d2, axis=1))
+    L = np.column_stack(logs)
+    L -= L.max(1, keepdims=True)
+    P = np.exp(L)
+    return P / P.sum(1, keepdims=True)
+
+
+MIXTURE_XLIM = (-2.6, 4.2)
+MIXTURE_YLIM = (-2.0, 2.9)
