@@ -573,3 +573,13 @@ def poly_basis(X, degree):
         for comb in combinations_with_replacement(range(X.shape[1]), d):
             cols.append(np.prod(X[:, comb], axis=1))
     return np.column_stack(cols)
+
+
+def second_diff_penalty(p):
+    """Matrice :math:`\\Omega = D^T D` où :math:`D` calcule les différences secondes.
+
+    :math:`\\beta^T\\Omega\\beta = \\sum_j (\\beta_{j+1} - 2\\beta_j + \\beta_{j-1})^2`
+    mesure la rugosité d'un vecteur de coefficients ordonnés.
+    """
+    D = np.diff(np.eye(p), n=2, axis=0)
+    return D.T @ D
