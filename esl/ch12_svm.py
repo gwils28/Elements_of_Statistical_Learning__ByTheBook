@@ -618,3 +618,42 @@ def kmeans(X, k, init=None, rng=None, n_iter=100):
             if np.any(labels == r):
                 centers[r] = X[labels == r].mean(0)
     return centers, labels
+
+
+def natural_spline_basis(x, knots):
+    """Base de splines cubiques naturelles (éq. (5.4)-(5.5) du livre).
+
+    Parameters
+    ----------
+    x : ndarray (n,)
+    knots : ndarray (K,)
+        Nœuds :math:`\\xi_1 < \\dots < \\xi_K` (y compris les nœuds frontières).
+
+    Returns
+    -------
+    ndarray (n, K)
+        Colonnes :math:`N_1 = 1, N_2 = x, N_{k+2} = d_k - d_{K-1}`.
+    """
+    x = np.asarray(x, float)
+    xi = np.asarray(knots, float)
+    K = len(xi)
+
+    def d(k):
+        return (np.maximum(x - xi[k], 0) ** 3 - np.maximum(x - xi[K - 1], 0) ** 3) / (xi[K - 1] - xi[k])
+
+    cols = [np.ones_like(x), x]
+    for k in range(K - 2):
+        cols.append(d(k) - d(K - 2))
+    return np.column_stack(cols)
+
+
+# ---------------------------------------------------------------------------
+# Analyse discriminante linéaire (LDA)
+# ---------------------------------------------------------------------------
+
+
+def class_indicator(g, classes=None):
+    """Matrice indicatrice :math:`Y` (N, K) des classes."""
+    g = np.asarray(g)
+    classes = np.unique(g) if classes is None else np.asarray(classes)
+    return (g[:, None] == classes[None, :]).astype(float), classes
