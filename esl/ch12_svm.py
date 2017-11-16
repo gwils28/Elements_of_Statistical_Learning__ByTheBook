@@ -583,3 +583,38 @@ def second_diff_penalty(p):
     """
     D = np.diff(np.eye(p), n=2, axis=0)
     return D.T @ D
+
+
+def kmeans(X, k, init=None, rng=None, n_iter=100):
+    """Algorithme des k-moyennes (Lloyd).
+
+    Parameters
+    ----------
+    X : ndarray (n, p)
+    k : int
+    init : ndarray (k,) d'indices ou ndarray (k, p) de centres, optionnel
+    rng : RandomState, utilisé si ``init`` est absent
+    n_iter : int
+
+    Returns
+    -------
+    centers : ndarray (k, p)
+    labels : ndarray (n,)
+    """
+    X = np.asarray(X, float)
+    if init is None:
+        rng = rng if rng is not None else np.random.RandomState(0)
+        init = rng.choice(len(X), k, replace=False)
+    init = np.asarray(init)
+    centers = X[init].copy() if init.ndim == 1 else init.astype(float).copy()
+    labels = None
+    for _ in range(n_iter):
+        d2 = ((X[:, None, :] - centers[None]) ** 2).sum(-1)
+        new = d2.argmin(1)
+        if labels is not None and np.array_equal(new, labels):
+            break
+        labels = new
+        for r in range(k):
+            if np.any(labels == r):
+                centers[r] = X[labels == r].mean(0)
+    return centers, labels
