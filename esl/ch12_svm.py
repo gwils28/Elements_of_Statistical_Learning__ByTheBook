@@ -657,3 +657,55 @@ def class_indicator(g, classes=None):
     g = np.asarray(g)
     classes = np.unique(g) if classes is None else np.asarray(classes)
     return (g[:, None] == classes[None, :]).astype(float), classes
+
+
+class LDA:
+    """Analyse discriminante linéaire (section 4.3), écrite à la main.
+
+    Attributes
+    ----------
+    means_ : ndarray (K, p)
+    W_ : ndarray (p, p)
+        Covariance intra-classe (dénominateur :math:`N - K`).
+    priors_ : ndarray (K,)
+    """
+
+    def __init__(self, priors=None):
+        self.priors = priors
+
+    def fit(self, X, g):
+        X = np.asarray(X, float)
+        Y, self.classes_ = class_indicator(g)
+        n_k = Y.sum(0)
+        self.means_ = (Y.T @ X) / n_k[:, None]
+        R = X - Y @ self.means_
+        self.W_ = R.T @ R / (len(X) - len(n_k))
+        self.priors_ = n_k / len(X) if self.priors is None else np.asarray(self.priors, float)
+        self.Winv_ = np.linalg.pinv(self.W_)
+        return self
+
+    def decision_function(self, X):
+        """Fonctions discriminantes :math:`\\delta_k(x)` (éq. (4.10) du livre)."""
+        X = np.asarray(X, float)
+        M = self.means_
+        A = X @ self.Winv_ @ M.T
+        c = -0.5 * np.einsum("kp,pq,kq->k", M, self.Winv_, M) + np.log(self.priors_)
+        return A + c
+
+    def predict(self, X):
+        return self.classes_[self.decision_function(X).argmax(1)]
+
+    def canonical_directions(self):
+        """Directions discriminantes (canoniques) :math:`\\nu_\\ell`, normalisées par :math:`\\nu^T W \\nu = 1`.
+
+        Ce sont les vecteurs propres généralisés de :math:`B\\nu = \\lambda W\\nu`
+        (B : covariance inter-classes pondérée par les effectifs), triés par
+        valeur propre décroissante. Renvoie ``(V, valeurs_propres)``.
+        """
+        from scipy.linalg import eigh
+        mu = self.priors_ @ self.means_
+        Mc = self.means_ - mu
+        B = Mc.T @ (self.priors_[:, None] * Mc)
+        vals, vecs = eigh(B, self.W_)
+        order = np.argsort(vals)[::-1]
+        return vecs[:, order], vals[order]
