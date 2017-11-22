@@ -709,3 +709,25 @@ class LDA:
         vals, vecs = eigh(B, self.W_)
         order = np.argsort(vals)[::-1]
         return vecs[:, order], vals[order]
+
+
+class QDA:
+    """Analyse discriminante quadratique (covariance propre à chaque classe)."""
+
+    def fit(self, X, g):
+        X = np.asarray(X, float)
+        Y, self.classes_ = class_indicator(g)
+        self.params_ = []
+        for k in range(len(self.classes_)):
+            Xk = X[Y[:, k] == 1]
+            S = np.cov(Xk, rowvar=False)
+            self.params_.append((Xk.mean(0), np.linalg.inv(S), np.linalg.slogdet(S)[1]))
+        self.priors_ = Y.mean(0)
+        return self
+
+    def predict(self, X):
+        X = np.asarray(X, float)
+        D = np.column_stack([
+            -0.5 * np.einsum("ij,jk,ik->i", X - m, Si, X - m) - 0.5 * ld + np.log(pk)
+            for (m, Si, ld), pk in zip(self.params_, self.priors_)])
+        return self.classes_[D.argmax(1)]
