@@ -731,3 +731,124 @@ class QDA:
             -0.5 * np.einsum("ij,jk,ik->i", X - m, Si, X - m) - 0.5 * ld + np.log(pk)
             for (m, Si, ld), pk in zip(self.params_, self.priors_)])
         return self.classes_[D.argmax(1)]
+
+
+# ---------------------------------------------------------------------------
+# FDA / PDA par optimal scoring
+# ---------------------------------------------------------------------------
+
+
+class FDA:
+    """Analyse discriminante flexible par *optimal scoring* (section 12.5.1).
+
+    La régression multivariée de l'étape 1 est une régression (éventuellement
+    pénalisée) sur une base :math:`h(x)` :
+
+    .. math::
+        \\hat\\beta = (H^T H + \\lambda\\Omega)^{-1} H^T Y,
+
+    où :math:`H` contient une colonne constante (non pénalisée). Avec
+    ``basis=None`` et ``lam=0`` on retrouve exactement la LDA ; avec
+    ``basis=None`` et une pénalité de rugosité on obtient la PDA.
+
+    Parameters
+    ----------
+    basis : fonction ``X -> H`` ou None
+        Expansion de base (sans constante) ; None = identité.
+    lam : float
+        Paramètre de pénalisation :math:`\\lambda`.
+    Omega : ndarray (M, M) ou None
+        Matrice de pénalité (identité par défaut, c.-à-d. ridge).
+    n_dims : int ou None
+        Nombre :math:`L` de fonctions discriminantes conservées (défaut K - 1).
+    use_priors : bool
+        Ajoute :math:`-2\\log\\hat\\pi_k` à la distance (règle bayésienne).
+
+    Attributes
+    ----------
+    theta_ : ndarray (K, L)
+        Scores optimaux (normalisés par :math:`\\Theta^T D_\\pi\\Theta = I`).
+    eigvals_ : ndarray (L,)
+        :math:`\\alpha_\\ell^2` : part de variance des scores expliquée par la régression.
+    weights_ : ndarray (L,)
+        Poids :math:`w_\\ell = 1/(\\alpha_\\ell^2(1 - \\alpha_\\ell^2))` de (12.55).
+    centroids_ : ndarray (K, L)
+        Moyennes par classe des fonctions discriminantes.
+    """
+
+    def __init__(self, basis=None, lam=0.0, Omega=None, n_dims=None, use_priors=True):
+        self.basis = basis
+        self.lam, self.Omega = lam, Omega
+        self.n_dims, self.use_priors = n_dims, use_priors
+
+    def _H(self, X):
+        X = np.asarray(X, float)
+        Hb = X if self.basis is None else self.basis(X)
+        return np.column_stack([np.ones(len(X)), Hb])
+
+    def fit(self, X, g, weights=None, Y=None):
+        """Ajuste le modèle. ``Y`` (N, K) peut être une matrice de réponse « floue »
+        (cf. (12.63)) ; par défaut c'est l'indicatrice des classes de ``g``."""
+        H = self._H(X)
+        N, M = H.shape
+        if Y is None:
+            Y, self.classes_ = class_indicator(g)
+        else:
+            self.classes_ = np.arange(Y.shape[1])
+        K = Y.shape[1]
+        Om = np.eye(M - 1) if self.Omega is None else np.asarray(self.Omega, float)
+        P = np.zeros((M, M))
+        P[1:, 1:] = Om
+        A = H.T @ H + self.lam * P
+        Bhat = np.linalg.solve(A, H.T @ Y)          # étape 1 : régression multiple
+        Yhat = H @ Bhat
+        Dpi = Y.T @ Y / N
+        dpi = np.diag(Dpi).copy()
+        # étape 2 : Y^T Yhat / N theta = alpha^2 Dpi theta (problème symétrisé)
+        Ms = (Y.T @ Yhat) / N
+        Ms = 0.5 * (Ms + Ms.T)
+        Dm = 1 / np.sqrt(dpi)
+        vals, vecs = np.linalg.eigh(Dm[:, None] * Ms * Dm[None, :])
+        order = np.argsort(vals)[::-1]
+        vals, vecs = vals[order], vecs[:, order]
+        Theta = Dm[:, None] * vecs                  # Theta^T Dpi Theta = I
+        L = K - 1 if self.n_dims is None else self.n_dims
+        # la première solution (alpha^2 = 1) est la solution triviale constante
+        self.theta_ = Theta[:, 1:L + 1]
+        self.eigvals_ = np.clip(vals[1:L + 1], 1e-12, 1 - 1e-12)
+        self.beta_ = Bhat @ self.theta_             # étape 3 : eta(x) = Theta^T eta*(x)
+        self.weights_ = 1 / (self.eigvals_ * (1 - self.eigvals_))
+        eta = H @ self.beta_
+        nk = Y.sum(0)
+        self.centroids_ = (Y.T @ eta) / nk[:, None]
+        self.priors_ = nk / N
+        self.dpi_ = dpi
+        return self
+
+    def transform(self, X):
+        """Fonctions discriminantes :math:`\\hat\\eta_\\ell(x)` (canoniques non normalisées)."""
+        return self._H(X) @ self.beta_
+
+    def distances(self, X):
+        """Distances (12.54) (sans le terme :math:`D(x)` commun à toutes les classes)."""
+        E = self.transform(X)
+        d = ((E[:, None, :] - self.centroids_[None]) ** 2 * self.weights_).sum(-1)
+        if self.use_priors:
+            d = d - 2 * np.log(self.priors_)
+        return d
+
+    def predict(self, X):
+        return self.classes_[self.distances(X).argmin(1)]
+
+
+# ---------------------------------------------------------------------------
+# MDA : mélange de gaussiennes par classe (covariance commune), algorithme EM
+# ---------------------------------------------------------------------------
+
+
+def _log_gauss_shared(X, mus, Sinv, logdet):
+    """log phi(x; mu_r, Sigma) pour chaque ligne de X et chaque centre."""
+    p = X.shape[1]
+    diff = X[:, None, :] - mus[None]
+    q = np.einsum("nrp,pq,nrq->nr", diff, Sinv, diff)
+    return -0.5 * (q + logdet + p * np.log(2 * np.pi))
