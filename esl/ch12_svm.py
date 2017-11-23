@@ -852,3 +852,108 @@ def _log_gauss_shared(X, mus, Sinv, logdet):
     diff = X[:, None, :] - mus[None]
     q = np.einsum("nrp,pq,nrq->nr", diff, Sinv, diff)
     return -0.5 * (q + logdet + p * np.log(2 * np.pi))
+
+
+class MDA:
+    """Analyse discriminante par mélanges (section 12.7), EM « plein rang ».
+
+    Chaque classe :math:`k` est un mélange de :math:`R_k` gaussiennes de
+    covariance commune :math:`\\Sigma` (éq. (12.59)). Initialisation par
+    k-moyennes dans chaque classe, puis EM (12.62).
+
+    Parameters
+    ----------
+    n_sub : int
+        Nombre :math:`R_k` de sous-classes par classe.
+    n_iter : int
+    shrink : float
+        Régularisation :math:`\\Sigma \\leftarrow \\Sigma + \\text{shrink}\\,\\Omega`
+        (0 par défaut ; avec une matrice de rugosité on obtient une MDA
+        « pénalisée » simplifiée).
+    Omega : ndarray ou None
+    rng : RandomState
+
+    Attributes
+    ----------
+    mus_ : ndarray (K, R, p)
+    pis_ : ndarray (K, R)
+    Sigma_ : ndarray (p, p)
+    loglik_ : list
+        Log-vraisemblance (12.61) au fil des itérations.
+    """
+
+    def __init__(self, n_sub=3, n_iter=50, shrink=0.0, Omega=None, rng=None):
+        self.n_sub, self.n_iter = n_sub, n_iter
+        self.shrink, self.Omega = shrink, Omega
+        self.rng = rng
+
+    def fit(self, X, g):
+        X = np.asarray(X, float)
+        N, p = X.shape
+        Y, self.classes_ = class_indicator(g)
+        K, R = len(self.classes_), self.n_sub
+        rng = self.rng if self.rng is not None else np.random.RandomState(0)
+        self.priors_ = Y.mean(0)
+        # initialisation : poids 0/1 issus des k-moyennes dans chaque classe
+        Wt = np.zeros((N, K, R))
+        for k in range(K):
+            idx = np.flatnonzero(Y[:, k] == 1)
+            _, lab = kmeans(X[idx], R, rng=rng)
+            Wt[idx, k, lab] = 1.0
+        Om = np.eye(p) if self.Omega is None else self.Omega
+        self.loglik_ = []
+        for it in range(self.n_iter + 1):
+            # M-step
+            tot = Wt.sum(0)                                   # (K, R)
+            self.pis_ = tot / tot.sum(1, keepdims=True)
+            self.mus_ = np.einsum("nkr,np->krp", Wt, X) / np.maximum(tot, 1e-12)[..., None]
+            S = np.zeros((p, p))
+            for k in range(K):
+                for r in range(R):
+                    D = X - self.mus_[k, r]
+                    S += (Wt[:, k, r][:, None] * D).T @ D
+            self.Sigma_ = S / N + self.shrink * Om
+            if it == self.n_iter:
+                break
+            # E-step (12.62)
+            lj = self._log_joint(X)                           # (N, K, R)
+            lj = np.where(Y[:, :, None] == 1, lj, -np.inf)
+            m = lj.max(axis=(1, 2), keepdims=True)
+            e = np.exp(lj - m)
+            self.loglik_.append(float((np.log(e.sum(axis=(1, 2))) + m[:, 0, 0]).sum()))
+            Wt = e / e.sum(axis=(1, 2), keepdims=True)
+        return self
+
+    def _log_joint(self, X):
+        K, R, p = self.mus_.shape
+        Sinv = np.linalg.inv(self.Sigma_)
+        logdet = np.linalg.slogdet(self.Sigma_)[1]
+        lg = _log_gauss_shared(X, self.mus_.reshape(K * R, p), Sinv, logdet).reshape(-1, K, R)
+        return lg + np.log(np.maximum(self.pis_, 1e-300))[None] + np.log(self.priors_)[None, :, None]
+
+    def predict_proba(self, X):
+        """Probabilités a posteriori (12.60)."""
+        lj = self._log_joint(np.asarray(X, float))
+        lk = np.logaddexp.reduce(lj, axis=2)
+        lk -= lk.max(1, keepdims=True)
+        P = np.exp(lk)
+        return P / P.sum(1, keepdims=True)
+
+    def predict(self, X):
+        return self.classes_[self.predict_proba(X).argmax(1)]
+
+    def canonical_directions(self):
+        """Directions canoniques des sous-classes (LDA sur les :math:`\\sum_k R_k` centres).
+
+        Vecteurs propres généralisés de :math:`B\\nu = \\lambda\\Sigma\\nu` où
+        :math:`B` est la covariance pondérée des centres de sous-classes.
+        """
+        from scipy.linalg import eigh
+        K, R, p = self.mus_.shape
+        w = (self.pis_ * self.priors_[:, None]).ravel()
+        mus = self.mus_.reshape(K * R, p)
+        mu = w @ mus
+        B = (mus - mu).T @ (w[:, None] * (mus - mu))
+        vals, vecs = eigh(B, self.Sigma_)
+        order = np.argsort(vals)[::-1]
+        return vecs[:, order], vals[order]
