@@ -18,3 +18,9 @@ def two_class():
     X = np.vstack([rng.randn(40, 2) + [1, 1], rng.randn(40, 2) - [1, 1]])
     y = np.r_[np.ones(40), -np.ones(40)]
     return X, y
+
+
+@pytest.mark.parametrize("kernel,C,kw", [
+    ("linear", 0.1, {}), ("linear", 10.0, {}), ("rbf", 1.0, {"gamma": 0.5}),
+    ("rbf", 100.0, {"gamma": 2.0}), ("poly", 1.0, {"degree": 2, "gamma": 1.0}),
+])
