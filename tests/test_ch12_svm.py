@@ -31,3 +31,18 @@ def test_svc_matches_sklearn(two_class, kernel, C, kw):
     Z = np.random.RandomState(1).randn(50, 2) * 2
     np.testing.assert_allclose(mine.decision_function(Z), sk.decision_function(Z), atol=2e-4)
     assert set(mine.support_) == set(sk.support_)
+
+
+@pytest.mark.parametrize("solver", ["smo", "ip"])
+def test_kkt_conditions(two_class, solver):
+    X, y = two_class
+    C = 1.0
+    s = SVMClassifier(C=C, kernel="rbf", gamma=1.0, solver=solver,
+                      tol=1e-7 if solver == "smo" else None).fit(X, y)
+    a, m = s.alpha_, y * s.decision_function(X)
+    assert np.all(a >= -1e-12) and np.all(a <= C + 1e-12)
+    assert abs(a @ y) < 1e-8
+    assert np.all(m[a < 1e-6] >= 1 - 1e-4)              # alpha = 0  => y f >= 1
+    assert np.all(m[a > C - 1e-6] <= 1 + 1e-4)          # alpha = C  => y f <= 1
+    free = (a > 1e-5) & (a < C - 1e-5)
+    np.testing.assert_allclose(m[free], 1, atol=1e-4)    # 0 < alpha < C => y f = 1
