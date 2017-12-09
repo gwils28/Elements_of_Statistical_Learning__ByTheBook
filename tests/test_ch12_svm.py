@@ -46,3 +46,14 @@ def test_kkt_conditions(two_class, solver):
     assert np.all(m[a > C - 1e-6] <= 1 + 1e-4)          # alpha = C  => y f <= 1
     free = (a > 1e-5) & (a < C - 1e-5)
     np.testing.assert_allclose(m[free], 1, atol=1e-4)    # 0 < alpha < C => y f = 1
+
+
+def test_smo_and_interior_point_agree(two_class):
+    X, y = two_class
+    Q = (y[:, None] * y[None, :]) * rbf_kernel(X, X, 0.7)
+    p = -np.ones(len(y))
+    a1, b1, _ = smo_solve(Q, p, y, 2.0, tol=1e-8)
+    a2, b2, _ = qp_interior_point(Q, p, y, 2.0)
+    obj = lambda a: 0.5 * a @ Q @ a + p @ a
+    assert abs(obj(a1) - obj(a2)) < 1e-7
+    assert abs(b1 - b2) < 1e-4
