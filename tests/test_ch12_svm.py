@@ -24,3 +24,10 @@ def two_class():
     ("linear", 0.1, {}), ("linear", 10.0, {}), ("rbf", 1.0, {"gamma": 0.5}),
     ("rbf", 100.0, {"gamma": 2.0}), ("poly", 1.0, {"degree": 2, "gamma": 1.0}),
 ])
+def test_svc_matches_sklearn(two_class, kernel, C, kw):
+    X, y = two_class
+    mine = SVMClassifier(C=C, kernel=kernel, **kw).fit(X, y)
+    sk = SVC(C=C, kernel=kernel, coef0=1.0, tol=1e-8, **kw).fit(X, y)
+    Z = np.random.RandomState(1).randn(50, 2) * 2
+    np.testing.assert_allclose(mine.decision_function(Z), sk.decision_function(Z), atol=2e-4)
+    assert set(mine.support_) == set(sk.support_)
