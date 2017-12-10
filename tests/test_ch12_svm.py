@@ -66,3 +66,15 @@ def test_primal_equals_dual(two_class):
     w = s.alpha_ * y
     dual = s.alpha_.sum() - 0.5 * w @ K @ w
     assert abs(s.primal_objective() - dual) < 1e-6 * (1 + abs(dual))
+
+
+def test_svr_matches_sklearn():
+    rng = np.random.RandomState(0)
+    x = np.sort(rng.rand(50) * 6)[:, None]
+    t = np.sin(x[:, 0]) + 0.2 * rng.randn(50)
+    a = SVMRegressor(C=5.0, epsilon=0.15, kernel="rbf", gamma=1.0).fit(x, t)
+    b = SVR(C=5.0, epsilon=0.15, gamma=1.0, tol=1e-8).fit(x, t)
+    np.testing.assert_allclose(a.predict(x), b.predict(x), atol=1e-4)
+    # résidus des non-supports dans le tube
+    inside = np.setdiff1d(np.arange(50), a.support_)
+    assert np.all(np.abs(t[inside] - a.predict(x[inside])) <= 0.15 + 1e-6)
