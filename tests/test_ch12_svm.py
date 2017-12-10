@@ -88,3 +88,12 @@ def test_kernels():
     np.testing.assert_allclose(np.diag(K), 1)
     Z = rng.randn(30, 2)
     assert np.linalg.eigvalsh(rbf_kernel(Z, Z, 1.0)).min() > -1e-10
+
+
+def test_losses():
+    m = np.array([-2.0, 0.0, 1.0, 2.0])
+    np.testing.assert_allclose(hinge_loss(m), [3, 1, 0, 0])
+    np.testing.assert_allclose(binomial_deviance(m), np.log1p(np.exp(-m)))
+    np.testing.assert_allclose(huberized_hinge(m), [8, 1, 0, 0])
+    np.testing.assert_allclose(eps_insensitive([0.5, -2.0], 1.0), [0, 1])
+    np.testing.assert_allclose(huber_loss([0.5, 3.0], 1.0), [0.125, 2.5])
