@@ -78,3 +78,13 @@ def test_svr_matches_sklearn():
     # résidus des non-supports dans le tube
     inside = np.setdiff1d(np.arange(50), a.support_)
     assert np.all(np.abs(t[inside] - a.predict(x[inside])) <= 0.15 + 1e-6)
+
+
+def test_kernels():
+    rng = np.random.RandomState(0)
+    A, B = rng.randn(4, 3), rng.randn(5, 3)
+    np.testing.assert_allclose(polynomial_kernel(A, B, 2), poly2_features(A) @ poly2_features(B).T)
+    K = rbf_kernel(A, A, 0.3)
+    np.testing.assert_allclose(np.diag(K), 1)
+    Z = rng.randn(30, 2)
+    assert np.linalg.eigvalsh(rbf_kernel(Z, Z, 1.0)).min() > -1e-10
