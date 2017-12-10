@@ -57,3 +57,12 @@ def test_smo_and_interior_point_agree(two_class):
     obj = lambda a: 0.5 * a @ Q @ a + p @ a
     assert abs(obj(a1) - obj(a2)) < 1e-7
     assert abs(b1 - b2) < 1e-4
+
+
+def test_primal_equals_dual(two_class):
+    X, y = two_class
+    s = SVMClassifier(C=3.0, kernel="poly", degree=3).fit(X, y)
+    K = s.K_(X, X)
+    w = s.alpha_ * y
+    dual = s.alpha_.sum() - 0.5 * w @ K @ w
+    assert abs(s.primal_objective() - dual) < 1e-6 * (1 + abs(dual))
