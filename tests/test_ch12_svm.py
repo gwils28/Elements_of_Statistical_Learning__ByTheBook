@@ -116,3 +116,12 @@ def test_fda_linear_is_lda():
     sk = LinearDiscriminantAnalysis().fit(X, g)
     diff = sk.decision_function(Xt) - l.decision_function(Xt)
     assert diff.std(axis=1).max() < 1e-8
+
+
+def test_fda_scores_normalised():
+    rng = np.random.RandomState(1)
+    X, g = simulate_waveform(200, rng)
+    f = FDA(lam=10.0, Omega=second_diff_penalty(21)).fit(X, g)
+    Dpi = np.diag(f.dpi_)
+    np.testing.assert_allclose(f.theta_.T @ Dpi @ f.theta_, np.eye(2), atol=1e-10)
+    np.testing.assert_allclose(f.dpi_ @ f.theta_, 0, atol=1e-10)    # scores centrés
