@@ -97,3 +97,22 @@ def test_losses():
     np.testing.assert_allclose(huberized_hinge(m), [8, 1, 0, 0])
     np.testing.assert_allclose(eps_insensitive([0.5, -2.0], 1.0), [0, 1])
     np.testing.assert_allclose(huber_loss([0.5, 3.0], 1.0), [0.125, 2.5])
+
+
+def test_fda_linear_is_lda():
+    rng = np.random.RandomState(0)
+    X, g = simulate_waveform(300, rng)
+    Xt, _ = simulate_waveform(200, rng)
+    f = FDA().fit(X, g)
+    l = LDA().fit(X, g)
+    N, K = len(g), 3
+    Wi = np.linalg.inv(l.W_ * (N - K) / N)
+    maha = np.column_stack([np.einsum("ij,jk,ik->i", Xt - m, Wi, Xt - m) for m in l.means_])
+    d = f.distances(Xt) + 2 * np.log(f.priors_) - maha
+    assert d.std(axis=1).max() < 1e-8
+    # LDA écrite à la main = sklearn (qui normalise W par N au lieu de N - K)
+    l.W_ = l.W_ * (N - K) / N
+    l.Winv_ = np.linalg.inv(l.W_)
+    sk = LinearDiscriminantAnalysis().fit(X, g)
+    diff = sk.decision_function(Xt) - l.decision_function(Xt)
+    assert diff.std(axis=1).max() < 1e-8
