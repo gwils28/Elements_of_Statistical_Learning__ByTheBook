@@ -134,3 +134,10 @@ def test_mda_loglik_increases():
     assert np.all(np.diff(m.loglik_) > -1e-8)
     np.testing.assert_allclose(m.pis_.sum(1), 1)
     np.testing.assert_allclose(m.predict_proba(X[:5]).sum(1), 1)
+
+
+def test_waveform_bayes_better_than_lda():
+    rng = np.random.RandomState(3)
+    X, g = simulate_waveform(2000, rng)
+    err = np.mean(waveform_bayes_posterior(X).argmax(1) + 1 != g)
+    assert 0.10 < err < 0.17
