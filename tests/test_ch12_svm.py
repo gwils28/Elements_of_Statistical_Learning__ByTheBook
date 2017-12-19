@@ -125,3 +125,12 @@ def test_fda_scores_normalised():
     Dpi = np.diag(f.dpi_)
     np.testing.assert_allclose(f.theta_.T @ Dpi @ f.theta_, np.eye(2), atol=1e-10)
     np.testing.assert_allclose(f.dpi_ @ f.theta_, 0, atol=1e-10)    # scores centrés
+
+
+def test_mda_loglik_increases():
+    rng = np.random.RandomState(2)
+    X, g = simulate_waveform(200, rng)
+    m = MDA(n_sub=2, n_iter=20, rng=np.random.RandomState(0)).fit(X, g)
+    assert np.all(np.diff(m.loglik_) > -1e-8)
+    np.testing.assert_allclose(m.pis_.sum(1), 1)
+    np.testing.assert_allclose(m.predict_proba(X[:5]).sum(1), 1)
