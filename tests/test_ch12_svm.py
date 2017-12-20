@@ -141,3 +141,17 @@ def test_waveform_bayes_better_than_lda():
     X, g = simulate_waveform(2000, rng)
     err = np.mean(waveform_bayes_posterior(X).argmax(1) + 1 != g)
     assert 0.10 < err < 0.17
+
+
+def test_kmeans_and_splines():
+    rng = np.random.RandomState(0)
+    X = np.vstack([rng.randn(30, 2), rng.randn(30, 2) + 6])
+    c, lab = kmeans(X, 2, init=np.array([0, 59]))
+    assert len(set(lab[:30])) == 1 and len(set(lab[30:])) == 1
+    x = np.linspace(0, 10, 101)
+    B = natural_spline_basis(x, np.linspace(0, 10, 5))
+    assert B.shape == (101, 5)
+    # linéaire au-delà des nœuds frontières : dérivée seconde nulle hors de [0, 10]
+    xe = np.array([10.0, 11.0, 12.0])
+    Be = natural_spline_basis(xe, np.linspace(0, 10, 5))
+    np.testing.assert_allclose(Be[2] - 2 * Be[1] + Be[0], 0, atol=1e-9)
