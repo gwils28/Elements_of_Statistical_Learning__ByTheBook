@@ -40,3 +40,10 @@ def sq_dists(A, B):
     B = np.asarray(B, float)
     D = (A ** 2).sum(1)[:, None] + (B ** 2).sum(1)[None, :] - 2.0 * A @ B.T
     return np.maximum(D, 0.0)
+
+
+def kfold_indices(n, n_folds, rng=None):
+    """Découpe aléatoire de ``range(n)`` en ``n_folds`` blocs (liste d'indices)."""
+    rng = np.random.RandomState(0) if rng is None else rng
+    perm = rng.permutation(n)
+    return [np.sort(f) for f in np.array_split(perm, n_folds)]
