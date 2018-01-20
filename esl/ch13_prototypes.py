@@ -47,3 +47,61 @@ def kfold_indices(n, n_folds, rng=None):
     rng = np.random.RandomState(0) if rng is None else rng
     perm = rng.permutation(n)
     return [np.sort(f) for f in np.array_split(perm, n_folds)]
+
+
+# ---------------------------------------------------------------------------
+# K-means et classifieur K-means
+# ---------------------------------------------------------------------------
+
+def kmeans(X, R, n_init=5, max_iter=100, rng=None, init=None):
+    """Algorithme de Lloyd : minimise l'inertie intra-groupes.
+
+    Critère : :math:`\\sum_i \\min_r \\|x_i - m_r\\|^2`.
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+    R : int
+        Nombre de centres.
+    n_init : int
+        Nombre de redémarrages aléatoires (on garde le meilleur).
+    max_iter : int
+    rng : RandomState
+    init : ndarray (R, p), optionnel
+        Centres initiaux (dans ce cas un seul démarrage).
+
+    Returns
+    -------
+    centers : ndarray (R, p)
+    labels : ndarray (N,)
+    inertia : float
+    history : list
+        Valeurs successives du critère pour le meilleur démarrage.
+    """
+    X = np.asarray(X, float)
+    rng = np.random.RandomState(0) if rng is None else rng
+    N = X.shape[0]
+    R = min(R, N)
+    best = None
+    starts = [np.array(init, float)] if init is not None else [None] * n_init
+    for start in starts:
+        C = X[rng.choice(N, R, replace=False)].copy() if start is None else start.copy()
+        hist = []
+        labels = None
+        for _ in range(max_iter):
+            D = sq_dists(X, C)
+            new_labels = D.argmin(1)
+            hist.append(D[np.arange(N), new_labels].sum())
+            if labels is not None and np.array_equal(new_labels, labels):
+                break
+            labels = new_labels
+            for r in range(R):
+                mask = labels == r
+                if mask.any():
+                    C[r] = X[mask].mean(0)
+                else:  # groupe vide : on le relance sur un point au hasard
+                    C[r] = X[rng.randint(N)]
+        inertia = hist[-1]
+        if best is None or inertia < best[2]:
+            best = (C, labels, inertia, hist)
+    return best
