@@ -144,3 +144,50 @@ def nearest_prototype(X, prototypes, proto_labels):
     """Classe du prototype le plus proche (distance euclidienne)."""
     D = sq_dists(X, prototypes)
     return np.asarray(proto_labels)[D.argmin(1)]
+
+
+# ---------------------------------------------------------------------------
+# LVQ1
+# ---------------------------------------------------------------------------
+
+def lvq1(X, y, prototypes, proto_labels, n_iter=None, eps0=0.05, rng=None):
+    """Algorithme LVQ1 (algorithme 13.1 du livre).
+
+    À chaque itération on tire un point d'apprentissage ``x_i`` au hasard ;
+    le prototype le plus proche ``m`` est rapproché de ``x_i``
+    (``m <- m + eps (x_i - m)``) s'il est de la même classe, éloigné
+    (``m <- m - eps (x_i - m)``) sinon. Le pas décroît linéairement de
+    ``eps0`` à 0.
+
+    Parameters
+    ----------
+    X, y : données d'apprentissage.
+    prototypes : ndarray (M, p)
+        Prototypes initiaux (non modifiés : on travaille sur une copie).
+    proto_labels : ndarray (M,)
+    n_iter : int, par défaut ``20 * N``.
+    eps0 : float
+        Pas initial.
+    rng : RandomState
+
+    Returns
+    -------
+    M : ndarray (M, p), prototypes finaux.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y)
+    rng = np.random.RandomState(0) if rng is None else rng
+    M = np.array(prototypes, float, copy=True)
+    proto_labels = np.asarray(proto_labels)
+    N = X.shape[0]
+    n_iter = 20 * N if n_iter is None else n_iter
+    idx = rng.randint(N, size=n_iter)
+    for t, i in enumerate(idx):
+        eps = eps0 * (1.0 - t / n_iter)
+        d = ((M - X[i]) ** 2).sum(1)
+        j = d.argmin()
+        if proto_labels[j] == y[i]:
+            M[j] += eps * (X[i] - M[j])
+        else:
+            M[j] -= eps * (X[i] - M[j])
+    return M
