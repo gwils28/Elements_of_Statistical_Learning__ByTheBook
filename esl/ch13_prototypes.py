@@ -138,3 +138,9 @@ class KMeansClassifier:
 
     def predict(self, X):
         return nearest_prototype(X, self.prototypes_, self.proto_labels_)
+
+
+def nearest_prototype(X, prototypes, proto_labels):
+    """Classe du prototype le plus proche (distance euclidienne)."""
+    D = sq_dists(X, prototypes)
+    return np.asarray(proto_labels)[D.argmin(1)]
