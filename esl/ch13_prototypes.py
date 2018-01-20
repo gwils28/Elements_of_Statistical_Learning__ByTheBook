@@ -105,3 +105,36 @@ def kmeans(X, R, n_init=5, max_iter=100, rng=None, init=None):
         if best is None or inertia < best[2]:
             best = (C, labels, inertia, hist)
     return best
+
+
+class KMeansClassifier:
+    """Classifieur à prototypes obtenus par K-means dans chaque classe.
+
+    Parameters
+    ----------
+    R : int
+        Nombre de prototypes par classe.
+    n_init : int
+    rng : RandomState
+    """
+
+    def __init__(self, R=5, n_init=5, rng=None):
+        self.R = R
+        self.n_init = n_init
+        self.rng = np.random.RandomState(0) if rng is None else rng
+
+    def fit(self, X, y):
+        X = np.asarray(X, float)
+        y = np.asarray(y)
+        self.classes_ = np.unique(y)
+        protos, labs = [], []
+        for k in self.classes_:
+            C, _, _, _ = kmeans(X[y == k], self.R, n_init=self.n_init, rng=self.rng)
+            protos.append(C)
+            labs.append(np.full(len(C), k))
+        self.prototypes_ = np.vstack(protos)
+        self.proto_labels_ = np.concatenate(labs)
+        return self
+
+    def predict(self, X):
+        return nearest_prototype(X, self.prototypes_, self.proto_labels_)
