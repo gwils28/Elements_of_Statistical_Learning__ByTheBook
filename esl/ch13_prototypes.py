@@ -214,3 +214,19 @@ class LVQClassifier:
 
     def predict(self, X):
         return nearest_prototype(X, self.prototypes_, self.proto_labels_)
+
+
+# ---------------------------------------------------------------------------
+# Mélanges gaussiens (covariance commune) - EM
+# ---------------------------------------------------------------------------
+
+def _log_gauss_common(X, means, cov):
+    """log phi(x ; mu_r, cov) pour tous les points et toutes les moyennes."""
+    p = X.shape[1]
+    L = np.linalg.cholesky(cov)
+    logdet = 2.0 * np.log(np.diag(L)).sum()
+    out = np.empty((X.shape[0], len(means)))
+    for r, m in enumerate(means):
+        z = np.linalg.solve(L, (X - m).T)
+        out[:, r] = -0.5 * (z ** 2).sum(0)
+    return out - 0.5 * (p * np.log(2 * np.pi) + logdet)
