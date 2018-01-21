@@ -191,3 +191,26 @@ def lvq1(X, y, prototypes, proto_labels, n_iter=None, eps0=0.05, rng=None):
         else:
             M[j] -= eps * (X[i] - M[j])
     return M
+
+
+class LVQClassifier:
+    """Classifieur LVQ1 initialisé par la solution K-means (R par classe)."""
+
+    def __init__(self, R=5, n_iter=None, eps0=0.05, n_init=5, rng=None):
+        self.R = R
+        self.n_iter = n_iter
+        self.eps0 = eps0
+        self.n_init = n_init
+        self.rng = np.random.RandomState(0) if rng is None else rng
+
+    def fit(self, X, y):
+        km = KMeansClassifier(self.R, self.n_init, self.rng).fit(X, y)
+        self.classes_ = km.classes_
+        self.init_prototypes_ = km.prototypes_
+        self.proto_labels_ = km.proto_labels_
+        self.prototypes_ = lvq1(X, y, km.prototypes_, km.proto_labels_,
+                                self.n_iter, self.eps0, self.rng)
+        return self
+
+    def predict(self, X):
+        return nearest_prototype(X, self.prototypes_, self.proto_labels_)
