@@ -300,3 +300,47 @@ class GaussianMixtureClassifier:
 
     def predict(self, X):
         return self.classes_[self.predict_proba(X).argmax(1)]
+
+
+# ---------------------------------------------------------------------------
+# k plus proches voisins
+# ---------------------------------------------------------------------------
+
+def knn_from_dists(D, y_train, ks, rng=None, classes=None):
+    """Prédictions k-ppv pour plusieurs k à partir d'une matrice de distances.
+
+    Parameters
+    ----------
+    D : ndarray (n_test, n_train)
+        Distances (ou distances au carré : seul l'ordre compte).
+    y_train : ndarray (n_train,)
+    ks : int ou liste d'entiers
+    rng : RandomState
+        Sert à départager les égalités de votes au hasard (comme dans le livre).
+    classes : ndarray, optionnel
+
+    Returns
+    -------
+    pred : ndarray (len(ks), n_test) (ou (n_test,) si ``ks`` est un entier).
+    """
+    rng = np.random.RandomState(0) if rng is None else rng
+    scalar = np.isscalar(ks)
+    ks = np.atleast_1d(ks).astype(int)
+    y_train = np.asarray(y_train)
+    classes = np.unique(y_train) if classes is None else np.asarray(classes)
+    kmax = min(ks.max(), D.shape[1])
+    if kmax < D.shape[1]:
+        part = np.argpartition(D, kmax - 1, axis=1)[:, :kmax]
+    else:
+        part = np.tile(np.arange(D.shape[1]), (D.shape[0], 1))
+    order = np.take_along_axis(D, part, 1).argsort(1, kind="stable")
+    nbr = np.take_along_axis(part, order, 1)           # voisins triés
+    lab = np.searchsorted(classes, y_train[nbr])       # (n_test, kmax)
+    onehot = np.zeros(lab.shape + (len(classes),))
+    np.put_along_axis(onehot, lab[..., None], 1.0, axis=2)
+    counts = onehot.cumsum(1)                          # votes pour chaque k
+    jitter = rng.uniform(0, 0.5, size=(D.shape[0], len(classes)))
+    out = np.empty((len(ks), D.shape[0]), dtype=classes.dtype)
+    for i, k in enumerate(ks):
+        out[i] = classes[(counts[:, min(k, kmax) - 1, :] + jitter).argmax(1)]
+    return out[0] if scalar else out
