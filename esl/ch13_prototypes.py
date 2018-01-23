@@ -230,3 +230,73 @@ def _log_gauss_common(X, means, cov):
         z = np.linalg.solve(L, (X - m).T)
         out[:, r] = -0.5 * (z ** 2).sum(0)
     return out - 0.5 * (p * np.log(2 * np.pi) + logdet)
+
+
+class GaussianMixtureClassifier:
+    """Mélange de R gaussiennes par classe, covariance commune à toutes.
+
+    Chaque classe ``k`` a pour densité
+    :math:`f_k(x) = \\sum_r w_{kr} \\phi(x; \\mu_{kr}, \\Sigma)` et l'on classe
+    par :math:`\\arg\\max_k \\pi_k f_k(x)`. Les paramètres sont estimés par EM,
+    initialisé par la solution K-means de chaque classe (comme dans la
+    figure 13.2 du livre).
+    """
+
+    def __init__(self, R=5, n_iter=100, tol=1e-8, rng=None):
+        self.R = R
+        self.n_iter = n_iter
+        self.tol = tol
+        self.rng = np.random.RandomState(0) if rng is None else rng
+
+    def fit(self, X, y):
+        X = np.asarray(X, float)
+        y = np.asarray(y)
+        N, p = X.shape
+        km = KMeansClassifier(self.R, rng=self.rng).fit(X, y)
+        self.classes_ = km.classes_
+        means = km.prototypes_.copy()
+        lab = km.proto_labels_
+        # initialisation : covariance intra-groupes K-means
+        D = sq_dists(X, means)
+        D[:, :] = np.where(lab[None, :] == y[:, None], D, np.inf)
+        a = D.argmin(1)
+        res = X - means[a]
+        cov = res.T @ res / N + 1e-6 * np.eye(p)
+        w = np.array([np.mean(a[y == lab[r]] == r) for r in range(len(means))])
+        same = lab[None, :] == y[:, None]           # composantes autorisées
+        self.loglik_ = []
+        for _ in range(self.n_iter):
+            # Étape E : responsabilités restreintes aux composantes de la classe
+            logp = _log_gauss_common(X, means, cov) + np.log(np.maximum(w, 1e-300))
+            logp = np.where(same, logp, -np.inf)
+            lse = logsumexp(logp, axis=1, keepdims=True)
+            G = np.exp(logp - lse)
+            self.loglik_.append(lse.sum())
+            # Étape M
+            Nr = G.sum(0)
+            means = (G.T @ X) / np.maximum(Nr, 1e-12)[:, None]
+            cov = np.zeros((p, p))
+            for r in range(len(means)):
+                Z = X - means[r]
+                cov += (G[:, r, None] * Z).T @ Z
+            cov = cov / N + 1e-9 * np.eye(p)
+            for k in self.classes_:
+                m = lab == k
+                w[m] = Nr[m] / Nr[m].sum()
+            if len(self.loglik_) > 1 and abs(self.loglik_[-1] - self.loglik_[-2]) < self.tol * abs(self.loglik_[-1]):
+                break
+        self.means_, self.cov_, self.weights_, self.labels_ = means, cov, w, lab
+        self.priors_ = np.array([np.mean(y == k) for k in self.classes_])
+        return self
+
+    def predict_proba(self, X):
+        X = np.asarray(X, float)
+        logp = _log_gauss_common(X, self.means_, self.cov_) + np.log(np.maximum(self.weights_, 1e-300))
+        cols = []
+        for j, k in enumerate(self.classes_):
+            cols.append(np.log(self.priors_[j]) + logsumexp(logp[:, self.labels_ == k], axis=1))
+        L = np.column_stack(cols)
+        return np.exp(L - logsumexp(L, axis=1, keepdims=True))
+
+    def predict(self, X):
+        return self.classes_[self.predict_proba(X).argmax(1)]
