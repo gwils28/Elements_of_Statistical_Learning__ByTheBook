@@ -344,3 +344,8 @@ def knn_from_dists(D, y_train, ks, rng=None, classes=None):
     for i, k in enumerate(ks):
         out[i] = classes[(counts[:, min(k, kmax) - 1, :] + jitter).argmax(1)]
     return out[0] if scalar else out
+
+
+def knn_predict(X_train, y_train, X_test, k=1, rng=None):
+    """Classifieur des k plus proches voisins (distance euclidienne)."""
+    return knn_from_dists(sq_dists(X_test, X_train), y_train, k, rng)
