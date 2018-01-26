@@ -413,3 +413,25 @@ def dann_metric(Xn, yn, eps=1.0):
     Wm = _inv_sqrt_sym(W)
     Bstar = Wm @ B @ Wm
     return Wm @ (Bstar + eps * np.eye(p)) @ Wm
+
+
+def dann_predict(X_train, y_train, X_test, k=5, n_metric=50, eps=1.0, rng=None):
+    """Classifieur k-ppv avec la métrique DANN estimée en chaque point test.
+
+    Pour chaque point test ``x0`` : (1) on prend ses ``n_metric`` voisins
+    euclidiens, (2) on y calcule ``Sigma`` (éq. (13.9)), (3) on applique le
+    k-ppv avec la distance ``(x - x0)^T Sigma (x - x0)`` (éq. (13.8)).
+    """
+    rng = np.random.RandomState(0) if rng is None else rng
+    X_train = np.asarray(X_train, float)
+    X_test = np.asarray(X_test, float)
+    classes = np.unique(y_train)
+    D0 = sq_dists(X_test, X_train)
+    nbrs = np.argpartition(D0, n_metric - 1, axis=1)[:, :n_metric]
+    pred = np.empty(len(X_test), dtype=classes.dtype)
+    for i, x0 in enumerate(X_test):
+        S = dann_metric(X_train[nbrs[i]], y_train[nbrs[i]], eps)
+        Z = X_train - x0
+        d = np.einsum("ij,jk,ik->i", Z, S, Z)
+        pred[i] = knn_from_dists(d[None, :], y_train, k, rng, classes)[0]
+    return pred
