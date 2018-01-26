@@ -349,3 +349,43 @@ def knn_from_dists(D, y_train, ks, rng=None, classes=None):
 def knn_predict(X_train, y_train, X_test, k=1, rng=None):
     """Classifieur des k plus proches voisins (distance euclidienne)."""
     return knn_from_dists(sq_dists(X_test, X_train), y_train, k, rng)
+
+
+def knn_cv_error(X, y, ks, n_folds=10, rng=None, groups=None):
+    """Erreur de validation croisée du k-ppv pour une liste de ``ks``.
+
+    Parameters
+    ----------
+    groups : ndarray (N,), optionnel
+        Si fourni, les observations d'un même groupe restent dans le même
+        bloc (utile quand on a ajouté des copies transformées d'un point).
+
+    Returns
+    -------
+    mean, se : ndarray (len(ks),)
+        Moyenne des erreurs des blocs et erreur standard
+        (écart-type / sqrt(n_folds)).
+    """
+    rng = np.random.RandomState(0) if rng is None else rng
+    ks = np.atleast_1d(ks)
+    if groups is None:
+        groups = np.arange(len(y))
+    ug = np.unique(groups)
+    folds = kfold_indices(len(ug), n_folds, rng)
+    errs = np.empty((n_folds, len(ks)))
+    for f, fg in enumerate(folds):
+        test = np.isin(groups, ug[fg])
+        pred = knn_from_dists(sq_dists(X[test], X[~test]), y[~test], ks, rng,
+                              classes=np.unique(y))
+        errs[f] = (pred != y[test]).mean(1)
+    return errs.mean(0), errs.std(0, ddof=1) / np.sqrt(n_folds)
+
+
+# ---------------------------------------------------------------------------
+# DANN : métrique discriminante adaptative
+# ---------------------------------------------------------------------------
+
+def _inv_sqrt_sym(W, ridge=1e-8):
+    vals, vecs = np.linalg.eigh(W)
+    vals = np.maximum(vals, ridge * max(vals.max(), 1e-12))
+    return (vecs / np.sqrt(vals)) @ vecs.T
