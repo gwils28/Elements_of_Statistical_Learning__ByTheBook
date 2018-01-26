@@ -389,3 +389,27 @@ def _inv_sqrt_sym(W, ridge=1e-8):
     vals, vecs = np.linalg.eigh(W)
     vals = np.maximum(vals, ridge * max(vals.max(), 1e-12))
     return (vecs / np.sqrt(vals)) @ vecs.T
+
+
+def dann_metric(Xn, yn, eps=1.0):
+    """Matrice Sigma de la métrique DANN (éq. (13.9) du livre).
+
+    :math:`\\Sigma = W^{-1/2}[W^{-1/2} B W^{-1/2} + \\epsilon I] W^{-1/2}`,
+    où ``W`` est la covariance intra-classe poolée et ``B`` la covariance
+    inter-classes, calculées sur le voisinage ``(Xn, yn)``.
+    """
+    Xn = np.asarray(Xn, float)
+    yn = np.asarray(yn)
+    p = Xn.shape[1]
+    xbar = Xn.mean(0)
+    W = np.zeros((p, p))
+    B = np.zeros((p, p))
+    for k in np.unique(yn):
+        Z = Xn[yn == k]
+        pik = len(Z) / len(Xn)
+        mk = Z.mean(0)
+        W += pik * np.cov(Z.T, bias=True).reshape(p, p)
+        B += pik * np.outer(mk - xbar, mk - xbar)
+    Wm = _inv_sqrt_sym(W)
+    Bstar = Wm @ B @ Wm
+    return Wm @ (Bstar + eps * np.eye(p)) @ Wm
