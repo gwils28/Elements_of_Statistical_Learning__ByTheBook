@@ -435,3 +435,18 @@ def dann_predict(X_train, y_train, X_test, k=5, n_metric=50, eps=1.0, rng=None):
         d = np.einsum("ij,jk,ik->i", Z, S, Z)
         pred[i] = knn_from_dists(d[None, :], y_train, k, rng, classes)[0]
     return pred
+
+
+# ---------------------------------------------------------------------------
+# Images : vecteurs tangents et distance tangente
+# ---------------------------------------------------------------------------
+
+def pixel_coords(side=16):
+    """Coordonnées (u, v) centrées des pixels d'une image ``side x side``.
+
+    ``u`` croît vers la droite, ``v`` vers le haut ; l'ordre est celui de la
+    lecture ligne par ligne (comme les 256 colonnes de ``load_zip``).
+    """
+    c = (side - 1) / 2.0
+    i, j = np.meshgrid(np.arange(side), np.arange(side), indexing="ij")
+    return np.column_stack([(j - c).ravel(), (c - i).ravel()])
