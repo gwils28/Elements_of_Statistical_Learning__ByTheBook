@@ -450,3 +450,38 @@ def pixel_coords(side=16):
     c = (side - 1) / 2.0
     i, j = np.meshgrid(np.arange(side), np.arange(side), indexing="ij")
     return np.column_stack([(j - c).ravel(), (c - i).ravel()])
+
+
+def smoother_matrices(side=16, h=0.9, points=None):
+    """Matrices du lissage à noyau gaussien (Nadaraya-Watson) d'une image.
+
+    L'image discrète (valeurs ``F_j`` aux pixels ``u_j``) est prolongée en une
+    fonction lisse :math:`\\hat F(u) = \\sum_j K_h(u - u_j) F_j / \\sum_j K_h(u - u_j)`.
+    ``hat F`` et ses dérivées partielles sont **linéaires** en l'image : on
+    renvoie les matrices ``S, Su, Sv`` telles que ``hat F(points) = S @ F``,
+    ``d hat F / du = Su @ F``, ``d hat F / dv = Sv @ F``.
+
+    Parameters
+    ----------
+    side : int
+    h : float
+        Largeur de bande du noyau (en pixels).
+    points : ndarray (n, 2), optionnel
+        Points d'évaluation (par défaut les centres des pixels).
+    """
+    U = pixel_coords(side)
+    P = U if points is None else np.asarray(points, float)
+    du = P[:, None, 0] - U[None, :, 0]
+    dv = P[:, None, 1] - U[None, :, 1]
+    K = np.exp(-(du ** 2 + dv ** 2) / (2 * h * h))
+    s = K.sum(1, keepdims=True)
+    Ku = -du / (h * h) * K           # dérivée de K par rapport à u (point d'évaluation)
+    Kv = -dv / (h * h) * K
+    S = K / s
+    Su = Ku / s - K * Ku.sum(1, keepdims=True) / s ** 2
+    Sv = Kv / s - K * Kv.sum(1, keepdims=True) / s ** 2
+    return S, Su, Sv
+
+
+TANGENT_NAMES = ("translation x", "translation y", "rotation",
+                 "homothétie x", "homothétie y", "cisaillement", "épaisseur")
