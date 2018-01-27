@@ -520,3 +520,14 @@ def image_tangents(X, which=TANGENT_NAMES, side=16, h=0.9):
         "épaisseur": Fu ** 2 + Fv ** 2,
     }
     return np.stack([table[w] for w in which], axis=1)
+
+
+def transform_image(x, A=np.eye(2), c=(0.0, 0.0), side=16, h=0.6):
+    """Image transformée ``u -> F(c + A u)`` (évaluée par lissage à noyau).
+
+    Le centre de l'image sert d'origine ``x0``.
+    """
+    U = pixel_coords(side)
+    P = U @ np.asarray(A, float).T + np.asarray(c, float)
+    S, _, _ = smoother_matrices(side, h, P)
+    return S @ np.asarray(x, float)
