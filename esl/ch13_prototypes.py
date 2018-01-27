@@ -485,3 +485,38 @@ def smoother_matrices(side=16, h=0.9, points=None):
 
 TANGENT_NAMES = ("translation x", "translation y", "rotation",
                  "homothétie x", "homothétie y", "cisaillement", "épaisseur")
+
+
+def image_tangents(X, which=TANGENT_NAMES, side=16, h=0.9):
+    """Vecteurs tangents des images ``X`` (une image par ligne).
+
+    Pour une transformation ``F(u) -> F(c + A u)`` proche de l'identité, la
+    dérivée par rapport à chaque paramètre s'écrit avec les deux dérivées
+    spatiales ``F_u, F_v`` (exercice 13.4) :
+
+    * translations : ``F_u``, ``F_v`` ;
+    * rotation : ``-v F_u + u F_v`` ;
+    * homothéties : ``u F_u`` et ``v F_v`` ;
+    * cisaillement : ``v F_u`` ;
+    * épaisseur du trait : ``F_u^2 + F_v^2`` (Simard et al.).
+
+    Returns
+    -------
+    T : ndarray (n, len(which), side*side)
+    """
+    X = np.atleast_2d(np.asarray(X, float))
+    _, Su, Sv = smoother_matrices(side, h)
+    Fu = X @ Su.T
+    Fv = X @ Sv.T
+    U = pixel_coords(side)
+    u, v = U[:, 0], U[:, 1]
+    table = {
+        "translation x": Fu,
+        "translation y": Fv,
+        "rotation": -v * Fu + u * Fv,
+        "homothétie x": u * Fu,
+        "homothétie y": v * Fv,
+        "cisaillement": v * Fu,
+        "épaisseur": Fu ** 2 + Fv ** 2,
+    }
+    return np.stack([table[w] for w in which], axis=1)
