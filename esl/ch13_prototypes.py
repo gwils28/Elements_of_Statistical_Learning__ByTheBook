@@ -531,3 +531,9 @@ def transform_image(x, A=np.eye(2), c=(0.0, 0.0), side=16, h=0.6):
     P = U @ np.asarray(A, float).T + np.asarray(c, float)
     S, _, _ = smoother_matrices(side, h, P)
     return S @ np.asarray(x, float)
+
+
+def rotation_matrix(theta):
+    """Matrice de rotation d'angle ``theta`` (radians)."""
+    c, s = np.cos(theta), np.sin(theta)
+    return np.array([[c, -s], [s, c]])
