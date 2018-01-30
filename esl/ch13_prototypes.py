@@ -537,3 +537,46 @@ def rotation_matrix(theta):
     """Matrice de rotation d'angle ``theta`` (radians)."""
     c, s = np.cos(theta), np.sin(theta)
     return np.array([[c, -s], [s, c]])
+
+
+def tangent_distance(x, Tx, z, Tz=None, ridge=1e-6):
+    """Distance tangente (au carré) entre ``x`` et des candidats ``z``.
+
+    Bilatérale : :math:`\\min_{a,b} \\|x + T_x a - z - T_z b\\|^2` ;
+    unilatérale si ``Tz`` est ``None`` : :math:`\\min_a \\|x + T_x a - z\\|^2`.
+
+    Parameters
+    ----------
+    x : ndarray (p,)
+    Tx : ndarray (m, p)
+        Vecteurs tangents de ``x`` (en lignes).
+    z : ndarray (p,) ou (n, p)
+    Tz : ndarray (m', p) ou (n, m', p), optionnel
+    ridge : float
+        Petite régularisation (relative) des équations normales.
+
+    Returns
+    -------
+    d2 : float ou ndarray (n,)
+    """
+    z = np.asarray(z, float)
+    single = z.ndim == 1
+    Z = np.atleast_2d(z)
+    n = Z.shape[0]
+    Tx = np.atleast_2d(Tx)
+    if Tz is None:
+        T = np.broadcast_to(Tx, (n,) + Tx.shape)
+    else:
+        Tz = np.asarray(Tz, float)
+        if Tz.ndim == 2:
+            Tz = np.broadcast_to(Tz, (n,) + Tz.shape)
+        T = np.concatenate([np.broadcast_to(Tx, (n,) + Tx.shape), -Tz], axis=1)
+    r = Z - x                                       # on cherche T^T c ~ r
+    G = np.einsum("nip,njp->nij", T, T)
+    scale = np.trace(G, axis1=1, axis2=2)[:, None, None] / G.shape[1]
+    G = G + ridge * scale * np.eye(G.shape[1])
+    bvec = np.einsum("nip,np->ni", T, r)
+    coef = np.linalg.solve(G, bvec[..., None])[..., 0]
+    res = r - np.einsum("ni,nip->np", coef, T)
+    d2 = (res ** 2).sum(1)
+    return d2[0] if single else d2
