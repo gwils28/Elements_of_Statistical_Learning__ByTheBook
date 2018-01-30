@@ -608,3 +608,12 @@ def tangent_nn_predict(X_train, y_train, X_test, T_train, T_test, n_candidates=5
 def unit_ball_volume(p):
     """Volume ``v_p`` de la boule unité de R^p : pi^(p/2) / Gamma(p/2 + 1)."""
     return np.exp(0.5 * p * np.log(np.pi) - gammaln(0.5 * p + 1))
+
+
+def median_nn_radius(N, p):
+    """Rayon médian du 1-voisinage de l'origine (éq. (13.7) du livre).
+
+    ``median(R) = v_p^{-1/p} (1 - (1/2)^{1/N})^{1/p}`` pour N points uniformes
+    dans le cube ``[-1/2, 1/2]^p`` (exact tant que ce rayon est <= 1/2).
+    """
+    return unit_ball_volume(p) ** (-1.0 / p) * (1 - 0.5 ** (1.0 / N)) ** (1.0 / p)
