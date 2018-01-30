@@ -580,3 +580,31 @@ def tangent_distance(x, Tx, z, Tz=None, ridge=1e-6):
     res = r - np.einsum("ni,nip->np", coef, T)
     d2 = (res ** 2).sum(1)
     return d2[0] if single else d2
+
+
+def tangent_nn_predict(X_train, y_train, X_test, T_train, T_test, n_candidates=50,
+                       two_sided=True):
+    """1-ppv avec distance tangente, parmi les ``n_candidates`` voisins euclidiens.
+
+    Le présélection euclidienne évite de calculer la distance tangente à
+    toutes les images d'apprentissage (gain de temps important, perte
+    négligeable en pratique).
+    """
+    D = sq_dists(X_test, X_train)
+    cand = np.argpartition(D, n_candidates - 1, axis=1)[:, :n_candidates]
+    pred = np.empty(len(X_test), dtype=np.asarray(y_train).dtype)
+    for i in range(len(X_test)):
+        c = cand[i]
+        d = tangent_distance(X_test[i], T_test[i], X_train[c],
+                             T_train[c] if two_sided else None)
+        pred[i] = y_train[c[d.argmin()]]
+    return pred
+
+
+# ---------------------------------------------------------------------------
+# Fléau de la dimension : rayon médian du 1-voisinage
+# ---------------------------------------------------------------------------
+
+def unit_ball_volume(p):
+    """Volume ``v_p`` de la boule unité de R^p : pi^(p/2) / Gamma(p/2 + 1)."""
+    return np.exp(0.5 * p * np.log(np.pi) - gammaln(0.5 * p + 1))
