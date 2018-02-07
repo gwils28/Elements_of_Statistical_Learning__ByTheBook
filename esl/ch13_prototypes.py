@@ -637,3 +637,15 @@ def sample_gaussian_mixture(means_per_class, n_per_class, sigma2, rng=None):
         Xs.append(M[idx] + np.sqrt(sigma2) * rng.randn(n_per_class, M.shape[1]))
         ys.append(np.full(n_per_class, k))
     return np.vstack(Xs), np.concatenate(ys)
+
+
+def mixture_posterior(X, means_per_class, sigma2):
+    """Probabilités a posteriori exactes (classes équiprobables) du modèle
+    simulé par :func:`sample_gaussian_mixture`. Renvoie (n, K)."""
+    X = np.asarray(X, float)
+    L = []
+    for M in means_per_class:
+        D = sq_dists(X, M)
+        L.append(logsumexp(-D / (2 * sigma2), axis=1) - np.log(len(M)))
+    L = np.column_stack(L)
+    return np.exp(L - logsumexp(L, axis=1, keepdims=True))
