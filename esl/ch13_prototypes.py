@@ -617,3 +617,23 @@ def median_nn_radius(N, p):
     dans le cube ``[-1/2, 1/2]^p`` (exact tant que ce rayon est <= 1/2).
     """
     return unit_ball_volume(p) ** (-1.0 / p) * (1 - 0.5 ** (1.0 / N)) ** (1.0 / p)
+
+
+# ---------------------------------------------------------------------------
+# Simulations du chapitre
+# ---------------------------------------------------------------------------
+
+def sample_gaussian_mixture(means_per_class, n_per_class, sigma2, rng=None):
+    """Tire des données de classes définies chacune par un mélange gaussien.
+
+    Chaque observation de la classe ``k`` choisit uniformément l'un des
+    centres ``means_per_class[k]`` puis ajoute un bruit ``N(0, sigma2 I)``.
+    """
+    rng = np.random.RandomState(0) if rng is None else rng
+    Xs, ys = [], []
+    for k, M in enumerate(means_per_class):
+        M = np.asarray(M, float)
+        idx = rng.randint(len(M), size=n_per_class)
+        Xs.append(M[idx] + np.sqrt(sigma2) * rng.randn(n_per_class, M.shape[1]))
+        ys.append(np.full(n_per_class, k))
+    return np.vstack(Xs), np.concatenate(ys)
