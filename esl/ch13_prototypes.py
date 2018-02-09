@@ -649,3 +649,18 @@ def mixture_posterior(X, means_per_class, sigma2):
         L.append(logsumexp(-D / (2 * sigma2), axis=1) - np.log(len(M)))
     L = np.column_stack(L)
     return np.exp(L - logsumexp(L, axis=1, keepdims=True))
+
+
+def simulate_easy_hard(n, problem="easy", p=10, rng=None):
+    """Simulation de l'éq. (13.6) : X uniforme sur [0,1]^10.
+
+    * ``easy`` : Y = 1{X_1 > 1/2} ;
+    * ``hard`` : Y = 1{prod_{j<=3} (X_j - 1/2) > 0} (damier).
+    """
+    rng = np.random.RandomState(0) if rng is None else rng
+    X = rng.uniform(size=(n, p))
+    if problem == "easy":
+        y = (X[:, 0] > 0.5).astype(int)
+    else:
+        y = (np.prod(X[:, :3] - 0.5, axis=1) > 0).astype(int)
+    return X, y
