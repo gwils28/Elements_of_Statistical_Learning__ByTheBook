@@ -664,3 +664,34 @@ def simulate_easy_hard(n, problem="easy", p=10, rng=None):
     else:
         y = (np.prod(X[:, :3] - 0.5, axis=1) > 0).astype(int)
     return X, y
+
+
+# ---------------------------------------------------------------------------
+# Réduction du stockage : condensation et multi-édition
+# ---------------------------------------------------------------------------
+
+def hart_condense(X, y, rng=None, n_pass=10):
+    """Condensation de Hart (1968).
+
+    On part d'un point au hasard ; on parcourt les données et on ajoute un
+    point à l'ensemble conservé s'il est mal classé par le 1-ppv calculé sur
+    cet ensemble. On répète les passages jusqu'à stabilité.
+
+    Returns
+    -------
+    keep : ndarray d'indices conservés.
+    """
+    rng = np.random.RandomState(0) if rng is None else rng
+    N = len(y)
+    order = rng.permutation(N)
+    keep = [order[0]]
+    for _ in range(n_pass):
+        changed = False
+        for i in order:
+            d = ((X[keep] - X[i]) ** 2).sum(1)
+            if y[keep[int(d.argmin())]] != y[i]:
+                keep.append(i)
+                changed = True
+        if not changed:
+            break
+    return np.array(sorted(set(keep)))
