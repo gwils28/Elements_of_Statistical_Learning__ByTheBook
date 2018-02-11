@@ -695,3 +695,36 @@ def hart_condense(X, y, rng=None, n_pass=10):
         if not changed:
             break
     return np.array(sorted(set(keep)))
+
+
+def multiedit(X, y, n_splits=3, n_rounds=10, rng=None):
+    """Multi-édition de Devijver et Kittler (1982), version simplifiée.
+
+    À chaque tour, on découpe les données en ``n_splits`` blocs ; les points
+    du bloc ``s`` sont classés par le 1-ppv construit sur le bloc ``s+1``
+    (cycliquement) et supprimés s'ils sont mal classés. On s'arrête quand
+    plus rien ne change pendant ``n_rounds`` tours (ou au bout de 100 tours).
+
+    Returns
+    -------
+    keep : ndarray d'indices conservés.
+    """
+    rng = np.random.RandomState(0) if rng is None else rng
+    keep = np.arange(len(y))
+    stable = 0
+    for _ in range(100):
+        folds = kfold_indices(len(keep), n_splits, rng)
+        drop = []
+        for s in range(n_splits):
+            te = keep[folds[s]]
+            tr = keep[folds[(s + 1) % n_splits]]
+            pred = y[tr][sq_dists(X[te], X[tr]).argmin(1)]
+            drop.extend(te[pred != y[te]])
+        if drop:
+            keep = np.setdiff1d(keep, drop)
+            stable = 0
+        else:
+            stable += 1
+            if stable >= n_rounds:
+                break
+    return keep
