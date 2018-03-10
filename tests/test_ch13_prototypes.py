@@ -49,3 +49,10 @@ def test_lvq1_single_step():
     # classe différente : il s'éloigne
     M = cp.lvq1(X, np.array([1]), protos, np.array([0, 1]), n_iter=1, eps0=0.5)
     assert np.allclose(M[0], [1.5, 0.0])
+
+
+def test_lvq_classifier_runs():
+    rng = np.random.RandomState(2)
+    X, y = _blobs(rng)
+    clf = cp.LVQClassifier(R=2, rng=rng).fit(X, y)
+    assert np.mean(clf.predict(X) == y) == 1.0
