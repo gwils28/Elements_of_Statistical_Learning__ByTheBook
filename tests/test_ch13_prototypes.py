@@ -38,3 +38,14 @@ def test_kmeans_classifier_separable():
     clf = cp.KMeansClassifier(R=3, rng=rng).fit(X, y)
     assert clf.prototypes_.shape == (6, 2)
     assert np.mean(clf.predict(X) == y) == 1.0
+
+
+def test_lvq1_single_step():
+    X = np.array([[0.0, 0.0]])
+    protos = np.array([[1.0, 0.0], [5.0, 5.0]])
+    # même classe : le prototype se rapproche
+    M = cp.lvq1(X, np.array([0]), protos, np.array([0, 1]), n_iter=1, eps0=0.5)
+    assert np.allclose(M[0], [0.5, 0.0]) and np.allclose(M[1], protos[1])
+    # classe différente : il s'éloigne
+    M = cp.lvq1(X, np.array([1]), protos, np.array([0, 1]), n_iter=1, eps0=0.5)
+    assert np.allclose(M[0], [1.5, 0.0])
