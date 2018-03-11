@@ -87,3 +87,10 @@ def test_knn_multi_k_consistent_and_1nn_train():
     P = cp.knn_from_dists(D, y, [1, 3, 7])
     assert np.array_equal(P[0], y)                  # 1-ppv : erreur d'apprentissage nulle
     assert np.array_equal(P[2], cp.knn_from_dists(D, y, 7))
+
+
+def test_knn_cv_shapes():
+    rng = np.random.RandomState(6)
+    X, y = _blobs(rng, 40)
+    m, se = cp.knn_cv_error(X, y, [1, 3, 5], n_folds=5, rng=rng)
+    assert m.shape == (3,) and np.all(m <= 0.05) and np.all(se >= 0)
