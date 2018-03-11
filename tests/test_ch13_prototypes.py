@@ -77,3 +77,13 @@ def test_knn_matches_sklearn():
     for k in (1, 5, 15):          # k impair : pas d'égalité à deux classes
         ref = KNeighborsClassifier(k).fit(X, y).predict(Xt)
         assert np.array_equal(cp.knn_predict(X, y, Xt, k), ref)
+
+
+def test_knn_multi_k_consistent_and_1nn_train():
+    rng = np.random.RandomState(5)
+    X = rng.randn(80, 2)
+    y = rng.randint(3, size=80)
+    D = cp.sq_dists(X, X)
+    P = cp.knn_from_dists(D, y, [1, 3, 7])
+    assert np.array_equal(P[0], y)                  # 1-ppv : erreur d'apprentissage nulle
+    assert np.array_equal(P[2], cp.knn_from_dists(D, y, 7))
