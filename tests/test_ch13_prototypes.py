@@ -56,3 +56,13 @@ def test_lvq_classifier_runs():
     X, y = _blobs(rng)
     clf = cp.LVQClassifier(R=2, rng=rng).fit(X, y)
     assert np.mean(clf.predict(X) == y) == 1.0
+
+
+def test_gmm_classifier_probabilities():
+    rng = np.random.RandomState(3)
+    X, y = _blobs(rng)
+    clf = cp.GaussianMixtureClassifier(R=2, rng=rng).fit(X, y)
+    P = clf.predict_proba(X)
+    assert np.allclose(P.sum(1), 1.0)
+    assert np.all(np.diff(clf.loglik_) > -1e-6)     # EM : vraisemblance croissante
+    assert np.mean(clf.predict(X) == y) == 1.0
