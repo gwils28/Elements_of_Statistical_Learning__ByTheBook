@@ -66,3 +66,14 @@ def test_gmm_classifier_probabilities():
     assert np.allclose(P.sum(1), 1.0)
     assert np.all(np.diff(clf.loglik_) > -1e-6)     # EM : vraisemblance croissante
     assert np.mean(clf.predict(X) == y) == 1.0
+
+
+def test_knn_matches_sklearn():
+    from sklearn.neighbors import KNeighborsClassifier
+    rng = np.random.RandomState(4)
+    X = rng.randn(200, 3)
+    y = (X[:, 0] + 0.5 * rng.randn(200) > 0).astype(int)
+    Xt = rng.randn(100, 3)
+    for k in (1, 5, 15):          # k impair : pas d'égalité à deux classes
+        ref = KNeighborsClassifier(k).fit(X, y).predict(Xt)
+        assert np.array_equal(cp.knn_predict(X, y, Xt, k), ref)
