@@ -94,3 +94,20 @@ def test_knn_cv_shapes():
     X, y = _blobs(rng, 40)
     m, se = cp.knn_cv_error(X, y, [1, 3, 5], n_folds=5, rng=rng)
     assert m.shape == (3,) and np.all(m <= 0.05) and np.all(se >= 0)
+
+
+def test_dann_metric_properties():
+    rng = np.random.RandomState(7)
+    # classes séparées selon la 1re coordonnée seulement
+    X = rng.uniform(-1, 1, size=(400, 2))
+    y = (X[:, 0] > 0).astype(int)
+    S = cp.dann_metric(X, y, eps=1.0)
+    assert np.allclose(S, S.T)
+    vals, vecs = np.linalg.eigh(S)
+    assert np.all(vals > 0)
+    # la direction la plus « pénalisée » est l'axe discriminant e1
+    assert abs(vecs[0, -1]) > 0.99
+    # une seule classe : B = 0 et Sigma = eps W^{-1}
+    S1 = cp.dann_metric(X, np.zeros(400, int), eps=2.0)
+    W = np.cov(X.T, bias=True)
+    assert np.allclose(S1, 2.0 * np.linalg.inv(W), atol=1e-8)
