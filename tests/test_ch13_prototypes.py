@@ -120,3 +120,21 @@ def test_dann_predict_beats_chance():
     Xt = rng.uniform(-1, 1, size=(100, 2))
     yt = (Xt[:, 0] > 0).astype(int)
     assert np.mean(cp.dann_predict(X, y, Xt, k=5, n_metric=30) == yt) > 0.9
+
+
+def test_tangent_distance_properties():
+    rng = np.random.RandomState(9)
+    p = 20
+    x, z = rng.randn(p), rng.randn(p)
+    Tx, Tz = rng.randn(2, p), rng.randn(3, p)
+    d_two = cp.tangent_distance(x, Tx, z, Tz, ridge=0)
+    d_one = cp.tangent_distance(x, Tx, z, ridge=0)
+    eu = ((x - z) ** 2).sum()
+    assert d_two <= d_one + 1e-10 <= eu + 1e-10
+    # point situé sur le plan tangent : distance nulle
+    z2 = x + Tx.T @ np.array([0.3, -1.2])
+    assert cp.tangent_distance(x, Tx, z2, ridge=0) == pytest.approx(0, abs=1e-18)
+    # comparaison à un moindre carré direct
+    A = np.vstack([Tx, -Tz]).T
+    coef = np.linalg.lstsq(A, z - x, rcond=None)[0]
+    assert d_two == pytest.approx(((z - x - A @ coef) ** 2).sum())
