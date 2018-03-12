@@ -111,3 +111,12 @@ def test_dann_metric_properties():
     S1 = cp.dann_metric(X, np.zeros(400, int), eps=2.0)
     W = np.cov(X.T, bias=True)
     assert np.allclose(S1, 2.0 * np.linalg.inv(W), atol=1e-8)
+
+
+def test_dann_predict_beats_chance():
+    rng = np.random.RandomState(8)
+    X = rng.uniform(-1, 1, size=(300, 2))
+    y = (X[:, 0] > 0).astype(int)
+    Xt = rng.uniform(-1, 1, size=(100, 2))
+    yt = (Xt[:, 0] > 0).astype(int)
+    assert np.mean(cp.dann_predict(X, y, Xt, k=5, n_metric=30) == yt) > 0.9
