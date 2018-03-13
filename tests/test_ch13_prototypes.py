@@ -150,3 +150,13 @@ def test_rotation_tangent_matches_finite_difference():
     fd = (cp.transform_image(img, cp.rotation_matrix(a), h=0.6)
           - cp.transform_image(img, cp.rotation_matrix(-a), h=0.6)) / (2 * a)
     assert np.corrcoef(t, fd)[0, 1] > 0.999
+
+
+def test_median_radius_formula():
+    rng = np.random.RandomState(10)
+    N, p = 50, 3
+    R = np.array([np.sqrt((rng.uniform(-.5, .5, (N, p)) ** 2).sum(1)).min()
+                  for _ in range(4000)])
+    assert np.median(R) == pytest.approx(cp.median_nn_radius(N, p), rel=0.03)
+    assert cp.unit_ball_volume(2) == pytest.approx(np.pi)
+    assert cp.unit_ball_volume(3) == pytest.approx(4 * np.pi / 3)
