@@ -138,3 +138,15 @@ def test_tangent_distance_properties():
     A = np.vstack([Tx, -Tz]).T
     coef = np.linalg.lstsq(A, z - x, rcond=None)[0]
     assert d_two == pytest.approx(((z - x - A @ coef) ** 2).sum())
+
+
+def test_rotation_tangent_matches_finite_difference():
+    # image lisse : gaussienne décentrée ; on compare la tangente de rotation
+    # à la différence finie d'une petite rotation
+    U = cp.pixel_coords(16)
+    img = np.exp(-((U[:, 0] - 3) ** 2 + (U[:, 1] - 1) ** 2 / 4) / 6)
+    t = cp.image_tangents(img, which=("rotation",), h=0.6)[0, 0]
+    a = 1e-3
+    fd = (cp.transform_image(img, cp.rotation_matrix(a), h=0.6)
+          - cp.transform_image(img, cp.rotation_matrix(-a), h=0.6)) / (2 * a)
+    assert np.corrcoef(t, fd)[0, 1] > 0.999
