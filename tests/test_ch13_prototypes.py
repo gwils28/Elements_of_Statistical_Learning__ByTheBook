@@ -160,3 +160,9 @@ def test_median_radius_formula():
     assert np.median(R) == pytest.approx(cp.median_nn_radius(N, p), rel=0.03)
     assert cp.unit_ball_volume(2) == pytest.approx(np.pi)
     assert cp.unit_ball_volume(3) == pytest.approx(4 * np.pi / 3)
+
+
+def test_mixture_posterior_sums_to_one():
+    means = [np.array([[0.0, 0.0]]), np.array([[1.0, 0.0]])]
+    P = cp.mixture_posterior(np.array([[0.5, 3.0], [0.0, 0.0]]), means, 0.2)
+    assert np.allclose(P.sum(1), 1) and P[0, 0] == pytest.approx(0.5)
