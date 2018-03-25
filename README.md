@@ -59,8 +59,8 @@ Lancer les tests : `pytest tests/`.
 | 10 | [Boosting et arbres additifs](notebooks/ch10_boosting) | ✅ |
 | 11 | [Réseaux de neurones](notebooks/ch11_reseaux_de_neurones) | ✅ |
 | 12 | [SVM et discriminants flexibles](notebooks/ch12_svm_discriminants_flexibles) | ✅ |
-| 13 | Méthodes de prototypes et plus proches voisins | 🚧 |
-| 14 | Apprentissage non supervisé | - |
+| 13 | [Méthodes de prototypes et plus proches voisins](notebooks/ch13_prototypes_plus_proches_voisins) | ✅ |
+| 14 | Apprentissage non supervisé | 🚧 |
 | 15 | Forêts aléatoires | - |
 | 16 | Apprentissage ensembliste | - |
 | 17 | Modèles graphiques non orientés | - |
