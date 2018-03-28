@@ -111,3 +111,52 @@ def codage_disjonctif(df, ordinales, categorielles):
                 noms.append("%s=%g" % (v, m))
                 variables.append(v)
     return np.column_stack(cols), noms, variables
+
+
+def apriori(Z, support_min, taille_max=None):
+    """Algorithme Apriori (Agrawal et al., 1995) : ensembles d'items fréquents.
+
+    On parcourt les tailles ``k = 1, 2, ...`` ; un ensemble de taille ``k`` n'est
+    candidat que si tous ses sous-ensembles de taille ``k-1`` sont fréquents
+    (propriété d'anti-monotonie du support).
+
+    Parameters
+    ----------
+    Z : ndarray booléen (N, K)
+        Matrice des items.
+    support_min : float
+        Seuil ``t`` sur le support (proportion d'observations), éq. (14.6).
+    taille_max : int ou None
+        Taille maximale des ensembles d'items.
+
+    Returns
+    -------
+    dict
+        ``{tuple trié d'indices d'items : support}``.
+    """
+    Z = np.asarray(Z, dtype=bool)
+    N, K = Z.shape
+    sup1 = Z.mean(axis=0)
+    niveau = {(j,): Z[:, j] for j in range(K) if sup1[j] >= support_min}
+    frequents = {k: float(v.mean()) for k, v in niveau.items()}
+    taille = 1
+    while niveau and (taille_max is None or taille < taille_max):
+        cles = sorted(niveau)
+        nouveau = {}
+        for a in range(len(cles)):
+            for b in range(a + 1, len(cles)):
+                A, B = cles[a], cles[b]
+                if A[:-1] != B[:-1]:
+                    break  # les clés sont triées : plus de préfixe commun
+                cand = A + (B[-1],)
+                # élagage : tous les sous-ensembles de taille k-1 fréquents
+                if any(sub not in niveau for sub in combinations(cand, taille)):
+                    continue
+                couv = niveau[A] & Z[:, B[-1]]
+                s = couv.mean()
+                if s >= support_min:
+                    nouveau[cand] = couv
+                    frequents[cand] = float(s)
+        niveau = nouveau
+        taille += 1
+    return frequents
