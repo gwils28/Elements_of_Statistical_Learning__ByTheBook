@@ -66,3 +66,48 @@ MODALITES_MARKETING = {
 ORDINALES_MARKETING = ["Age", "Edu", "Income", "Lived", "Household", "Householdu18"]
 CATEGORIELLES_MARKETING = ["Sex", "Marital", "Occupation", "Dual_Income",
                            "Status", "Home_Type", "Ethnic", "Language"]
+
+
+def codage_disjonctif(df, ordinales, categorielles):
+    """Code un tableau de variables discrètes en variables indicatrices.
+
+    Comme dans la section 14.2.3 du livre : chaque variable ordinale est coupée
+    à sa médiane (deux indicatrices ``x <= médiane`` et ``x > médiane``) et
+    chaque variable catégorielle à ``k`` modalités donne ``k`` indicatrices.
+    Si la médiane coïncide avec la valeur maximale, on coupe en
+    ``x < médiane`` / ``x >= médiane`` pour que les deux indicatrices soient non vides.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Données sans valeurs manquantes.
+    ordinales, categorielles : list of str
+        Noms des colonnes de chaque type.
+
+    Returns
+    -------
+    Z : ndarray de booléens, forme (N, K)
+        Matrice des « items ».
+    noms : list of str
+        Libellé de chaque item (par ex. ``"Age<=3"`` ou ``"Sex=2"``).
+    variables : list of str
+        Variable d'origine de chaque item.
+    """
+    cols, noms, variables = [], [], []
+    for v in df.columns:
+        x = df[v].to_numpy()
+        if v in ordinales:
+            med = np.median(x)
+            if med < x.max():
+                cols += [x <= med, x > med]
+                noms += ["%s<=%g" % (v, med), "%s>%g" % (v, med)]
+            else:  # médiane = maximum : on coupe juste en dessous
+                cols += [x < med, x >= med]
+                noms += ["%s<%g" % (v, med), "%s>=%g" % (v, med)]
+            variables += [v, v]
+        elif v in categorielles:
+            for m in np.unique(x):
+                cols.append(x == m)
+                noms.append("%s=%g" % (v, m))
+                variables.append(v)
+    return np.column_stack(cols), noms, variables
