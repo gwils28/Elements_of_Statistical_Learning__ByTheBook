@@ -223,3 +223,21 @@ def echantillon_reference(X, methode="uniforme", rng=None, n=None):
     if methode == "permutation":
         return np.column_stack([X[rng.permutation(N), j] for j in range(p)])
     raise ValueError(methode)
+
+
+def base_splines_naturelles(x, noeuds):
+    """Base des splines cubiques naturelles (éq. (5.4)-(5.5) du livre).
+
+    Renvoie la matrice ``(N, K)`` des fonctions ``N_1 = 1, N_2 = x`` et
+    ``N_{k+2} = d_k - d_{K-1}`` avec
+    ``d_k(x) = ((x - ξ_k)_+^3 - (x - ξ_K)_+^3) / (ξ_K - ξ_k)``.
+    """
+    x = np.asarray(x, float)
+    xi = np.asarray(noeuds, float)
+    K = len(xi)
+
+    def d(k):
+        return (np.maximum(x - xi[k], 0) ** 3 - np.maximum(x - xi[-1], 0) ** 3) / (xi[-1] - xi[k])
+
+    cols = [np.ones_like(x), x] + [d(k) - d(K - 2) for k in range(K - 2)]
+    return np.column_stack(cols)
