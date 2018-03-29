@@ -194,3 +194,32 @@ def regles_association(frequents, confiance_min=0.0, noms=None):
         for c in ("antecedent", "consequent"):
             df[c] = df[c].apply(lambda t: tuple(noms[i] for i in t))
     return df
+
+
+# ---------------------------------------------------------------------------
+# 2. Non supervisé vu comme supervisé
+# ---------------------------------------------------------------------------
+
+def echantillon_reference(X, methode="uniforme", rng=None, n=None):
+    """Tire un échantillon de la densité de référence ``g0`` (section 14.2.4).
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+    methode : {"uniforme", "permutation"}
+        ``"uniforme"`` : loi uniforme sur le pavé contenant les données ;
+        ``"permutation"`` : produit des lois marginales (14.15), obtenu en
+        permutant indépendamment chaque colonne.
+    n : int ou None
+        Taille de l'échantillon (``N`` par défaut ; uniquement pour « uniforme »).
+    """
+    rng = _rng(rng)
+    X = np.asarray(X, float)
+    N, p = X.shape
+    if methode == "uniforme":
+        n = N if n is None else n
+        lo, hi = X.min(axis=0), X.max(axis=0)
+        return lo + (hi - lo) * rng.uniform(size=(n, p))
+    if methode == "permutation":
+        return np.column_stack([X[rng.permutation(N), j] for j in range(p)])
+    raise ValueError(methode)
