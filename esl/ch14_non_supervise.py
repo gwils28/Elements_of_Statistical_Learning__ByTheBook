@@ -160,3 +160,37 @@ def apriori(Z, support_min, taille_max=None):
         niveau = nouveau
         taille += 1
     return frequents
+
+
+def regles_association(frequents, confiance_min=0.0, noms=None):
+    """Construit les règles ``A => B`` à partir des ensembles fréquents.
+
+    Pour chaque ensemble fréquent ``K`` (``|K| >= 2``) et chaque partition
+    ``K = A ∪ B`` en deux parties non vides, on calcule
+
+    * le support ``T(A => B) = T(K)`` ;
+    * la confiance ``C(A => B) = T(K) / T(A)``, éq. (14.8) ;
+    * le lift ``L(A => B) = C(A => B) / T(B)``.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Colonnes ``antecedent``, ``consequent`` (tuples d'indices ou de noms),
+        ``taille``, ``support``, ``confiance``, ``lift``.
+    """
+    lignes = []
+    for K, sK in frequents.items():
+        if len(K) < 2:
+            continue
+        for r in range(1, len(K)):
+            for A in combinations(K, r):
+                B = tuple(i for i in K if i not in A)
+                conf = sK / frequents[A]
+                if conf >= confiance_min:
+                    lignes.append((A, B, len(K), sK, conf, conf / frequents[B]))
+    df = pd.DataFrame(lignes, columns=["antecedent", "consequent", "taille",
+                                       "support", "confiance", "lift"])
+    if noms is not None:
+        for c in ("antecedent", "consequent"):
+            df[c] = df[c].apply(lambda t: tuple(noms[i] for i in t))
+    return df
