@@ -271,3 +271,72 @@ def regression_logistique(B, y, lam=0.0, n_iter=50, tol=1e-10):
         if np.max(np.abs(pas)) < tol:
             break
     return beta
+
+
+def prim_peeling(X, y, categorielles=(), alpha=0.1, support_min=0.1):
+    """Phase d'« épluchage » de PRIM (section 9.3), version simplifiée.
+
+    On part de la boîte contenant toutes les données ; à chaque étape on
+    considère, pour chaque variable ordinale, le retrait de la tranche des
+    ``alpha`` plus petites (ou plus grandes) valeurs, et pour chaque variable
+    catégorielle le retrait d'une modalité ; on garde le retrait qui maximise la
+    moyenne de ``y`` dans la boîte restante. On s'arrête quand le support de la
+    boîte passe sous ``support_min``.
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+        Variables (codes numériques).
+    y : ndarray (N,)
+        Réponse (0/1 pour la recherche de régions de forte densité).
+    categorielles : iterable d'int
+        Indices des colonnes catégorielles.
+
+    Returns
+    -------
+    dict
+        ``boite`` : liste de contraintes par variable (``("intervalle", lo, hi)``
+        ou ``("modalites", ensemble)``) ; ``moyennes`` et ``supports`` : trajectoire
+        de l'épluchage ; ``dedans`` : masque des observations dans la boîte finale.
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    N, p = X.shape
+    cat = set(categorielles)
+    dedans = np.ones(N, bool)
+    boite = []
+    for j in range(p):
+        if j in cat:
+            boite.append(("modalites", set(np.unique(X[:, j]).tolist())))
+        else:
+            boite.append(("intervalle", X[:, j].min(), X[:, j].max()))
+    moyennes, supports = [y.mean()], [1.0]
+    while True:
+        meilleur = None
+        n_in = dedans.sum()
+        for j in range(p):
+            xj = X[dedans, j]
+            if j in cat:
+                for m in boite[j][1]:
+                    reste = dedans & (X[:, j] != m)
+                    if 0 < reste.sum() < n_in:
+                        cand = (y[reste].mean(), j, ("modalites", boite[j][1] - {m}), reste)
+                        if meilleur is None or cand[0] > meilleur[0]:
+                            meilleur = cand
+            else:
+                lo, hi = np.quantile(xj, [alpha, 1 - alpha])
+                for reste in (dedans & (X[:, j] > lo), dedans & (X[:, j] < hi)):
+                    if 0 < reste.sum() < n_in:
+                        xr = X[reste, j]
+                        cand = (y[reste].mean(), j, ("intervalle", xr.min(), xr.max()), reste)
+                        if meilleur is None or cand[0] > meilleur[0]:
+                            meilleur = cand
+        if meilleur is None or meilleur[3].sum() < support_min * N:
+            break
+        _, j, nouvelle, reste = meilleur
+        boite[j] = nouvelle
+        dedans = reste
+        moyennes.append(y[dedans].mean())
+        supports.append(dedans.mean())
+    return {"boite": boite, "moyennes": np.array(moyennes),
+            "supports": np.array(supports), "dedans": dedans}
