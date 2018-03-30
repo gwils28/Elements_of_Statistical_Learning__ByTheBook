@@ -241,3 +241,33 @@ def base_splines_naturelles(x, noeuds):
 
     cols = [np.ones_like(x), x] + [d(k) - d(K - 2) for k in range(K - 2)]
     return np.column_stack(cols)
+
+
+def regression_logistique(B, y, lam=0.0, n_iter=50, tol=1e-10):
+    """Régression logistique pénalisée (ridge) par l'algorithme IRLS.
+
+    Maximise ``sum_i [y_i f_i - log(1 + e^{f_i})] - lam/2 * ||beta[1:]||^2`` avec
+    ``f = B beta`` (la première colonne de ``B``, la constante, n'est pas
+    pénalisée).
+
+    Returns
+    -------
+    beta : ndarray (q,)
+    """
+    B = np.asarray(B, float)
+    y = np.asarray(y, float)
+    q = B.shape[1]
+    P = lam * np.eye(q)
+    P[0, 0] = 0.0
+    beta = np.zeros(q)
+    for _ in range(n_iter):
+        f = B @ beta
+        mu = 1 / (1 + np.exp(-f))
+        w = np.maximum(mu * (1 - mu), 1e-10)
+        H = B.T @ (B * w[:, None]) + P
+        g = B.T @ (y - mu) - P @ beta
+        pas = np.linalg.solve(H, g)
+        beta = beta + pas
+        if np.max(np.abs(pas)) < tol:
+            break
+    return beta
