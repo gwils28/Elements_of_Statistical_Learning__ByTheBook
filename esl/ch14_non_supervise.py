@@ -340,3 +340,15 @@ def prim_peeling(X, y, categorielles=(), alpha=0.1, support_min=0.1):
         supports.append(dedans.mean())
     return {"boite": boite, "moyennes": np.array(moyennes),
             "supports": np.array(supports), "dedans": dedans}
+
+
+# ---------------------------------------------------------------------------
+# 3. Classification (clustering)
+# ---------------------------------------------------------------------------
+
+def distances_carrees(X, Y=None):
+    """Matrice des distances euclidiennes au carré ``||x_i - y_j||^2``."""
+    X = np.asarray(X, float)
+    Y = X if Y is None else np.asarray(Y, float)
+    D = (X ** 2).sum(1)[:, None] + (Y ** 2).sum(1)[None, :] - 2 * X @ Y.T
+    return np.maximum(D, 0)
