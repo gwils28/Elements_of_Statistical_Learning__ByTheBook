@@ -352,3 +352,19 @@ def distances_carrees(X, Y=None):
     Y = X if Y is None else np.asarray(Y, float)
     D = (X ** 2).sum(1)[:, None] + (Y ** 2).sum(1)[None, :] - 2 * X @ Y.T
     return np.maximum(D, 0)
+
+
+def inertie_intra(X, labels, centres=None):
+    """Somme des carrés intra-classes ``sum_k sum_{C(i)=k} ||x_i - xbar_k||^2``.
+
+    Le critère ``W(C)`` du livre (14.31) pondère en plus chaque classe par son
+    effectif ``N_k`` ; nous utilisons, comme la plupart des logiciels (et la
+    figure 14.8), la somme simple ci-dessus, minimisée elle aussi par K-means.
+    """
+    X = np.asarray(X, float)
+    tot = 0.0
+    for k in np.unique(labels):
+        Xk = X[labels == k]
+        c = Xk.mean(0) if centres is None else centres[k]
+        tot += ((Xk - c) ** 2).sum()
+    return tot
