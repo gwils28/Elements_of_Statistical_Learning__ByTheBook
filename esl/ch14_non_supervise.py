@@ -368,3 +368,83 @@ def inertie_intra(X, labels, centres=None):
         c = Xk.mean(0) if centres is None else centres[k]
         tot += ((Xk - c) ** 2).sum()
     return tot
+
+
+def kmeans(X, K, n_init=10, max_iter=300, rng=None, centres_init=None):
+    """K-means (algorithme 14.1, itérations de Lloyd).
+
+    Alterne (i) l'affectation de chaque point au centre le plus proche (14.34)
+    et (ii) le remplacement de chaque centre par la moyenne de sa classe
+    (14.32), à partir de ``n_init`` initialisations aléatoires (``K``
+    observations tirées au hasard) ; on garde la solution d'inertie minimale.
+
+    Returns
+    -------
+    labels : ndarray (N,)
+    centres : ndarray (K, p)
+    inertie : float
+        Somme des carrés intra-classes.
+    """
+    rng = _rng(rng)
+    X = np.asarray(X, float)
+    N = X.shape[0]
+    meilleur = None
+    inits = [np.asarray(centres_init, float)] if centres_init is not None else \
+        [X[rng.choice(N, K, replace=False)] for _ in range(n_init)]
+    for C in inits:
+        C = C.copy()
+        labels = None
+        for _ in range(max_iter):
+            nouv = distances_carrees(X, C).argmin(1)
+            if labels is not None and np.array_equal(nouv, labels):
+                break
+            labels = nouv
+            for k in range(K):
+                if np.any(labels == k):
+                    C[k] = X[labels == k].mean(0)
+                else:  # classe vide : on la réinitialise sur le point le plus mal servi
+                    d = distances_carrees(X, C).min(1)
+                    C[k] = X[d.argmax()]
+        inertie = ((X - C[labels]) ** 2).sum()
+        if meilleur is None or inertie < meilleur[2]:
+            meilleur = (labels, C, inertie)
+    return meilleur
+
+
+def kmedoides(D, K, n_init=10, max_iter=100, rng=None, medoides_init=None):
+    """K-médoïdes (algorithme 14.2) à partir d'une matrice de dissimilarités.
+
+    Alterne (i) pour chaque classe, le choix comme centre de l'observation qui
+    minimise la dissimilarité totale aux autres membres (14.35), et (ii)
+    l'affectation de chaque observation au médoïde le plus proche (14.37).
+
+    Returns
+    -------
+    labels : ndarray (N,)
+    medoides : ndarray (K,) d'indices
+    critere : float
+        Valeur de (14.38), ``sum_i d(i, medoide de i)``.
+    """
+    rng = _rng(rng)
+    D = np.asarray(D, float)
+    N = D.shape[0]
+    inits = [np.asarray(medoides_init)] if medoides_init is not None else \
+        [rng.choice(N, K, replace=False) for _ in range(n_init)]
+    meilleur = None
+    for med in inits:
+        med = np.array(med)
+        for _ in range(max_iter):
+            labels = D[:, med].argmin(1)
+            nouv = med.copy()
+            for k in range(K):
+                membres = np.where(labels == k)[0]
+                if len(membres):
+                    nouv[k] = membres[D[np.ix_(membres, membres)].sum(1).argmin()]
+            if np.array_equal(nouv, med):
+                break
+            med = nouv
+        labels = D[:, med].argmin(1)
+        crit = D[np.arange(N), med[labels]].sum()
+        if meilleur is None or crit < meilleur[2]:
+            meilleur = (labels, med, crit)
+    return meilleur
