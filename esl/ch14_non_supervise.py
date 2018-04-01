@@ -555,3 +555,17 @@ def dissimilarites_cophenetiques(Z):
         C[np.ix_(B, A)] = h
         membres[N + s] = A + B
     return C
+
+
+def couper_hierarchie(Z, K):
+    """Coupe une hiérarchie pour obtenir ``K`` groupes ; renvoie les étiquettes."""
+    Z = np.asarray(Z)
+    N = Z.shape[0] + 1
+    membres = {i: [i] for i in range(N)}
+    for s in range(N - K):
+        a, b = int(Z[s, 0]), int(Z[s, 1])
+        membres[N + s] = membres.pop(a) + membres.pop(b)
+    labels = np.empty(N, int)
+    for k, (_, m) in enumerate(sorted(membres.items(), key=lambda t: min(t[1]))):
+        labels[m] = k
+    return labels
