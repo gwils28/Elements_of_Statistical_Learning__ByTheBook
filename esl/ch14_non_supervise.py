@@ -537,3 +537,21 @@ def classification_hierarchique(D, methode="average"):
         tailles[i] = ni + nj
         ids[i] = N + s
     return Z
+
+
+def dissimilarites_cophenetiques(Z):
+    """Matrice ``C`` des dissimilarités cophénétiques d'une hiérarchie.
+
+    ``C_ii'`` est la hauteur de la fusion à laquelle ``i`` et ``i'`` se retrouvent
+    pour la première fois dans le même groupe (section 14.3.12).
+    """
+    Z = np.asarray(Z)
+    N = Z.shape[0] + 1
+    membres = {i: [i] for i in range(N)}
+    C = np.zeros((N, N))
+    for s, (a, b, h, _) in enumerate(Z):
+        A, B = membres.pop(int(a)), membres.pop(int(b))
+        C[np.ix_(A, B)] = h
+        C[np.ix_(B, A)] = h
+        membres[N + s] = A + B
+    return C
