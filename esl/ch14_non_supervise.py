@@ -448,3 +448,92 @@ def kmedoides(D, K, n_init=10, max_iter=100, rng=None, medoides_init=None):
         if meilleur is None or crit < meilleur[2]:
             meilleur = (labels, med, crit)
     return meilleur
+
+
+def statistique_gap(X, K_max, B=20, rng=None, n_init=5):
+    """Statistique Gap (Tibshirani et al., 2001), section 14.3.11.
+
+    Compare ``log W_K`` observé à son espérance sous une loi uniforme sur le
+    pavé contenant les données (estimée par ``B`` simulations).
+
+    Returns
+    -------
+    dict
+        ``logW``, ``logW_ref`` (moyenne), ``gap``, ``s`` (= ``s_K sqrt(1+1/B)``),
+        ``K_etoile`` (règle (14.39)).
+    """
+    rng = _rng(rng)
+    X = np.asarray(X, float)
+    Ks = np.arange(1, K_max + 1)
+
+    def logW(Y):
+        return np.array([np.log(kmeans(Y, K, n_init=n_init, rng=rng)[2]) for K in Ks])
+
+    lw = logW(X)
+    ref = np.array([logW(echantillon_reference(X, "uniforme", rng)) for _ in range(B)])
+    gap = ref.mean(0) - lw
+    s = ref.std(0) * np.sqrt(1 + 1 / B)
+    K_etoile = Ks[-1]
+    for i in range(len(Ks) - 1):
+        if gap[i] >= gap[i + 1] - s[i + 1]:
+            K_etoile = Ks[i]
+            break
+    return {"K": Ks, "logW": lw, "logW_ref": ref.mean(0), "gap": gap, "s": s,
+            "K_etoile": int(K_etoile)}
+
+
+def classification_hierarchique(D, methode="average"):
+    """Classification hiérarchique ascendante (section 14.3.12).
+
+    À chaque étape on fusionne les deux groupes les moins dissemblables, la
+    dissimilarité entre groupes étant mise à jour par la formule de
+    Lance-Williams :
+
+    * ``"single"`` (lien simple, 14.41) : ``min(d_kG, d_kH)`` ;
+    * ``"complete"`` (lien complet, 14.42) : ``max(d_kG, d_kH)`` ;
+    * ``"average"`` (lien moyen, 14.43) : ``(N_G d_kG + N_H d_kH)/(N_G + N_H)``.
+
+    Parameters
+    ----------
+    D : ndarray (N, N)
+        Matrice de dissimilarités symétrique.
+
+    Returns
+    -------
+    ndarray (N-1, 4)
+        Matrice de liaison au format de ``scipy.cluster.hierarchy`` :
+        ``[groupe 1, groupe 2, hauteur, effectif]``, le groupe créé à l'étape
+        ``s`` recevant le numéro ``N + s``.
+    """
+    D = np.array(D, float)
+    N = D.shape[0]
+    np.fill_diagonal(D, np.inf)
+    ids = np.arange(N)          # numéro scipy du groupe occupant chaque ligne
+    tailles = np.ones(N)
+    actif = np.ones(N, bool)
+    Z = np.zeros((N - 1, 4))
+    for s in range(N - 1):
+        sub = np.where(actif)[0]
+        M = D[np.ix_(sub, sub)]
+        a, b = np.unravel_index(np.argmin(M), M.shape)
+        i, j = sub[min(a, b)], sub[max(a, b)]
+        h = D[i, j]
+        ni, nj = tailles[i], tailles[j]
+        if methode == "single":
+            nouv = np.minimum(D[i], D[j])
+        elif methode == "complete":
+            nouv = np.maximum(D[i], D[j])
+        elif methode == "average":
+            nouv = (ni * D[i] + nj * D[j]) / (ni + nj)
+        else:
+            raise ValueError(methode)
+        Z[s] = [min(ids[i], ids[j]), max(ids[i], ids[j]), h, ni + nj]
+        D[i, :] = nouv
+        D[:, i] = nouv
+        D[i, i] = np.inf
+        actif[j] = False
+        D[j, :] = np.inf
+        D[:, j] = np.inf
+        tailles[i] = ni + nj
+        ids[i] = N + s
+    return Z
