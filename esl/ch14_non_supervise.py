@@ -621,3 +621,42 @@ def indice_rand_ajuste(a, b):
     if maxi == attendu:
         return 1.0
     return (s_ij - attendu) / (maxi - attendu)
+
+
+def em_melange_isotrope(X, K, sigma2=None, n_iter=200, rng=None, mu_init=None, tol=1e-10):
+    """EM pour un mélange gaussien ``sum_k pi_k N(mu_k, sigma^2 I)`` (exercice 14.2).
+
+    Parameters
+    ----------
+    sigma2 : float ou None
+        Si fourni, la variance est fixée à cette valeur ; sinon elle est estimée.
+
+    Returns
+    -------
+    dict
+        ``pi``, ``mu``, ``sigma2``, ``resp`` (responsabilités ``(N, K)``) et
+        ``loglik`` (historique de la log-vraisemblance).
+    """
+    rng = _rng(rng)
+    X = np.asarray(X, float)
+    N, p = X.shape
+    mu = X[rng.choice(N, K, replace=False)].copy() if mu_init is None else np.array(mu_init, float)
+    pi = np.full(K, 1 / K)
+    s2 = X.var() if sigma2 is None else sigma2
+    hist = []
+    for _ in range(n_iter):
+        # étape E : log(pi_k phi(x_i; mu_k, s2 I)), normalisé par log-sum-exp
+        L = np.log(pi)[None, :] - distances_carrees(X, mu) / (2 * s2) - p / 2 * np.log(2 * np.pi * s2)
+        m = L.max(1, keepdims=True)
+        lse = m[:, 0] + np.log(np.exp(L - m).sum(1))
+        resp = np.exp(L - lse[:, None])
+        hist.append(lse.sum())
+        # étape M
+        Nk = resp.sum(0)
+        pi = Nk / N
+        mu = (resp.T @ X) / np.maximum(Nk[:, None], 1e-300)
+        if sigma2 is None:
+            s2 = (resp * distances_carrees(X, mu)).sum() / (N * p)
+        if len(hist) > 1 and abs(hist[-1] - hist[-2]) < tol * abs(hist[-1]):
+            break
+    return {"pi": pi, "mu": mu, "sigma2": s2, "resp": resp, "loglik": np.array(hist)}
