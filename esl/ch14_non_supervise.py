@@ -569,3 +569,55 @@ def couper_hierarchie(Z, K):
     for k, (_, m) in enumerate(sorted(membres.items(), key=lambda t: min(t[1]))):
         labels[m] = k
     return labels
+
+
+def division_macnaughton_smith(D, membres=None):
+    """Une étape de classification descendante (Macnaughton-Smith et al., 1965).
+
+    On part du groupe ``G`` (``membres``, toutes les observations par défaut).
+    L'observation de plus grande dissimilarité moyenne aux autres fonde le
+    groupe ``H`` ; puis, tant qu'il existe dans ``G`` une observation dont la
+    dissimilarité moyenne à ``H`` est plus petite que sa dissimilarité moyenne
+    aux autres membres de ``G``, on transfère celle pour qui l'écart est le plus
+    grand.
+
+    Returns
+    -------
+    G, H : listes d'indices
+    """
+    D = np.asarray(D, float)
+    G = list(range(D.shape[0])) if membres is None else list(membres)
+    if len(G) < 2:
+        return G, []
+    moy = [D[i, [j for j in G if j != i]].mean() for i in G]
+    H = [G.pop(int(np.argmax(moy)))]
+    while len(G) > 1:
+        ecarts = [D[i, [j for j in G if j != i]].mean() - D[i, H].mean() for i in G]
+        k = int(np.argmax(ecarts))
+        if ecarts[k] <= 0:
+            break
+        H.append(G.pop(k))
+    return G, H
+
+
+def indice_rand_ajuste(a, b):
+    """Indice de Rand ajusté (Hubert et Arabie, 1985) entre deux partitions.
+
+    Vaut 1 pour deux partitions identiques (à renumérotation près) et a une
+    espérance nulle pour des partitions indépendantes.
+    """
+    _, ia = np.unique(a, return_inverse=True)
+    _, ib = np.unique(b, return_inverse=True)
+    T = np.zeros((ia.max() + 1, ib.max() + 1))
+    np.add.at(T, (ia, ib), 1)
+
+    def c2(x):
+        return (x * (x - 1) / 2).sum()
+
+    n = len(ia)
+    s_ij, s_a, s_b = c2(T), c2(T.sum(1)), c2(T.sum(0))
+    attendu = s_a * s_b / (n * (n - 1) / 2)
+    maxi = (s_a + s_b) / 2
+    if maxi == attendu:
+        return 1.0
+    return (s_ij - attendu) / (maxi - attendu)
