@@ -660,3 +660,12 @@ def em_melange_isotrope(X, K, sigma2=None, n_iter=200, rng=None, mu_init=None, t
         if len(hist) > 1 and abs(hist[-1] - hist[-2]) < tol * abs(hist[-1]):
             break
     return {"pi": pi, "mu": mu, "sigma2": s2, "resp": resp, "loglik": np.array(hist)}
+
+
+# ---------------------------------------------------------------------------
+# 4. Cartes auto-organisatrices
+# ---------------------------------------------------------------------------
+
+def grille_som(q1, q2):
+    """Coordonnées entières ``l_j`` des ``K = q1 q2`` prototypes d'une grille."""
+    return np.array([(a, b) for a in range(q1) for b in range(q2)], float)
