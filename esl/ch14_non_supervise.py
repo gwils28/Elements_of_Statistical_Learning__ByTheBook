@@ -669,3 +669,76 @@ def em_melange_isotrope(X, K, sigma2=None, n_iter=200, rng=None, mu_init=None, t
 def grille_som(q1, q2):
     """Coordonnées entières ``l_j`` des ``K = q1 q2`` prototypes d'une grille."""
     return np.array([(a, b) for a in range(q1) for b in range(q2)], float)
+
+
+def init_som_acp(X, q1, q2):
+    """Prototypes initiaux régulièrement répartis dans le plan des deux premières CP.
+
+    Les coordonnées de la grille sont envoyées linéairement sur
+    ``[-s_1, s_1] x [-s_2, s_2]`` où ``s_m`` est l'écart-type de la m-ième
+    composante principale.
+    """
+    X = np.asarray(X, float)
+    xbar = X.mean(0)
+    _, d, Vt = np.linalg.svd(X - xbar, full_matrices=False)
+    s = d[:2] / np.sqrt(X.shape[0])
+    L = grille_som(q1, q2)
+    u = np.column_stack([np.linspace(-1, 1, q)[L[:, m].astype(int)] if q > 1 else
+                         np.zeros(len(L)) for m, q in enumerate((q1, q2))])
+    return xbar + (u * s) @ Vt[:2]
+
+
+def som(X, q1, q2, n_iter, R, alpha=(1.0, 0.0), rng=None, init=None,
+        voisinage="seuil", suivi=None):
+    """Carte auto-organisatrice de Kohonen, version en ligne (section 14.4).
+
+    À l'itération ``t`` on prend une observation ``x_i`` (passages successifs
+    dans un ordre aléatoire), on trouve le prototype le plus proche ``m_j`` et on
+    met à jour tous ses voisins sur la grille :
+    ``m_k <- m_k + alpha_t h(||l_j - l_k||) (x_i - m_k)`` (14.46)-(14.47).
+    Le taux ``alpha_t`` et le rayon ``r_t`` décroissent linéairement
+    (de ``alpha[0]`` à ``alpha[1]`` et de ``R`` à 1).
+
+    Parameters
+    ----------
+    voisinage : {"seuil", "gaussien"}
+        ``"seuil"`` : ``h = 1`` si ``||l_j - l_k|| < r_t`` (14.46) ; comme
+        ``r_t >= 1``, le prototype gagnant est toujours mis à jour, et en fin
+        d'apprentissage (``r_t -> 1``) il est le seul ;
+        ``"gaussien"`` : ``h = exp(-||l_j - l_k||^2 / (2 r_t^2))``.
+    suivi : int ou None
+        Si fourni, on enregistre l'erreur de reconstruction toutes les
+        ``suivi`` itérations.
+
+    Returns
+    -------
+    dict
+        ``prototypes`` (K, p), ``grille`` (K, 2), ``labels`` (N,), ``erreur``
+        (erreur de reconstruction finale) et éventuellement ``historique``.
+    """
+    rng = _rng(rng)
+    X = np.asarray(X, float)
+    N = X.shape[0]
+    L = grille_som(q1, q2)
+    dgrille = np.sqrt(distances_carrees(L))
+    M = init_som_acp(X, q1, q2) if init is None else np.array(init, float)
+    ordre = np.concatenate([rng.permutation(N) for _ in range(n_iter // N + 1)])[:n_iter]
+    hist = []
+    for t in range(n_iter):
+        frac = t / max(n_iter - 1, 1)
+        a = alpha[0] + (alpha[1] - alpha[0]) * frac
+        r = R + (1 - R) * frac
+        x = X[ordre[t]]
+        j = ((M - x) ** 2).sum(1).argmin()
+        if voisinage == "seuil":
+            h = (dgrille[j] < r - 1e-12).astype(float)
+        else:
+            h = np.exp(-dgrille[j] ** 2 / (2 * r ** 2))
+        M += a * h[:, None] * (x - M)
+        if suivi and (t % suivi == 0 or t == n_iter - 1):
+            hist.append((t, distances_carrees(X, M).min(1).sum()))
+    d = distances_carrees(X, M)
+    out = {"prototypes": M, "grille": L, "labels": d.argmin(1), "erreur": d.min(1).sum()}
+    if suivi:
+        out["historique"] = np.array(hist)
+    return out
