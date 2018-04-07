@@ -843,3 +843,28 @@ def _lisseur_local_lineaire(t, Y, t_eval, h):
     a = (S2[:, None] * T0 - S1[:, None] * T1) / det[:, None]
     b = (S0[:, None] * T1 - S1[:, None] * T0) / det[:, None]
     return a + b * t_eval[:, None]
+
+
+def projeter_sur_polyligne(X, P):
+    """Projette chaque point de ``X`` sur la ligne brisée de sommets ``P``.
+
+    Returns
+    -------
+    lam : ndarray (N,)
+        Abscisse curviligne du projeté.
+    proj : ndarray (N, p)
+        Points projetés.
+    """
+    X = np.asarray(X, float)
+    seg = np.diff(P, axis=0)
+    long = np.sqrt((seg ** 2).sum(1))
+    cum = np.concatenate([[0], np.cumsum(long)])
+    A = P[:-1]
+    # paramètre t dans [0, 1] sur chaque segment
+    t = ((X[:, None, :] - A[None]) * seg[None]).sum(2) / np.maximum(long ** 2, 1e-300)[None]
+    t = np.clip(t, 0, 1)
+    Q = A[None] + t[..., None] * seg[None]
+    d = ((X[:, None, :] - Q) ** 2).sum(2)
+    k = d.argmin(1)
+    idx = np.arange(len(X))
+    return cum[k] + t[idx, k] * long[k], Q[idx, k]
