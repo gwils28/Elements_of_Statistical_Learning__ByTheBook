@@ -868,3 +868,41 @@ def projeter_sur_polyligne(X, P):
     k = d.argmin(1)
     idx = np.arange(len(X))
     return cum[k] + t[idx, k] * long[k], Q[idx, k]
+
+
+def courbe_principale(X, h=None, n_iter=20, tol=1e-4):
+    """Courbe principale de Hastie et Stuetzle (1989), algorithme (14.62).
+
+    On part de la première composante principale puis on alterne :
+    (a) lissage de chaque coordonnée ``X_j`` en fonction de l'abscisse
+    curviligne ``lambda`` (régression locale linéaire, fenêtre ``h``) ;
+    (b) projection de chaque point sur la courbe obtenue.
+
+    Parameters
+    ----------
+    h : float ou None
+        Fenêtre du lisseur, exprimée comme une fraction de la longueur de la
+        courbe (0.1 par défaut).
+
+    Returns
+    -------
+    dict
+        ``lam`` (abscisses curvilignes des données), ``courbe`` (points de la
+        courbe aux ``lam`` triés), ``ordre``, ``distances`` (historique de la
+        somme des carrés des distances).
+    """
+    X = np.asarray(X, float)
+    pc = acp(X, 1)
+    lam = pc["scores"][:, 0] - pc["scores"][:, 0].min()
+    hist = []
+    for _ in range(n_iter):
+        ordre = np.argsort(lam)
+        ls = lam[ordre]
+        hh = (h if h is not None else 0.1) * (ls[-1] - ls[0])
+        F = _lisseur_local_lineaire(lam, X, ls, hh)
+        lam, proj = projeter_sur_polyligne(X, F)
+        hist.append(((X - proj) ** 2).sum())
+        if len(hist) > 1 and abs(hist[-2] - hist[-1]) < tol * hist[-1]:
+            break
+    ordre = np.argsort(lam)
+    return {"lam": lam, "courbe": proj[ordre], "ordre": ordre, "distances": np.array(hist)}
