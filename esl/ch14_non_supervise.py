@@ -783,3 +783,25 @@ def som_batch(X, q1, q2, n_iter, R, r_final=1.0, init=None, voisinage="seuil"):
     d = distances_carrees(X, M)
     return {"prototypes": M, "grille": L, "labels": d.argmin(1), "erreur": d.min(1).sum(),
             "historique": np.array(hist)}
+
+
+def donnees_demi_sphere(n_par_classe=30, sd=0.6, rng=None):
+    """Données simulées près d'une sphère (exercice 14.5, figures 14.15-14.18).
+
+    Trois groupes centrés près de ``(0,0,1)``, ``(1,0,0)`` et ``(0,1,0)`` ; les
+    angles sont uniformes et un bruit gaussien d'écart-type ``sd`` est ajouté à
+    chaque coordonnée. Renvoie ``(X, y)`` avec ``y`` dans {0, 1, 2}.
+    """
+    rng = _rng(rng)
+    q = np.pi / 4
+    params = [((-np.pi / 8, np.pi / 8), (0, 2 * np.pi)),
+              ((np.pi / 2 - q, np.pi / 2 + q), (-q, q)),
+              ((np.pi / 2 - q, np.pi / 2 + q), (np.pi / 2 - q, np.pi / 2 + q))]
+    X, y = [], []
+    for k, (th, ph) in enumerate(params):
+        t = rng.uniform(*th, size=n_par_classe)
+        f = rng.uniform(*ph, size=n_par_classe)
+        P = np.column_stack([np.sin(t) * np.cos(f), np.sin(t) * np.sin(f), np.cos(t)])
+        X.append(P + sd * rng.normal(size=P.shape))
+        y += [k] * n_par_classe
+    return np.vstack(X), np.array(y)
