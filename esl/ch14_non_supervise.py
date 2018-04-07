@@ -805,3 +805,41 @@ def donnees_demi_sphere(n_par_classe=30, sd=0.6, rng=None):
         X.append(P + sd * rng.normal(size=P.shape))
         y += [k] * n_par_classe
     return np.vstack(X), np.array(y)
+
+
+# ---------------------------------------------------------------------------
+# 5. ACP, courbes principales, Procrustes
+# ---------------------------------------------------------------------------
+
+def acp(X, q):
+    """ACP par décomposition en valeurs singulières (14.49)-(14.54).
+
+    Returns
+    -------
+    dict
+        ``moyenne`` (= ``mu chapeau``, 14.51), ``V`` (p, q) directions,
+        ``scores`` (N, q) = ``U_q D_q`` (= ``lambda chapeau``, 14.52),
+        ``d`` (toutes les valeurs singulières), ``reconstruction`` (N, p).
+    """
+    X = np.asarray(X, float)
+    xbar = X.mean(0)
+    U, d, Vt = np.linalg.svd(X - xbar, full_matrices=False)
+    V = Vt[:q].T
+    scores = U[:, :q] * d[:q]
+    return {"moyenne": xbar, "V": V, "scores": scores, "d": d,
+            "reconstruction": xbar + scores @ V.T}
+
+
+def _lisseur_local_lineaire(t, Y, t_eval, h):
+    """Régression locale linéaire à noyau gaussien de chaque colonne de ``Y`` sur ``t``."""
+    W = np.exp(-0.5 * ((t_eval[:, None] - t[None, :]) / h) ** 2)
+    S0 = W.sum(1)
+    S1 = W @ t
+    S2 = W @ t ** 2
+    T0 = W @ Y
+    T1 = W @ (t[:, None] * Y)
+    det = S0 * S2 - S1 ** 2
+    det = np.where(np.abs(det) < 1e-12, 1e-12, det)
+    a = (S2[:, None] * T0 - S1[:, None] * T1) / det[:, None]
+    b = (S0[:, None] * T1 - S1[:, None] * T0) / det[:, None]
+    return a + b * t_eval[:, None]
