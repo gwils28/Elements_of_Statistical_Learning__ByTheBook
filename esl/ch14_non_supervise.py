@@ -742,3 +742,44 @@ def som(X, q1, q2, n_iter, R, alpha=(1.0, 0.0), rng=None, init=None,
     if suivi:
         out["historique"] = np.array(hist)
     return out
+
+
+def som_batch(X, q1, q2, n_iter, R, r_final=1.0, init=None, voisinage="seuil"):
+    """Carte auto-organisatrice, version « batch » (éq. (14.48)).
+
+    À chaque itération, chaque observation est affectée au prototype le plus
+    proche, puis chaque prototype ``m_j`` est remplacé par la moyenne pondérée
+    ``sum_k w_k x_k / sum_k w_k`` des observations affectées à ses voisins sur la
+    grille (poids rectangulaires ``1{||l_j - l_k|| < r}`` ou gaussiens). Le rayon
+    décroît linéairement de ``R`` à ``r_final``. Avec ``r_final <= 1`` et des
+    poids rectangulaires, les dernières itérations sont exactement celles des
+    K-means.
+
+    Returns
+    -------
+    dict
+        ``prototypes``, ``grille``, ``labels``, ``erreur``, ``historique``
+        (erreur de reconstruction à chaque itération).
+    """
+    X = np.asarray(X, float)
+    L = grille_som(q1, q2)
+    dgrille = np.sqrt(distances_carrees(L))
+    M = init_som_acp(X, q1, q2) if init is None else np.array(init, float)
+    hist = []
+    for t in range(n_iter):
+        r = R + (r_final - R) * t / max(n_iter - 1, 1)
+        lab = distances_carrees(X, M).argmin(1)
+        if voisinage == "seuil":
+            H = (dgrille < r - 1e-12).astype(float)
+        else:
+            H = np.exp(-dgrille ** 2 / (2 * r ** 2))
+        A = np.zeros((len(M), len(X)))
+        A[lab, np.arange(len(X))] = 1.0      # A[k, i] = 1 si x_i est affecté à m_k
+        Wt = H @ A                           # poids de x_i pour le prototype j
+        tot = Wt.sum(1)
+        ok = tot > 0
+        M[ok] = (Wt[ok] @ X) / tot[ok, None]
+        hist.append(distances_carrees(X, M).min(1).sum())
+    d = distances_carrees(X, M)
+    return {"prototypes": M, "grille": L, "labels": d.argmin(1), "erreur": d.min(1).sum(),
+            "historique": np.array(hist)}
