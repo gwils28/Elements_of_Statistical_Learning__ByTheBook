@@ -906,3 +906,30 @@ def courbe_principale(X, h=None, n_iter=20, tol=1e-4):
             break
     ordre = np.argsort(lam)
     return {"lam": lam, "courbe": proj[ordre], "ordre": ordre, "distances": np.array(hist)}
+
+
+def procrustes(X1, X2, echelle=False):
+    """Problème de Procrustes (14.56), éventuellement avec facteur d'échelle (14.58).
+
+    Cherche ``min ||X2 - (beta X1 R + 1 mu^T)||_F`` avec ``R`` orthogonale.
+    Avec ``X1~, X2~`` centrées et ``X1~^T X2~ = U D V^T`` (SVD) :
+    ``R = U V^T``, ``beta = tr(D) / ||X1~||_F^2`` (si ``echelle``) et
+    ``mu = xbar2 - beta R^T xbar1``.
+
+    Returns
+    -------
+    dict
+        ``R``, ``beta``, ``mu``, ``ajuste`` (= ``beta X1 R + 1 mu^T``),
+        ``distance`` (norme de Frobenius du résidu).
+    """
+    X1 = np.asarray(X1, float)
+    X2 = np.asarray(X2, float)
+    m1, m2 = X1.mean(0), X2.mean(0)
+    A, B = X1 - m1, X2 - m2
+    U, d, Vt = np.linalg.svd(A.T @ B)
+    R = U @ Vt
+    beta = d.sum() / (A ** 2).sum() if echelle else 1.0
+    mu = m2 - beta * R.T @ m1
+    fit = beta * X1 @ R + mu
+    return {"R": R, "beta": beta, "mu": mu, "ajuste": fit,
+            "distance": np.sqrt(((X2 - fit) ** 2).sum())}
