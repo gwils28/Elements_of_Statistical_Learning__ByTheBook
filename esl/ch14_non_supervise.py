@@ -933,3 +933,38 @@ def procrustes(X1, X2, echelle=False):
     fit = beta * X1 @ R + mu
     return {"R": R, "beta": beta, "mu": mu, "ajuste": fit,
             "distance": np.sqrt(((X2 - fit) ** 2).sum())}
+
+
+def moyenne_procrustes(Xs, echelle=False, n_iter=100, tol=1e-12):
+    """Moyenne de Procrustes de ``L`` formes (14.59), avec échelle en option.
+
+    Les formes sont d'abord centrées. Algorithme alterné : (1) chaque forme est
+    alignée (rotation, et facteur ``beta_l`` si ``echelle``) sur la moyenne
+    courante ``M`` ; (2) ``M`` est remplacée par la moyenne des formes alignées.
+    Avec échelle, on impose ``||M||_F^2 = (1/L) sum_l ||X_l||_F^2`` pour exclure
+    la solution triviale ``beta_l = 0, M = 0`` (exercice 14.9).
+
+    Returns
+    -------
+    dict
+        ``M``, ``alignees`` (liste), ``R`` (liste), ``beta`` (array),
+        ``critere`` (historique de ``sum_l ||beta_l X_l R_l - M||_F^2``).
+    """
+    Xs = [np.asarray(X, float) - np.asarray(X, float).mean(0) for X in Xs]
+    L = len(Xs)
+    norme = np.sqrt(np.mean([(X ** 2).sum() for X in Xs]))
+    M = Xs[0].copy()
+    hist = []
+    for _ in range(n_iter):
+        res = [procrustes(X, M, echelle=echelle) for X in Xs]
+        al = [r["beta"] * X @ r["R"] for r, X in zip(res, Xs)]
+        M = np.mean(al, axis=0)
+        if echelle:
+            M *= norme / np.sqrt((M ** 2).sum())
+        hist.append(sum(((A - M) ** 2).sum() for A in al))
+        if len(hist) > 1 and hist[-2] - hist[-1] < tol * max(hist[-1], 1e-300):
+            break
+    res = [procrustes(X, M, echelle=echelle) for X in Xs]
+    al = [r["beta"] * X @ r["R"] for r, X in zip(res, Xs)]
+    return {"M": M, "alignees": al, "R": [r["R"] for r in res],
+            "beta": np.array([r["beta"] for r in res]), "critere": np.array(hist)}
