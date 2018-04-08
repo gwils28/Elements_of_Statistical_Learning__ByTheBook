@@ -968,3 +968,54 @@ def moyenne_procrustes(Xs, echelle=False, n_iter=100, tol=1e-12):
     al = [r["beta"] * X @ r["R"] for r, X in zip(res, Xs)]
     return {"M": M, "alignees": al, "R": [r["R"] for r in res],
             "beta": np.array([r["beta"] for r in res]), "critere": np.array(hist)}
+
+
+def moyenne_affine(Xs):
+    """Moyenne invariante par transformation affine (14.60), sans itération.
+
+    Avec ``H_l = X_l (X_l^T X_l)^{-1} X_l^T`` (projecteur sur l'espace des
+    colonnes de ``X_l`` centrée), ``M`` est formée des ``p`` premiers vecteurs
+    propres de ``Hbar = (1/L) sum_l H_l`` (donc ``M^T M = I``) et
+    ``A_l = (X_l^T X_l)^{-1} X_l^T M``.
+
+    Returns
+    -------
+    dict
+        ``M`` (N, p), ``A`` (liste de matrices p x p), ``alignees``
+        (``X_l A_l``), ``valeurs_propres`` de ``Hbar``.
+    """
+    Xs = [np.asarray(X, float) - np.asarray(X, float).mean(0) for X in Xs]
+    p = Xs[0].shape[1]
+    H = np.mean([X @ np.linalg.solve(X.T @ X, X.T) for X in Xs], axis=0)
+    vals, vecs = np.linalg.eigh(H)
+    ordre = np.argsort(vals)[::-1]
+    M = vecs[:, ordre[:p]]
+    A = [np.linalg.solve(X.T @ X, X.T @ M) for X in Xs]
+    return {"M": M, "A": A, "alignees": [X @ a for X, a in zip(Xs, A)],
+            "valeurs_propres": vals[ordre]}
+
+
+def forme_s(n=96, rng=None, bruit=0.0, deformation=0.0):
+    """Courbe en forme de « S » échantillonnée en ``n`` points repères.
+
+    Deux demi-cercles raccordés ; ``deformation`` ajoute une petite
+    déformation lisse aléatoire et ``bruit`` un bruit gaussien. Sert de
+    substitut aux « S » manuscrits de la figure 14.25 (données non fournies).
+    """
+    rng = _rng(rng)
+    t = np.linspace(0, 1, n)
+    u = np.clip(2 * t, 0, 1)          # parcours de l'arc supérieur
+    v = np.clip(2 * t - 1, 0, 1)      # parcours de l'arc inférieur
+    a1 = np.pi / 6 + 4 * np.pi / 3 * u
+    a2 = np.pi / 2 - 4 * np.pi / 3 * v
+    haut = t <= 0.5
+    x = np.where(haut, np.cos(a1), np.cos(a2))
+    y = np.where(haut, 1 + np.sin(a1), -1 + np.sin(a2))
+    P = np.column_stack([x, y])
+    if deformation:
+        coef = rng.normal(scale=deformation, size=(3, 2))
+        base = np.column_stack([np.sin(np.pi * t), np.sin(2 * np.pi * t), np.cos(np.pi * t)])
+        P = P + base @ coef
+    if bruit:
+        P = P + bruit * rng.normal(size=P.shape)
+    return P
