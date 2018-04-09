@@ -1019,3 +1019,9 @@ def forme_s(n=96, rng=None, bruit=0.0, deformation=0.0):
     if bruit:
         P = P + bruit * rng.normal(size=P.shape)
     return P
+
+
+def rotation2d(theta):
+    """Matrice de rotation plane d'angle ``theta`` (convention ``x -> x R``)."""
+    c, s = np.cos(theta), np.sin(theta)
+    return np.array([[c, s], [-s, c]])
