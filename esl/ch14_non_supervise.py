@@ -1025,3 +1025,15 @@ def rotation2d(theta):
     """Matrice de rotation plane d'angle ``theta`` (convention ``x -> x R``)."""
     c, s = np.cos(theta), np.sin(theta)
     return np.array([[c, s], [-s, c]])
+
+
+# ---------------------------------------------------------------------------
+# 6. Positionnement multidimensionnel
+# ---------------------------------------------------------------------------
+
+def double_centrage(D2):
+    """``B = -1/2 J D2 J`` avec ``J = I - 11^T/N`` (``D2`` : distances au carré)."""
+    D2 = np.asarray(D2, float)
+    N = D2.shape[0]
+    J = np.eye(N) - np.ones((N, N)) / N
+    return -0.5 * J @ D2 @ J
