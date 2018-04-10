@@ -1065,3 +1065,32 @@ def stress(D, Z):
     E = np.sqrt(distances_carrees(Z))
     iu = np.triu_indices(len(Z), 1)
     return ((np.asarray(D)[iu] - E[iu]) ** 2).sum()
+
+
+def mds_moindres_carres(D, k=2, n_iter=300, Z0=None, tol=1e-10):
+    """MDS par moindres carrés (Kruskal-Shephard, 14.98) via l'algorithme SMACOF.
+
+    Chaque itération applique la transformation de Guttman
+    ``Z <- (1/N) B(Z) Z`` qui majore le stress par une quadratique et fait
+    décroître (14.98) de façon monotone. Initialisation par le MDS classique.
+
+    Returns
+    -------
+    Z : ndarray (N, k)
+    historique : ndarray des valeurs du stress
+    """
+    D = np.asarray(D, float)
+    N = D.shape[0]
+    Z = mds_classique(D, k)[0] if Z0 is None else np.array(Z0, float)
+    hist = [stress(D, Z)]
+    for _ in range(n_iter):
+        E = np.sqrt(distances_carrees(Z))
+        with np.errstate(divide="ignore", invalid="ignore"):
+            Bm = np.where(E > 1e-12, -D / E, 0.0)
+        np.fill_diagonal(Bm, 0)
+        np.fill_diagonal(Bm, -Bm.sum(1))
+        Z = Bm @ Z / N
+        hist.append(stress(D, Z))
+        if hist[-2] - hist[-1] < tol * hist[-2]:
+            break
+    return Z, np.array(hist)
