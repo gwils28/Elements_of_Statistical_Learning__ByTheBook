@@ -1037,3 +1037,24 @@ def double_centrage(D2):
     N = D2.shape[0]
     J = np.eye(N) - np.ones((N, N)) / N
     return -0.5 * J @ D2 @ J
+
+
+def mds_classique(D, k=2, similarites=False):
+    """Positionnement multidimensionnel classique (échelle de Torgerson-Gower).
+
+    Si ``similarites`` est faux, ``D`` contient des dissimilarités et l'on forme
+    ``S = -1/2 J D^2 J`` ; sinon ``D`` est déjà la matrice des produits scalaires
+    centrés ``s_ii'``. La solution de (14.100) est ``Z = E_k D_k`` où ``E_k``
+    contient les ``k`` premiers vecteurs propres de ``S`` et ``D_k`` les racines
+    des valeurs propres (exercice 14.11).
+
+    Returns
+    -------
+    Z : ndarray (N, k)
+    valeurs_propres : ndarray (N,) par ordre décroissant
+    """
+    S = np.asarray(D, float) if similarites else double_centrage(np.asarray(D, float) ** 2)
+    vals, vecs = np.linalg.eigh(S)
+    ordre = np.argsort(vals)[::-1]
+    vals, vecs = vals[ordre], vecs[:, ordre]
+    return vecs[:, :k] * np.sqrt(np.maximum(vals[:k], 0)), vals
