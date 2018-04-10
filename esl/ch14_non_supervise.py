@@ -1058,3 +1058,10 @@ def mds_classique(D, k=2, similarites=False):
     ordre = np.argsort(vals)[::-1]
     vals, vecs = vals[ordre], vecs[:, ordre]
     return vecs[:, :k] * np.sqrt(np.maximum(vals[:k], 0)), vals
+
+
+def stress(D, Z):
+    """Stress de Kruskal-Shephard (14.98) : ``sum_{i<i'} (d_ii' - ||z_i - z_i'||)^2``."""
+    E = np.sqrt(distances_carrees(Z))
+    iu = np.triu_indices(len(Z), 1)
+    return ((np.asarray(D)[iu] - E[iu]) ** 2).sum()
