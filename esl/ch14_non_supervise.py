@@ -1140,3 +1140,24 @@ def laplacien(W, normalise=False):
     if normalise:
         return np.eye(len(W)) - W / g[:, None]
     return np.diag(g) - W
+
+
+def clustering_spectral(X, K, c=2.0, k_voisins=10, m=None, rng=None):
+    """Clustering spectral (section 14.5.3).
+
+    Construit le graphe des ``k`` voisins, calcule les ``m`` vecteurs propres du
+    laplacien associés aux plus petites valeurs propres (en ignorant le vecteur
+    constant) puis applique les K-means aux lignes de la matrice ``Z`` obtenue.
+
+    Returns
+    -------
+    dict
+        ``labels``, ``Z`` (N, m), ``valeurs_propres`` (toutes, croissantes),
+        ``vecteurs`` (vecteurs propres, mêmes colonnes).
+    """
+    m = K - 1 if m is None else m
+    W = matrice_adjacence(X, c, k_voisins)
+    vals, vecs = np.linalg.eigh(laplacien(W))
+    Z = vecs[:, 1:m + 1]
+    labels = kmeans(Z, K, n_init=10, rng=rng)[0]
+    return {"labels": labels, "Z": Z, "valeurs_propres": vals, "vecteurs": vecs}
