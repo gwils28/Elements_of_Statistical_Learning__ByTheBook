@@ -1094,3 +1094,18 @@ def mds_moindres_carres(D, k=2, n_iter=300, Z0=None, tol=1e-10):
         if hist[-2] - hist[-1] < tol * hist[-2]:
             break
     return Z, np.array(hist)
+
+
+# ---------------------------------------------------------------------------
+# 7. Clustering spectral et ACP à noyau
+# ---------------------------------------------------------------------------
+
+def donnees_cercles(n_par_cercle=150, rayons=(1.0, 2.8, 5.0), sd=0.25, rng=None):
+    """Trois cercles concentriques bruités (figure 14.29). Renvoie ``(X, y)``."""
+    rng = _rng(rng)
+    X, y = [], []
+    for k, r in enumerate(rayons):
+        a = rng.uniform(0, 2 * np.pi, n_par_cercle)
+        X.append(np.column_stack([r * np.cos(a), r * np.sin(a)]) + sd * rng.normal(size=(n_par_cercle, 2)))
+        y += [k] * n_par_cercle
+    return np.vstack(X), np.array(y)
