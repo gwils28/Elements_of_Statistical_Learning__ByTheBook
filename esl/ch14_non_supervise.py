@@ -1131,3 +1131,12 @@ def matrice_adjacence(X, c, k_voisins=None):
     A[np.repeat(np.arange(N), k_voisins), voisins.ravel()] = True
     A = A | A.T
     return np.where(A, S, 0.0)
+
+
+def laplacien(W, normalise=False):
+    """Laplacien de graphe ``L = G - W`` (14.63), ou ``I - G^{-1} W`` si ``normalise``."""
+    W = np.asarray(W, float)
+    g = W.sum(1)
+    if normalise:
+        return np.eye(len(W)) - W / g[:, None]
+    return np.diag(g) - W
