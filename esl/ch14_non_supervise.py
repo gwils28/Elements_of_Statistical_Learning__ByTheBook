@@ -1109,3 +1109,25 @@ def donnees_cercles(n_par_cercle=150, rayons=(1.0, 2.8, 5.0), sd=0.25, rng=None)
         X.append(np.column_stack([r * np.cos(a), r * np.sin(a)]) + sd * rng.normal(size=(n_par_cercle, 2)))
         y += [k] * n_par_cercle
     return np.vstack(X), np.array(y)
+
+
+def matrice_adjacence(X, c, k_voisins=None):
+    """Matrice des poids ``W`` d'un graphe de similarité (section 14.5.3).
+
+    ``s_ii' = exp(-||x_i - x_i'||^2 / c)`` ; si ``k_voisins`` est donné, on ne
+    garde que les paires ``(i, i')`` où l'un des deux points est parmi les
+    ``k`` plus proches voisins de l'autre (graphe des ``k`` voisins symétrisé).
+    """
+    D2 = distances_carrees(X)
+    S = np.exp(-D2 / c)
+    np.fill_diagonal(S, 0)
+    if k_voisins is None:
+        return S
+    N = len(X)
+    D2b = D2.copy()
+    np.fill_diagonal(D2b, np.inf)
+    voisins = np.argsort(D2b, axis=1)[:, :k_voisins]
+    A = np.zeros((N, N), bool)
+    A[np.repeat(np.arange(N), k_voisins), voisins.ravel()] = True
+    A = A | A.T
+    return np.where(A, S, 0.0)
