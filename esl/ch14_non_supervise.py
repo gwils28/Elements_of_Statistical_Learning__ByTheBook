@@ -1236,3 +1236,41 @@ def procrustes_reduit(Mat):
     """
     U, _, Qt = np.linalg.svd(np.asarray(Mat, float), full_matrices=False)
     return U @ Qt
+
+
+def acp_parcimonieuse(X, K, lam2, lam1, n_iter=100, tol=1e-8):
+    """ACP parcimonieuse de Zou, Hastie et Tibshirani (2006), critère (14.71).
+
+    Alterne : (i) à ``Theta`` fixé, ``K`` problèmes elastic net de réponses
+    ``X theta_k`` ; (ii) à ``V`` fixé, ``Theta = U Q^T`` avec
+    ``X^T X V = U D Q^T`` (exercice 14.12). Les colonnes de ``X`` sont centrées.
+
+    Parameters
+    ----------
+    lam1 : float ou array de taille K
+
+    Returns
+    -------
+    dict
+        ``V`` (p, K) non normalisée, ``directions`` (colonnes de ``V`` normées),
+        ``Theta``, ``critere`` (historique).
+    """
+    X = np.asarray(X, float)
+    X = X - X.mean(0)
+    lam1 = np.broadcast_to(np.asarray(lam1, float), (K,))
+    _, _, Vt = np.linalg.svd(X, full_matrices=False)
+    Theta = Vt[:K].T.copy()
+    V = Theta.copy()
+    hist = []
+    for _ in range(n_iter):
+        V = np.column_stack([elastic_net(X, X @ Theta[:, k], lam2, lam1[k], beta0=V[:, k])
+                             for k in range(K)])
+        Theta = procrustes_reduit(X.T @ (X @ V))
+        crit = ((X - X @ V @ Theta.T) ** 2).sum() + lam2 * (V ** 2).sum() + \
+            (lam1 * np.abs(V).sum(0)).sum()
+        hist.append(crit)
+        if len(hist) > 1 and abs(hist[-2] - hist[-1]) < tol * hist[-1]:
+            break
+    nrm = np.sqrt((V ** 2).sum(0))
+    return {"V": V, "directions": V / np.where(nrm > 0, nrm, 1), "Theta": Theta,
+            "critere": np.array(hist)}
