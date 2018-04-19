@@ -1303,3 +1303,20 @@ def nmf(X, r, n_iter=500, rng=None, W0=None, H0=None, eps=1e-12):
         WH = W @ H + eps
         hist.append((X * np.log(WH) - WH).sum())
     return W, H, np.array(hist)
+
+
+def blanchir(X):
+    """Centre et blanchit ``X`` (covariance empirique identité) via la SVD.
+
+    Returns
+    -------
+    Xb : ndarray (N, p)
+    T : ndarray (p, p)
+        Matrice de blanchiment : ``Xb = (X - moyenne) T``.
+    """
+    X = np.asarray(X, float)
+    Xc = X - X.mean(0)
+    N = len(X)
+    _, d, Vt = np.linalg.svd(Xc, full_matrices=False)
+    T = Vt.T / d * np.sqrt(N)
+    return Xc @ T, T
