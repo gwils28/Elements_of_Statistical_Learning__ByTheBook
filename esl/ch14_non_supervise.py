@@ -1161,3 +1161,8 @@ def clustering_spectral(X, K, c=2.0, k_voisins=10, m=None, rng=None):
     Z = vecs[:, 1:m + 1]
     labels = kmeans(Z, K, n_init=10, rng=rng)[0]
     return {"labels": labels, "Z": Z, "valeurs_propres": vals, "vecteurs": vecs}
+
+
+def noyau_gaussien(X, Y=None, c=1.0):
+    """Noyau radial ``K(x, x') = exp(-||x - x'||^2 / c)`` (14.67)."""
+    return np.exp(-distances_carrees(X, Y) / c)
