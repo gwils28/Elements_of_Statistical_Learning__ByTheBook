@@ -1274,3 +1274,32 @@ def acp_parcimonieuse(X, K, lam2, lam1, n_iter=100, tol=1e-8):
     nrm = np.sqrt((V ** 2).sum(0))
     return {"V": V, "directions": V / np.where(nrm > 0, nrm, 1), "Theta": Theta,
             "critere": np.array(hist)}
+
+
+def nmf(X, r, n_iter=500, rng=None, W0=None, H0=None, eps=1e-12):
+    """Factorisation en matrices positives ``X ≈ W H`` (Lee et Seung), (14.72)-(14.74).
+
+    Maximise la log-vraisemblance de Poisson
+    ``L(W, H) = sum_ij [x_ij log (WH)_ij - (WH)_ij]`` (14.73) par les mises à
+    jour multiplicatives (14.74).
+
+    Returns
+    -------
+    W : ndarray (N, r)
+    H : ndarray (r, p)
+    historique : ndarray des valeurs de ``L``
+    """
+    rng = _rng(rng)
+    X = np.asarray(X, float)
+    N, p = X.shape
+    W = rng.uniform(0.1, 1, (N, r)) if W0 is None else np.array(W0, float)
+    H = rng.uniform(0.1, 1, (r, p)) if H0 is None else np.array(H0, float)
+    hist = []
+    for _ in range(n_iter):
+        WH = W @ H + eps
+        W *= ((X / WH) @ H.T) / H.sum(1)[None, :]
+        WH = W @ H + eps
+        H *= (W.T @ (X / WH)) / W.sum(0)[:, None]
+        WH = W @ H + eps
+        hist.append((X * np.log(WH) - WH).sum())
+    return W, H, np.array(hist)
