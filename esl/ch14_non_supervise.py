@@ -1166,3 +1166,28 @@ def clustering_spectral(X, K, c=2.0, k_voisins=10, m=None, rng=None):
 def noyau_gaussien(X, Y=None, c=1.0):
     """Noyau radial ``K(x, x') = exp(-||x - x'||^2 / c)`` (14.67)."""
     return np.exp(-distances_carrees(X, Y) / c)
+
+
+def acp_noyau(K, m=2):
+    """ACP à noyau (section 14.5.4) à partir d'une matrice de Gram ``K``.
+
+    On double-centre : ``K~ = (I - M) K (I - M) = U D^2 U^T`` (14.65), puis
+    ``Z = U D``. Les coefficients ``alpha_jm = u_jm / d_m`` permettent d'écrire
+    ``z_im = sum_j alpha_jm K~(x_i, x_j)`` (exercice 14.16).
+
+    Returns
+    -------
+    dict
+        ``Z`` (N, m), ``alpha`` (N, m), ``valeurs_propres`` (= ``d^2`` triées).
+    """
+    K = np.asarray(K, float)
+    N = K.shape[0]
+    J = np.eye(N) - np.ones((N, N)) / N
+    Kc = J @ K @ J
+    vals, vecs = np.linalg.eigh(Kc)
+    ordre = np.argsort(vals)[::-1]
+    vals, vecs = vals[ordre], vecs[:, ordre]
+    d = np.sqrt(np.maximum(vals[:m], 0))
+    with np.errstate(divide="ignore"):
+        alpha = np.where(d > 1e-12, vecs[:, :m] / np.where(d > 0, d, 1), 0.0)
+    return {"Z": vecs[:, :m] * d, "alpha": alpha, "valeurs_propres": vals}
