@@ -1200,3 +1200,39 @@ def acp_noyau(K, m=2):
 def seuillage_doux(z, gamma):
     """Opérateur de seuillage doux ``sign(z) (|z| - gamma)_+``."""
     return np.sign(z) * np.maximum(np.abs(z) - gamma, 0)
+
+
+def elastic_net(X, y, lam2, lam1, n_iter=500, tol=1e-10, beta0=None):
+    """Minimise ``||y - X b||^2 + lam2 ||b||^2 + lam1 ||b||_1`` par descente par coordonnées.
+
+    La mise à jour de la coordonnée ``j`` est
+    ``b_j = S(x_j^T r_j, lam1/2) / (||x_j||^2 + lam2)`` où ``r_j`` est le
+    résidu partiel (sans la contribution de ``b_j``).
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    p = X.shape[1]
+    b = np.zeros(p) if beta0 is None else np.array(beta0, float)
+    nrm = (X ** 2).sum(0)
+    r = y - X @ b
+    for _ in range(n_iter):
+        ecart = 0.0
+        for j in range(p):
+            ancien = b[j]
+            rho = X[:, j] @ r + nrm[j] * ancien
+            b[j] = seuillage_doux(rho, lam1 / 2) / (nrm[j] + lam2)
+            if b[j] != ancien:
+                r -= X[:, j] * (b[j] - ancien)
+                ecart = max(ecart, abs(b[j] - ancien))
+        if ecart < tol:
+            break
+    return b
+
+
+def procrustes_reduit(Mat):
+    """Solution de ``max tr(Theta^T M)`` sous ``Theta^T Theta = I`` (14.116).
+
+    Si ``M = U D Q^T`` (SVD réduite), ``Theta = U Q^T``.
+    """
+    U, _, Qt = np.linalg.svd(np.asarray(Mat, float), full_matrices=False)
+    return U @ Qt
