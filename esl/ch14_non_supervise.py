@@ -1191,3 +1191,12 @@ def acp_noyau(K, m=2):
     with np.errstate(divide="ignore"):
         alpha = np.where(d > 1e-12, vecs[:, :m] / np.where(d > 0, d, 1), 0.0)
     return {"Z": vecs[:, :m] * d, "alpha": alpha, "valeurs_propres": vals}
+
+
+# ---------------------------------------------------------------------------
+# 8. ACP parcimonieuse, NMF, ACI
+# ---------------------------------------------------------------------------
+
+def seuillage_doux(z, gamma):
+    """Opérateur de seuillage doux ``sign(z) (|z| - gamma)_+``."""
+    return np.sign(z) * np.maximum(np.abs(z) - gamma, 0)
