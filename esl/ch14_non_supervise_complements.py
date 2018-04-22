@@ -125,3 +125,63 @@ def principal_curve(X, n_iter=10, bandwidth_frac=0.08, n_grid=200):
     grid = np.concatenate([[0.0], np.cumsum(seg)])
     return {"lam": lam, "curve": F, "grid": grid, "d2": d2,
             "history": np.array(history)}
+
+
+# ---------------------------------------------------------------------------
+# Cartes auto-organisatrices (SOM) - exercice 14.13
+# ---------------------------------------------------------------------------
+
+def som_fit(X, grid_shape, n_epochs=30, alpha=(1.0, 0.0), radius=None,
+            random_state=0):
+    """Carte auto-organisatrice « en ligne » (mise à jour (14.46) du livre).
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+        Données.
+    grid_shape : tuple
+        ``(q1,)`` pour une chaîne de prototypes, ``(q1, q2)`` pour une grille.
+    n_epochs : int
+        Nombre de passages sur les données (une itération par observation).
+    alpha : tuple
+        Taux d'apprentissage initial et final (décroissance linéaire).
+    radius : tuple ou None
+        Rayon de voisinage initial et final (décroissance linéaire) ; par
+        défaut ``(max(grid_shape)/2, 1)``.
+    random_state : int
+        Graine.
+
+    Returns
+    -------
+    M : ndarray (K, p)
+        Prototypes.
+    coords : ndarray (K, d)
+        Coordonnées entières des prototypes sur la grille.
+    """
+    rng = np.random.RandomState(random_state)
+    X = np.asarray(X, float)
+    coords = np.array(np.meshgrid(*[np.arange(q) for q in grid_shape],
+                                  indexing="ij")).reshape(len(grid_shape), -1).T
+    coords = coords.astype(float)
+    if radius is None:
+        radius = (max(grid_shape) / 2.0, 1.0)
+    # initialisation sur le plan (ou la droite) des composantes principales
+    mu = X.mean(0)
+    U, d, Vt = np.linalg.svd(X - mu, full_matrices=False)
+    sd = d / np.sqrt(len(X))
+    M = mu.copy()[None, :].repeat(len(coords), 0)
+    for a in range(len(grid_shape)):
+        c = coords[:, a] / max(grid_shape[a] - 1, 1) * 2 - 1     # dans [-1, 1]
+        M = M + 2 * sd[a] * c[:, None] * Vt[a]
+    n_total = n_epochs * len(X)
+    step = 0
+    for _ in range(n_epochs):
+        for i in rng.permutation(len(X)):
+            frac = step / max(n_total - 1, 1)
+            a_t = alpha[0] + (alpha[1] - alpha[0]) * frac
+            r_t = radius[0] + (radius[1] - radius[0]) * frac
+            j = ((M - X[i]) ** 2).sum(1).argmin()
+            nb = np.sqrt(((coords - coords[j]) ** 2).sum(1)) <= r_t
+            M[nb] += a_t * (X[i] - M[nb])
+            step += 1
+    return M, coords
