@@ -1320,3 +1320,37 @@ def blanchir(X):
     _, d, Vt = np.linalg.svd(Xc, full_matrices=False)
     T = Vt.T / d * np.sqrt(N)
     return Xc @ T, T
+
+
+def fastica(X, n_iter=200, rng=None, tol=1e-10):
+    """ACI par l'algorithme du point fixe (FastICA symétrique), éq. (14.96).
+
+    Les données sont blanchies ; avec ``G(u) = log cosh(u)`` (``g = tanh``), on
+    itère pour chaque direction ``a_j <- E[X g(a_j^T X)] - E[g'(a_j^T X)] a_j``
+    puis on ré-orthogonalise ``A <- A (A^T A)^{-1/2}``.
+
+    Returns
+    -------
+    S : ndarray (N, p)
+        Composantes indépendantes estimées (variance 1).
+    A : ndarray (p, p)
+        Matrice orthogonale telle que ``S = Xb A`` (``Xb`` données blanchies).
+    T : ndarray (p, p)
+        Matrice de blanchiment.
+    """
+    rng = _rng(rng)
+    Xb, T = blanchir(X)
+    N, p = Xb.shape
+    A = np.linalg.qr(rng.normal(size=(p, p)))[0]
+    for _ in range(n_iter):
+        Y = Xb @ A
+        g = np.tanh(Y)
+        gp = 1 - g ** 2
+        A_new = Xb.T @ g / N - A * gp.mean(0)
+        U, _, Vt = np.linalg.svd(A_new)
+        A_new = U @ Vt
+        ecart = 1 - np.min(np.abs((A_new * A).sum(0)))
+        A = A_new
+        if ecart < tol:
+            break
+    return Xb @ A, A, T
