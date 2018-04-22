@@ -78,3 +78,50 @@ def project_on_polyline(X, F):
     idx = np.arange(len(X))
     lam = cum[k] + u[idx, k] * np.sqrt(seg_len2[k])
     return lam, d2[idx, k]
+
+
+def principal_curve(X, n_iter=10, bandwidth_frac=0.08, n_grid=200):
+    """Courbe principale par l'algorithme alterné (14.62) du livre.
+
+    On part de la première composante principale, puis on alterne :
+    (a) lissage de chaque coordonnée :math:`X_j` en fonction de
+    l'abscisse curviligne :math:`\\hat\\lambda` (espérance conditionnelle) ;
+    (b) projection de chaque point sur la courbe obtenue.
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+        Données.
+    n_iter : int
+        Nombre d'itérations (a)-(b).
+    bandwidth_frac : float
+        Largeur du noyau en fraction de la longueur totale de la courbe.
+    n_grid : int
+        Nombre de sommets utilisés pour représenter la courbe.
+
+    Returns
+    -------
+    dict
+        ``lam`` (abscisses des points), ``curve`` (sommets, (n_grid, p)),
+        ``grid`` (abscisses des sommets), ``d2`` (distances au carré),
+        ``history`` (somme des distances au carré à chaque itération).
+    """
+    X = np.asarray(X, float)
+    mu = X.mean(0)
+    _, _, Vt = np.linalg.svd(X - mu, full_matrices=False)
+    lam = (X - mu) @ Vt[0]
+    lam = lam - lam.min()
+    history = []
+    for _ in range(n_iter):
+        grid = np.linspace(lam.min(), lam.max(), n_grid)
+        h = bandwidth_frac * (lam.max() - lam.min())
+        F = kernel_smoother(lam, X, grid, h)          # étape (a)
+        lam, d2 = project_on_polyline(X, F)            # étape (b)
+        history.append(d2.sum())
+    grid = np.linspace(lam.min(), lam.max(), n_grid)
+    F = kernel_smoother(lam, X, grid, bandwidth_frac * (lam.max() - lam.min()))
+    lam, d2 = project_on_polyline(X, F)
+    seg = np.sqrt((np.diff(F, axis=0) ** 2).sum(1))
+    grid = np.concatenate([[0.0], np.cumsum(seg)])
+    return {"lam": lam, "curve": F, "grid": grid, "d2": d2,
+            "history": np.array(history)}
