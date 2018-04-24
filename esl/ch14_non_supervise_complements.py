@@ -185,3 +185,65 @@ def som_fit(X, grid_shape, n_epochs=30, alpha=(1.0, 0.0), radius=None,
             M[nb] += a_t * (X[i] - M[nb])
             step += 1
     return M, coords
+
+
+# ---------------------------------------------------------------------------
+# Analyse factorielle - exercices 14.14 et 14.15
+# ---------------------------------------------------------------------------
+
+def factor_analysis_em(X, q, n_iter=500, tol=1e-10, psi_min=1e-8,
+                       random_state=0):
+    """Analyse factorielle gaussienne par l'algorithme EM.
+
+    Modèle : :math:`X = \\mu + A S + \\varepsilon`, :math:`S\\sim N(0, I_q)`,
+    :math:`\\varepsilon \\sim N(0, D_\\varepsilon)` avec
+    :math:`D_\\varepsilon` diagonale, de sorte que
+    :math:`\\Sigma = AA^T + D_\\varepsilon` (éq. (14.81)).
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+        Données.
+    q : int
+        Nombre de facteurs.
+    n_iter : int
+        Nombre maximal d'itérations.
+    tol : float
+        Arrêt quand la log-vraisemblance progresse de moins de ``tol``.
+    psi_min : float
+        Plancher pour les variances spécifiques.
+    random_state : int
+        Graine de l'initialisation.
+
+    Returns
+    -------
+    A : ndarray (p, q)
+        Matrice des saturations (loadings).
+    psi : ndarray (p,)
+        Variances spécifiques (diagonale de :math:`D_\\varepsilon`).
+    loglik : ndarray
+        Log-vraisemblance (moyenne par observation) au fil des itérations.
+    """
+    rng = np.random.RandomState(random_state)
+    X = np.asarray(X, float)
+    N, p = X.shape
+    Xc = X - X.mean(0)
+    S = Xc.T @ Xc / N
+    A = rng.randn(p, q) * np.sqrt(np.diag(S))[:, None] * 0.5
+    psi = np.diag(S).copy()
+    hist = []
+    for _ in range(n_iter):
+        Sigma = A @ A.T + np.diag(psi)
+        sign, logdet = np.linalg.slogdet(Sigma)
+        Si = np.linalg.inv(Sigma)
+        ll = -0.5 * (p * np.log(2 * np.pi) + logdet + np.trace(Si @ S))
+        hist.append(ll)
+        if len(hist) > 1 and abs(hist[-1] - hist[-2]) < tol:
+            break
+        # étape E : moments de S | X
+        B = A.T @ Si                         # (q, p) : E[S|x] = B x
+        Ess = np.eye(q) - B @ A + B @ S @ B.T
+        # étape M
+        A = S @ B.T @ np.linalg.inv(Ess)
+        psi = np.maximum(np.diag(S - A @ B @ S), psi_min)
+    return A, psi, np.array(hist)
