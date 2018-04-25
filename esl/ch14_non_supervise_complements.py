@@ -247,3 +247,26 @@ def factor_analysis_em(X, q, n_iter=500, tol=1e-10, psi_min=1e-8,
         A = S @ B.T @ np.linalg.inv(Ess)
         psi = np.maximum(np.diag(S - A @ B @ S), psi_min)
     return A, psi, np.array(hist)
+
+
+def factor_loglik(S, A, psi):
+    """Log-vraisemblance gaussienne moyenne pour :math:`\\Sigma = AA^T + \\mathrm{diag}(\\psi)`.
+
+    ``S`` est la covariance empirique (divisée par N).
+    """
+    p = len(S)
+    Sigma = A @ A.T + np.diag(psi)
+    logdet = np.linalg.slogdet(Sigma)[1]
+    return -0.5 * (p * np.log(2 * np.pi) + logdet + np.trace(np.linalg.solve(Sigma, S)))
+
+
+def loadings_given_psi(S, psi, q):
+    """Saturations optimales à :math:`\\psi` fixé (solution de Lawley–Jöreskog).
+
+    Si :math:`\\Psi^{-1/2}S\\Psi^{-1/2} = U\\Lambda U^T`, alors
+    :math:`\\hat A = \\Psi^{1/2}U_q(\\Lambda_q - I)_+^{1/2}`.
+    """
+    r = 1.0 / np.sqrt(psi)
+    ev, U = np.linalg.eigh(S * r[:, None] * r[None, :])
+    ev, U = ev[::-1][:q], U[:, ::-1][:, :q]
+    return (np.sqrt(psi)[:, None] * U) * np.sqrt(np.maximum(ev - 1.0, 0.0))
