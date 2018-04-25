@@ -307,3 +307,22 @@ def factor_analysis_ml(X, q, n_starts=5, psi_min_frac=1e-8, random_state=0):
             best = res
     psi = np.exp(best.x)
     return loadings_given_psi(S, psi, q), psi, -best.fun
+
+
+def standardize_factor_model(A, psi):
+    """Décomposition équivalente pour la matrice de corrélation (ex. 14.14).
+
+    Si :math:`\\Sigma = AA^T + D_\\varepsilon` et
+    :math:`\\Delta = \\mathrm{diag}(\\Sigma)^{-1/2}`, alors
+    :math:`\\Delta\\Sigma\\Delta = (\\Delta A)(\\Delta A)^T + \\Delta D_\\varepsilon\\Delta`.
+
+    Returns
+    -------
+    A_std : ndarray (p, q)
+        Saturations redimensionnées :math:`\\Delta A`.
+    psi_std : ndarray (p,)
+        Variances spécifiques redimensionnées (« unicités »).
+    """
+    sigma2 = (A ** 2).sum(1) + psi
+    delta = 1.0 / np.sqrt(sigma2)
+    return A * delta[:, None], psi * delta ** 2
