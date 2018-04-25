@@ -326,3 +326,13 @@ def standardize_factor_model(A, psi):
     sigma2 = (A ** 2).sum(1) + psi
     delta = 1.0 / np.sqrt(sigma2)
     return A * delta[:, None], psi * delta ** 2
+
+
+# ---------------------------------------------------------------------------
+# ACP à noyau - exercices 14.16 et 14.17
+# ---------------------------------------------------------------------------
+
+def rbf_kernel(X, Y, c):
+    """Noyau radial :math:`K(x, x') = \\exp(-\\|x-x'\\|^2/c)` (éq. (14.67))."""
+    d2 = ((X[:, None, :] - Y[None, :, :]) ** 2).sum(2)
+    return np.exp(-d2 / c)
