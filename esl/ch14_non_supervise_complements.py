@@ -270,3 +270,40 @@ def loadings_given_psi(S, psi, q):
     ev, U = np.linalg.eigh(S * r[:, None] * r[None, :])
     ev, U = ev[::-1][:q], U[:, ::-1][:, :q]
     return (np.sqrt(psi)[:, None] * U) * np.sqrt(np.maximum(ev - 1.0, 0.0))
+
+
+def factor_analysis_ml(X, q, n_starts=5, psi_min_frac=1e-8, random_state=0):
+    """Analyse factorielle par maximum de vraisemblance « profilée ».
+
+    Pour :math:`\\psi` fixé, les saturations optimales sont explicites
+    (:func:`loadings_given_psi`) ; on maximise ensuite la vraisemblance en
+    :math:`\\log\\psi` (L-BFGS-B, plusieurs départs). Plus fiable que l'EM
+    lorsque certaines variances spécifiques tendent vers 0 (cas de Heywood).
+
+    Returns
+    -------
+    A : ndarray (p, q)
+    psi : ndarray (p,)
+    loglik : float
+    """
+    from scipy.optimize import minimize
+    rng = np.random.RandomState(random_state)
+    X = np.asarray(X, float)
+    Xc = X - X.mean(0)
+    S = Xc.T @ Xc / len(X)
+    v = np.diag(S)
+    lo = np.log(psi_min_frac * v)
+
+    def nll(t):
+        psi = np.exp(t)
+        return -factor_loglik(S, loadings_given_psi(S, psi, q), psi)
+
+    best = None
+    for k in range(n_starts):
+        t0 = np.log(v * (0.5 if k == 0 else rng.uniform(0.05, 1.0, len(v))))
+        res = minimize(nll, t0, method="L-BFGS-B",
+                       bounds=[(l, np.log(vi)) for l, vi in zip(lo, v)])
+        if best is None or res.fun < best.fun:
+            best = res
+    psi = np.exp(best.x)
+    return loadings_given_psi(S, psi, q), psi, -best.fun
