@@ -336,3 +336,28 @@ def rbf_kernel(X, Y, c):
     """Noyau radial :math:`K(x, x') = \\exp(-\\|x-x'\\|^2/c)` (éq. (14.67))."""
     d2 = ((X[:, None, :] - Y[None, :, :]) ** 2).sum(2)
     return np.exp(-d2 / c)
+
+
+def center_gram(K):
+    """Double centrage :math:`(I-M)K(I-M)` avec :math:`M = 11^T/N` (éq. (14.65))."""
+    return K - K.mean(0)[None, :] - K.mean(1)[:, None] + K.mean()
+
+
+def kernel_pca(K, tol=1e-10):
+    """ACP à noyau à partir d'une matrice de Gram ``K`` (non centrée).
+
+    Returns
+    -------
+    dict
+        ``U`` (vecteurs propres de :math:`\\tilde K` associés aux valeurs
+        propres non nulles), ``d`` (les :math:`d_m`, racines des valeurs
+        propres), ``Z = U D`` (composantes), ``alpha = U D^{-1}``.
+    """
+    Kt = center_gram(K)
+    ev, U = np.linalg.eigh(Kt)
+    order = np.argsort(ev)[::-1]
+    ev, U = ev[order], U[:, order]
+    keep = ev > tol * max(ev[0], 1.0)
+    d = np.sqrt(ev[keep])
+    U = U[:, keep]
+    return {"U": U, "d": d, "Z": U * d, "alpha": U / d, "K": K}
