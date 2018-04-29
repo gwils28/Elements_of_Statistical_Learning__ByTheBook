@@ -361,3 +361,18 @@ def kernel_pca(K, tol=1e-10):
     d = np.sqrt(ev[keep])
     U = U[:, keep]
     return {"U": U, "d": d, "Z": U * d, "alpha": U / d, "K": K}
+
+
+def kernel_pca_transform(model, K_new):
+    """Projette de nouvelles observations : :math:`z_{0m} = \\sum_j \\alpha_{jm}\\tilde K(x_0, x_j)`.
+
+    Parameters
+    ----------
+    model : dict
+        Sortie de :func:`kernel_pca`.
+    K_new : ndarray (n0, N)
+        :math:`K(x_0, x_j)` pour les nouvelles observations.
+    """
+    K = model["K"]
+    Kc = (K_new - K_new.mean(1)[:, None] - K.mean(0)[None, :] + K.mean())
+    return Kc @ model["alpha"]
