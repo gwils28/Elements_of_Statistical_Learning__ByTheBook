@@ -376,3 +376,67 @@ def kernel_pca_transform(model, K_new):
     K = model["K"]
     Kc = (K_new - K_new.mean(1)[:, None] - K.mean(0)[None, :] + K.mean())
     return Kc @ model["alpha"]
+
+
+# ---------------------------------------------------------------------------
+# Densités gaussiennes inclinées pénalisées - exercice 14.18
+# ---------------------------------------------------------------------------
+
+def difference_matrix(L, order):
+    """Matrice des différences finies d'ordre ``order`` (taille (L-order, L))."""
+    D = sparse.eye(L, format="csr")
+    for _ in range(order):
+        D = D[1:] - D[:-1]
+    return D
+
+
+def tilted_gaussian_fit(s, lam=1.0, order=3, L=150, center_penalty=False,
+                        n_iter=100):
+    """Estimation pénalisée :math:`f = \\varphi e^{g}` (forme discrétisée (14.94)).
+
+    On discrétise l'axe en ``L`` cases de largeur :math:`\\Delta`, on compte
+    les :math:`y^*_\\ell` (proportions d'observations par case) et on maximise
+    par la méthode de Newton
+
+    .. math:: \\sum_\\ell y^*_\\ell [\\log\\varphi(s^*_\\ell) + g_\\ell]
+              - \\Delta\\sum_\\ell \\varphi(s^*_\\ell)e^{g_\\ell}
+              - \\lambda\\, g^T P g,
+
+    avec :math:`P = D_k^T D_k` (différences d'ordre ``order`` : version
+    discrète de :math:`\\int (g^{(k)})^2`, à un facteur d'échelle près absorbé
+    dans :math:`\\lambda`). Si ``center_penalty`` est vrai, on pénalise
+    seulement l'écart des différences à leur moyenne
+    (:math:`P = D_k^T(I - 11^T/n)D_k`), ce qui ajoute les quadratiques au
+    noyau de la pénalité lorsque ``order=2``.
+
+    Returns
+    -------
+    dict
+        ``grid`` (centres des cases), ``delta``, ``y`` (proportions),
+        ``g`` (fonction estimée), ``f`` (densité estimée sur la grille),
+        ``grad`` (norme infinie du gradient final).
+    """
+    s = np.asarray(s, float)
+    lo, hi = s.min() - 1.0, s.max() + 1.0
+    edges = np.linspace(lo, hi, L + 1)
+    grid = 0.5 * (edges[1:] + edges[:-1])
+    delta = edges[1] - edges[0]
+    y = np.histogram(s, edges)[0] / len(s)
+    logphi = -0.5 * grid ** 2 - 0.5 * np.log(2 * np.pi)
+    D = difference_matrix(L, order).toarray()
+    if center_penalty:
+        D = D - D.mean(0)[None, :]
+    P = D.T @ D
+    g = np.zeros(L)
+    for _ in range(n_iter):
+        mu = delta * np.exp(logphi + g)
+        grad = y - mu - 2 * lam * (P @ g)
+        step = np.linalg.solve(np.diag(mu) + 2 * lam * P, grad)
+        g = g + step
+        if np.max(np.abs(step)) < 1e-13:
+            break
+    mu = delta * np.exp(logphi + g)
+    grad = y - mu - 2 * lam * (P @ g)
+    f = np.exp(logphi + g)
+    return {"grid": grid, "delta": delta, "y": y, "g": g, "f": f,
+            "grad": np.max(np.abs(grad))}
