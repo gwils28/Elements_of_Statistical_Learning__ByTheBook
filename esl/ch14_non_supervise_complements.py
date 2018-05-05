@@ -450,3 +450,9 @@ def gaussian_loglik_term(A, X):
     """:math:`\\sum_j\\sum_i \\log\\varphi(a_j^T x_i)` (premier terme de (14.92))."""
     S = X @ A
     return (-0.5 * S ** 2 - 0.5 * np.log(2 * np.pi)).sum()
+
+
+def random_orthogonal(p, rng):
+    """Matrice orthogonale aléatoire (QR d'une matrice gaussienne)."""
+    Q, R = np.linalg.qr(rng.randn(p, p))
+    return Q * np.sign(np.diag(R))
