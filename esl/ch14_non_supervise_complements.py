@@ -501,3 +501,29 @@ def fastica_one_unit(X, a0, n_iter=200, tol=1e-12, a=1.0):
         if hist[-1] < tol:
             break
     return w, hist
+
+
+def fastica_symmetric(X, p_comp=None, n_iter=200, random_state=0, a=1.0):
+    """FastICA « symétrique » : point fixe (14.96) puis :math:`A\\leftarrow UV^T`.
+
+    Returns
+    -------
+    A : ndarray (p, p_comp)
+        Colonnes = directions :math:`a_j` (orthonormées).
+    """
+    rng = np.random.RandomState(random_state)
+    p = X.shape[1]
+    p_comp = p if p_comp is None else p_comp
+    A = np.linalg.qr(rng.randn(p, p_comp))[0]
+    for _ in range(n_iter):
+        U = X @ A
+        g1 = np.tanh(a * U)
+        g2 = a * (1 - g1 ** 2)
+        A_new = X.T @ g1 / len(X) - A * g2.mean(0)
+        Uu, _, Vt = np.linalg.svd(A_new, full_matrices=False)
+        A_new = Uu @ Vt
+        if np.max(1 - np.abs(np.sum(A_new * A, 0))) < 1e-12:
+            A = A_new
+            break
+        A = A_new
+    return A
