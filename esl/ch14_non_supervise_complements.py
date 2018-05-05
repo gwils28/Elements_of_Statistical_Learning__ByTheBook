@@ -456,3 +456,48 @@ def random_orthogonal(p, rng):
     """Matrice orthogonale aléatoire (QR d'une matrice gaussienne)."""
     Q, R = np.linalg.qr(rng.randn(p, p))
     return Q * np.sign(np.diag(R))
+
+
+def whiten(X):
+    """Centre et blanchit ``X`` (covariance empirique identité).
+
+    Returns
+    -------
+    Z : ndarray (N, p)
+        Données blanchies.
+    W : ndarray (p, p)
+        Matrice de blanchiment (``Z = (X - mean) @ W``).
+    """
+    Xc = X - X.mean(0)
+    C = Xc.T @ Xc / len(X)
+    ev, V = np.linalg.eigh(C)
+    W = V @ np.diag(ev ** -0.5) @ V.T
+    return Xc @ W, W
+
+
+def fastica_one_unit(X, a0, n_iter=200, tol=1e-12, a=1.0):
+    """Point fixe (14.96) pour une direction, contraste :math:`G(u)=\\frac1a\\log\\cosh(au)`.
+
+    :math:`a \\leftarrow E\\{X g'(a^TX)\\} - E\\{g''(a^TX)\\}a`, puis
+    normalisation. ``X`` doit être blanchi.
+
+    Returns
+    -------
+    w : ndarray (p,)
+        Direction trouvée (norme 1).
+    history : list
+        Écart :math:`1-|w_{k+1}^T w_k|` à chaque itération.
+    """
+    w = a0 / np.linalg.norm(a0)
+    hist = []
+    for _ in range(n_iter):
+        u = X @ w
+        g1 = np.tanh(a * u)
+        g2 = a * (1 - g1 ** 2)
+        w_new = (X * g1[:, None]).mean(0) - g2.mean() * w
+        w_new /= np.linalg.norm(w_new)
+        hist.append(1 - abs(w_new @ w))
+        w = w_new
+        if hist[-1] < tol:
+            break
+    return w, hist
