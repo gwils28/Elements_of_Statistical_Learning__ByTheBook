@@ -440,3 +440,13 @@ def tilted_gaussian_fit(s, lam=1.0, order=3, L=150, center_penalty=False,
     f = np.exp(logphi + g)
     return {"grid": grid, "delta": delta, "y": y, "g": g, "f": f,
             "grad": np.max(np.abs(grad))}
+
+
+# ---------------------------------------------------------------------------
+# ICA : terme gaussien et point fixe - exercices 14.19 et 14.20
+# ---------------------------------------------------------------------------
+
+def gaussian_loglik_term(A, X):
+    """:math:`\\sum_j\\sum_i \\log\\varphi(a_j^T x_i)` (premier terme de (14.92))."""
+    S = X @ A
+    return (-0.5 * S ** 2 - 0.5 * np.log(2 * np.pi)).sum()
