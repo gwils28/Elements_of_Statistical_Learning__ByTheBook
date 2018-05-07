@@ -537,3 +537,26 @@ def graph_laplacian(W):
     """Laplacien non normalisé :math:`L = G - W` (éq. (14.63))."""
     W = np.asarray(W, float)
     return np.diag(W.sum(1)) - W
+
+
+def knn_graph(X, k, c=None):
+    """Graphe symétrique des k plus proches voisins (section 14.5.3).
+
+    L'arête (i, i') est présente si i est parmi les k plus proches voisins de i'
+    ou réciproquement ; son poids vaut :math:`\\exp(-d_{ii'}^2/c)` (ou 1 si
+    ``c`` vaut None).
+
+    Returns
+    -------
+    W : ndarray (N, N)
+        Matrice d'adjacence symétrique, de diagonale nulle.
+    """
+    X = np.asarray(X, float)
+    d2 = ((X[:, None, :] - X[None, :, :]) ** 2).sum(2)
+    N = len(X)
+    nn = np.argsort(d2, axis=1)[:, 1:k + 1]
+    A = np.zeros((N, N), dtype=bool)
+    A[np.repeat(np.arange(N), k), nn.ravel()] = True
+    A = A | A.T
+    W = np.exp(-d2 / c) if c is not None else np.ones((N, N))
+    return np.where(A, W, 0.0)
