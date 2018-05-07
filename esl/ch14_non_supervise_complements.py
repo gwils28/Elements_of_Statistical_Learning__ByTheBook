@@ -527,3 +527,13 @@ def fastica_symmetric(X, p_comp=None, n_iter=200, random_state=0, a=1.0):
             break
         A = A_new
     return A
+
+
+# ---------------------------------------------------------------------------
+# Graphes : laplacien et PageRank - exercices 14.21 et 14.22
+# ---------------------------------------------------------------------------
+
+def graph_laplacian(W):
+    """Laplacien non normalisé :math:`L = G - W` (éq. (14.63))."""
+    W = np.asarray(W, float)
+    return np.diag(W.sum(1)) - W
