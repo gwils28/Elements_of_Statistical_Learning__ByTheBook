@@ -587,3 +587,16 @@ def connected_components(W):
                     queue.append(j)
         m += 1
     return labels
+
+
+def pagerank_matrix(L, d=0.85):
+    """Matrice :math:`A = (1-d)ee^T/N + d L D_c^{-1}` de (14.109).
+
+    ``L[i, j] = 1`` si la page ``j`` pointe vers la page ``i``.
+    """
+    L = np.asarray(L, float)
+    N = len(L)
+    c = L.sum(0)
+    if np.any(c == 0):
+        raise ValueError("chaque page doit avoir au moins un lien sortant")
+    return (1 - d) * np.ones((N, N)) / N + d * L / c[None, :]
