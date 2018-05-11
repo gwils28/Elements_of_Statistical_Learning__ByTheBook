@@ -560,3 +560,30 @@ def knn_graph(X, k, c=None):
     A = A | A.T
     W = np.exp(-d2 / c) if c is not None else np.ones((N, N))
     return np.where(A, W, 0.0)
+
+
+def connected_components(W):
+    """Composantes connexes d'un graphe non orienté (parcours en largeur).
+
+    Returns
+    -------
+    labels : ndarray (N,)
+        Numéro de composante de chaque sommet (0, 1, ..., m-1).
+    """
+    W = np.asarray(W)
+    N = len(W)
+    labels = -np.ones(N, dtype=int)
+    m = 0
+    for start in range(N):
+        if labels[start] >= 0:
+            continue
+        labels[start] = m
+        queue = [start]
+        while queue:
+            i = queue.pop()
+            for j in np.nonzero(W[i] > 0)[0]:
+                if labels[j] < 0:
+                    labels[j] = m
+                    queue.append(j)
+        m += 1
+    return labels
