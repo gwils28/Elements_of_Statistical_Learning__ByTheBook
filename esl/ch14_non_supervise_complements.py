@@ -633,3 +633,14 @@ def pagerank_linear(L, d=0.85):
     N = len(L)
     c = L.sum(0)
     return np.linalg.solve(np.eye(N) - d * L / c[None, :], (1 - d) * np.ones(N))
+
+
+# ---------------------------------------------------------------------------
+# Factorisation en matrices non négatives - exercices 14.23 à 14.25
+# ---------------------------------------------------------------------------
+
+def nmf_loglik(X, W, H):
+    """Log-vraisemblance de Poisson :math:`L(W,H)` (éq. (14.73))."""
+    WH = W @ H
+    mask = X > 0
+    return (X[mask] * np.log(WH[mask])).sum() - WH.sum()
