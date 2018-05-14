@@ -600,3 +600,28 @@ def pagerank_matrix(L, d=0.85):
     if np.any(c == 0):
         raise ValueError("chaque page doit avoir au moins un lien sortant")
     return (1 - d) * np.ones((N, N)) / N + d * L / c[None, :]
+
+
+def pagerank_power(L, d=0.85, n_iter=1000, tol=1e-12, p0=None):
+    """PageRank par la méthode de la puissance (14.110).
+
+    Returns
+    -------
+    p : ndarray (N,)
+        PageRanks, normalisés par :math:`e^Tp = N`.
+    history : list
+        Écart :math:`\\|p_k - p_{k-1}\\|_1` à chaque itération.
+    """
+    A = pagerank_matrix(L, d)
+    N = len(A)
+    p = np.ones(N) if p0 is None else np.asarray(p0, float)
+    p = N * p / p.sum()
+    hist = []
+    for _ in range(n_iter):
+        p_new = A @ p
+        p_new = N * p_new / p_new.sum()
+        hist.append(np.abs(p_new - p).sum())
+        p = p_new
+        if hist[-1] < tol:
+            break
+    return p, hist
