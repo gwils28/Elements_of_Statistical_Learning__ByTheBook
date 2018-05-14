@@ -644,3 +644,22 @@ def nmf_loglik(X, W, H):
     WH = W @ H
     mask = X > 0
     return (X[mask] * np.log(WH[mask])).sum() - WH.sum()
+
+
+def nmf_minorizer(X, W, H, Ws, Hs):
+    """Fonction minorante :math:`g(W, H\\mid W^s, H^s)` de l'exercice 14.23.
+
+    On garde ici les constantes, de sorte que :math:`g(W^s,H^s\\mid W^s,H^s)
+    = L(W^s,H^s)` exactement :
+
+    .. math:: g = \\sum_{ijk} x_{ij}\\frac{a^s_{ikj}}{b^s_{ij}}
+              \\log\\Big(\\frac{b^s_{ij}}{a^s_{ikj}} w_{ik}h_{kj}\\Big)
+              - \\sum_{ijk} w_{ik}h_{kj}.
+    """
+    a = Ws[:, :, None] * Hs[None, :, :]       # (N, r, p) : a_{ikj}
+    b = a.sum(1)                              # (N, p)
+    ratio = a / b[:, None, :]
+    prod = W[:, :, None] * H[None, :, :]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        term = np.where(ratio > 0, ratio * np.log(prod / ratio), 0.0)
+    return (X[:, None, :] * term).sum() - prod.sum()
