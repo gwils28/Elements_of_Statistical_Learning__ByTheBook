@@ -625,3 +625,11 @@ def pagerank_power(L, d=0.85, n_iter=1000, tol=1e-12, p0=None):
         if hist[-1] < tol:
             break
     return p, hist
+
+
+def pagerank_linear(L, d=0.85):
+    """PageRank en résolvant le système linéaire (14.108) : :math:`(I - dLD_c^{-1})p = (1-d)e`."""
+    L = np.asarray(L, float)
+    N = len(L)
+    c = L.sum(0)
+    return np.linalg.solve(np.eye(N) - d * L / c[None, :], (1 - d) * np.ones(N))
