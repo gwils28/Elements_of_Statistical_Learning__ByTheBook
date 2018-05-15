@@ -663,3 +663,35 @@ def nmf_minorizer(X, W, H, Ws, Hs):
     with np.errstate(divide="ignore", invalid="ignore"):
         term = np.where(ratio > 0, ratio * np.log(prod / ratio), 0.0)
     return (X[:, None, :] * term).sum() - prod.sum()
+
+
+def nmf_kl(X, r, n_iter=500, random_state=0, W0=None, H0=None, eps=1e-12):
+    """NMF par les mises à jour multiplicatives (14.74) (Lee et Seung).
+
+    Parameters
+    ----------
+    X : ndarray (N, p), positif ou nul.
+    r : int
+        Rang de la factorisation.
+    n_iter : int
+        Nombre d'itérations (une mise à jour de W puis de H).
+
+    Returns
+    -------
+    W : ndarray (N, r)
+    H : ndarray (r, p)
+    loglik : ndarray
+        :math:`L(W,H)` après chaque itération.
+    """
+    rng = np.random.RandomState(random_state)
+    N, p = X.shape
+    W = rng.uniform(0.1, 1.0, (N, r)) if W0 is None else np.array(W0, float)
+    H = rng.uniform(0.1, 1.0, (r, p)) if H0 is None else np.array(H0, float)
+    hist = []
+    for _ in range(n_iter):
+        R = X / np.maximum(W @ H, eps)
+        W = W * (R @ H.T) / np.maximum(H.sum(1)[None, :], eps)
+        R = X / np.maximum(W @ H, eps)
+        H = H * (W.T @ R) / np.maximum(W.sum(0)[:, None], eps)
+        hist.append(nmf_loglik(X, W, H))
+    return W, H, np.array(hist)
