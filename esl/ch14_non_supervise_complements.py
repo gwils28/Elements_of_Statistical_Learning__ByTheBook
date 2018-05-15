@@ -695,3 +695,14 @@ def nmf_kl(X, r, n_iter=500, random_state=0, W0=None, H0=None, eps=1e-12):
         H = H * (W.T @ R) / np.maximum(W.sum(0)[:, None], eps)
         hist.append(nmf_loglik(X, W, H))
     return W, H, np.array(hist)
+
+
+def independence_fit(X, c=1.0):
+    """Solution explicite (rang 1) de l'exercice 14.24.
+
+    :math:`w_i = c\\, x_{i+}/x_{++}` et :math:`h_j = x_{+j}/c`, de sorte que
+    :math:`w_ih_j = x_{i+}x_{+j}/x_{++}` (modèle d'indépendance).
+    """
+    X = np.asarray(X, float)
+    tot = X.sum()
+    return c * X.sum(1) / tot, X.sum(0) / c
