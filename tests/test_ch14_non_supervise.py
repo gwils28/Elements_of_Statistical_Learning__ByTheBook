@@ -21,3 +21,14 @@ def _apriori_force_brute(Z, t, taille_max):
             if s >= t:
                 out[S] = s
     return out
+
+
+def test_apriori_egal_force_brute():
+    rng = np.random.RandomState(0)
+    Z = rng.uniform(size=(300, 8)) < np.linspace(0.3, 0.8, 8)
+    Z[:, 1] |= Z[:, 0]
+    a = ns.apriori(Z, 0.15, taille_max=4)
+    b = _apriori_force_brute(Z, 0.15, 4)
+    assert set(a) == set(b)
+    for k in a:
+        assert a[k] == pytest.approx(b[k])
