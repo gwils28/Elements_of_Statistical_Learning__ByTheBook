@@ -46,3 +46,10 @@ def test_regles_confiance_lift():
         sB = Z[:, B].all(1).mean()
         assert r.confiance == pytest.approx(sAB / sA)
         assert r.lift == pytest.approx(sAB / (sA * sB))
+
+
+def test_codage_disjonctif():
+    df = pd.DataFrame({"a": [1, 2, 3, 4], "b": [1, 2, 1, 3]})
+    Z, noms, var = ns.codage_disjonctif(df, ["a"], ["b"])
+    assert Z.shape == (4, 5)
+    assert np.all(Z[:, :2].sum(1) == 1) and np.all(Z[:, 2:].sum(1) == 1)
