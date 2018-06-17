@@ -32,3 +32,17 @@ def test_apriori_egal_force_brute():
     assert set(a) == set(b)
     for k in a:
         assert a[k] == pytest.approx(b[k])
+
+
+def test_regles_confiance_lift():
+    rng = np.random.RandomState(1)
+    Z = rng.uniform(size=(500, 5)) < 0.6
+    f = ns.apriori(Z, 0.2)
+    R = ns.regles_association(f)
+    for _, r in R.head(20).iterrows():
+        A, B = list(r.antecedent), list(r.consequent)
+        sAB = Z[:, A + B].all(1).mean()
+        sA = Z[:, A].all(1).mean()
+        sB = Z[:, B].all(1).mean()
+        assert r.confiance == pytest.approx(sAB / sA)
+        assert r.lift == pytest.approx(sAB / (sA * sB))
