@@ -53,3 +53,12 @@ def test_codage_disjonctif():
     Z, noms, var = ns.codage_disjonctif(df, ["a"], ["b"])
     assert Z.shape == (4, 5)
     assert np.all(Z[:, :2].sum(1) == 1) and np.all(Z[:, 2:].sum(1) == 1)
+
+
+# --- non supervisé comme supervisé ------------------------------------------
+
+def test_reference_permutation_marges():
+    rng = np.random.RandomState(0)
+    X = rng.normal(size=(50, 3))
+    X0 = ns.echantillon_reference(X, "permutation", rng)
+    assert np.allclose(np.sort(X, 0), np.sort(X0, 0))
