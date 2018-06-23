@@ -62,3 +62,14 @@ def test_reference_permutation_marges():
     X = rng.normal(size=(50, 3))
     X0 = ns.echantillon_reference(X, "permutation", rng)
     assert np.allclose(np.sort(X, 0), np.sort(X0, 0))
+
+
+def test_logistique_irls_sans_penalite():
+    from sklearn.linear_model import LogisticRegression
+    rng = np.random.RandomState(0)
+    X = rng.normal(size=(200, 2))
+    y = (X[:, 0] + 0.5 * rng.normal(size=200) > 0).astype(int)
+    B = np.column_stack([np.ones(200), X])
+    beta = ns.regression_logistique(B, y)
+    sk = LogisticRegression(C=1e10, tol=1e-12, max_iter=10000).fit(X, y)
+    assert np.allclose(beta, np.r_[sk.intercept_, sk.coef_[0]], atol=1e-4)
