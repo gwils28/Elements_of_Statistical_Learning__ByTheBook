@@ -82,3 +82,27 @@ def test_splines_naturelles_lineaires_hors_noeuds():
     for m in (gauche, droite):
         d2 = np.diff(N[m], 2, axis=0)
         assert np.abs(d2).max() < 1e-8
+
+
+# --- classification ---------------------------------------------------------
+
+def test_kmeans_point_fixe_et_sklearn():
+    from sklearn.cluster import KMeans
+    rng = np.random.RandomState(0)
+    X = np.vstack([rng.normal(m, 0.5, size=(40, 2)) for m in ((0, 0), (4, 0), (0, 4))])
+    lab, C, W = ns.kmeans(X, 3, n_init=10, rng=rng)
+    for k in range(3):
+        assert np.allclose(C[k], X[lab == k].mean(0))
+    assert np.all(ns.distances_carrees(X, C).argmin(1) == lab)
+    sk = KMeans(3, n_init=10, random_state=0).fit(X)
+    assert W == pytest.approx(sk.inertia_, rel=1e-8)
+    assert ns.indice_rand_ajuste(lab, sk.labels_) == pytest.approx(1.0)
+
+
+def test_kmedoides_optimal_petit_cas():
+    rng = np.random.RandomState(2)
+    X = rng.normal(size=(12, 2))
+    D = np.sqrt(ns.distances_carrees(X))
+    lab, med, crit = ns.kmedoides(D, 2, n_init=20, rng=rng)
+    best = min(D[:, list(m)].min(1).sum() for m in combinations(range(12), 2))
+    assert crit == pytest.approx(best)
