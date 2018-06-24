@@ -73,3 +73,12 @@ def test_logistique_irls_sans_penalite():
     beta = ns.regression_logistique(B, y)
     sk = LogisticRegression(C=1e10, tol=1e-12, max_iter=10000).fit(X, y)
     assert np.allclose(beta, np.r_[sk.intercept_, sk.coef_[0]], atol=1e-4)
+
+
+def test_splines_naturelles_lineaires_hors_noeuds():
+    x = np.linspace(-5, 5, 400)
+    N = ns.base_splines_naturelles(x, np.linspace(-1, 1, 5))
+    gauche, droite = x < -1, x > 1
+    for m in (gauche, droite):
+        d2 = np.diff(N[m], 2, axis=0)
+        assert np.abs(d2).max() < 1e-8
