@@ -106,3 +106,15 @@ def test_kmedoides_optimal_petit_cas():
     lab, med, crit = ns.kmedoides(D, 2, n_init=20, rng=rng)
     best = min(D[:, list(m)].min(1).sum() for m in combinations(range(12), 2))
     assert crit == pytest.approx(best)
+
+
+@pytest.mark.parametrize("methode", ["single", "complete", "average"])
+def test_hierarchique_comme_scipy(methode):
+    rng = np.random.RandomState(3)
+    X = rng.normal(size=(25, 4))
+    d = pdist(X)
+    Z = ns.classification_hierarchique(squareform(d), methode)
+    Zs = hierarchy.linkage(d, method=methode)
+    assert np.allclose(Z[:, 2], Zs[:, 2])
+    C = ns.dissimilarites_cophenetiques(Z)
+    assert np.allclose(squareform(C, checks=False), hierarchy.cophenet(Zs))
