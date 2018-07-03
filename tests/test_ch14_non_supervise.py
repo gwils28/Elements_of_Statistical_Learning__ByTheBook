@@ -118,3 +118,12 @@ def test_hierarchique_comme_scipy(methode):
     assert np.allclose(Z[:, 2], Zs[:, 2])
     C = ns.dissimilarites_cophenetiques(Z)
     assert np.allclose(squareform(C, checks=False), hierarchy.cophenet(Zs))
+
+
+def test_cophenetique_ultrametrique():
+    rng = np.random.RandomState(4)
+    X = rng.normal(size=(15, 2))
+    C = ns.dissimilarites_cophenetiques(ns.classification_hierarchique(
+        np.sqrt(ns.distances_carrees(X)), "average"))
+    for i, j, k in combinations(range(15), 3):
+        assert C[i, j] <= max(C[i, k], C[j, k]) + 1e-12
