@@ -127,3 +127,13 @@ def test_cophenetique_ultrametrique():
         np.sqrt(ns.distances_carrees(X)), "average"))
     for i, j, k in combinations(range(15), 3):
         assert C[i, j] <= max(C[i, k], C[j, k]) + 1e-12
+
+
+def test_couper_hierarchie():
+    rng = np.random.RandomState(5)
+    X = rng.normal(size=(20, 2))
+    d = pdist(X)
+    Z = ns.classification_hierarchique(squareform(d), "complete")
+    lab = ns.couper_hierarchie(Z, 4)
+    ref = hierarchy.fcluster(hierarchy.linkage(d, "complete"), 4, "maxclust")
+    assert ns.indice_rand_ajuste(lab, ref) == pytest.approx(1.0)
