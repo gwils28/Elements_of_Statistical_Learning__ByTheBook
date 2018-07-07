@@ -137,3 +137,10 @@ def test_couper_hierarchie():
     lab = ns.couper_hierarchie(Z, 4)
     ref = hierarchy.fcluster(hierarchy.linkage(d, "complete"), 4, "maxclust")
     assert ns.indice_rand_ajuste(lab, ref) == pytest.approx(1.0)
+
+
+def test_rand_ajuste_sklearn():
+    from sklearn.metrics import adjusted_rand_score
+    rng = np.random.RandomState(6)
+    a, b = rng.randint(0, 4, 100), rng.randint(0, 3, 100)
+    assert ns.indice_rand_ajuste(a, b) == pytest.approx(adjusted_rand_score(a, b))
