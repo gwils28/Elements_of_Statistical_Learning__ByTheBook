@@ -144,3 +144,15 @@ def test_rand_ajuste_sklearn():
     rng = np.random.RandomState(6)
     a, b = rng.randint(0, 4, 100), rng.randint(0, 3, 100)
     assert ns.indice_rand_ajuste(a, b) == pytest.approx(adjusted_rand_score(a, b))
+
+
+def test_em_vraisemblance_croissante_et_limite_kmeans():
+    rng = np.random.RandomState(7)
+    X = np.vstack([rng.normal(m, 1, size=(50, 2)) for m in ((0, 0), (3, 3))])
+    res = ns.em_melange_isotrope(X, 2, rng=rng)
+    assert np.all(np.diff(res["loglik"]) > -1e-8)
+    # sigma -> 0 : responsabilités dures = affectation au centre le plus proche
+    res0 = ns.em_melange_isotrope(X, 2, sigma2=1e-4, rng=rng, n_iter=50)
+    dures = ns.distances_carrees(X, res0["mu"]).argmin(1)
+    assert np.all(res0["resp"].argmax(1) == dures)
+    assert np.allclose(res0["resp"].max(1), 1)
