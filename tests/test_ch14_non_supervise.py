@@ -166,3 +166,13 @@ def test_som_rayon_nul_proche_kmeans():
     out = ns.som(X, 2, 2, 4000, R=0.5, rng=rng)  # rayon < 1 : aucun voisin
     km = ns.kmeans(X, 4, rng=rng)
     assert ns.indice_rand_ajuste(out["labels"], km[0]) > 0.95
+
+
+# --- ACP, Procrustes ---------------------------------------------------------
+
+def test_acp_reconstruction_optimale():
+    rng = np.random.RandomState(9)
+    X = rng.normal(size=(60, 5)) @ rng.normal(size=(5, 5))
+    a = ns.acp(X, 2)
+    err = ((X - a["reconstruction"]) ** 2).sum()
+    assert err == pytest.approx((a["d"][2:] ** 2).sum())
