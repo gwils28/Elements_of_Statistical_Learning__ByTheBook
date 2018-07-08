@@ -156,3 +156,13 @@ def test_em_vraisemblance_croissante_et_limite_kmeans():
     dures = ns.distances_carrees(X, res0["mu"]).argmin(1)
     assert np.all(res0["resp"].argmax(1) == dures)
     assert np.allclose(res0["resp"].max(1), 1)
+
+
+# --- SOM ---------------------------------------------------------------------
+
+def test_som_rayon_nul_proche_kmeans():
+    rng = np.random.RandomState(8)
+    X = np.vstack([rng.normal(m, 0.3, size=(30, 2)) for m in ((0, 0), (3, 0), (0, 3), (3, 3))])
+    out = ns.som(X, 2, 2, 4000, R=0.5, rng=rng)  # rayon < 1 : aucun voisin
+    km = ns.kmeans(X, 4, rng=rng)
+    assert ns.indice_rand_ajuste(out["labels"], km[0]) > 0.95
