@@ -186,3 +186,10 @@ def test_procrustes_retrouve_transformation():
     res = ns.procrustes(X1, X2, echelle=True)
     assert np.allclose(res["R"], R) and res["beta"] == pytest.approx(1.7)
     assert res["distance"] < 1e-10
+
+
+def test_moyenne_procrustes_decroit():
+    rng = np.random.RandomState(11)
+    Xs = [ns.forme_s(rng=rng, deformation=0.1) @ ns.rotation2d(a) for a in (0, 1, 2)]
+    res = ns.moyenne_procrustes(Xs, echelle=True)
+    assert np.all(np.diff(res["critere"]) < 1e-9)
