@@ -176,3 +176,13 @@ def test_acp_reconstruction_optimale():
     a = ns.acp(X, 2)
     err = ((X - a["reconstruction"]) ** 2).sum()
     assert err == pytest.approx((a["d"][2:] ** 2).sum())
+
+
+def test_procrustes_retrouve_transformation():
+    rng = np.random.RandomState(10)
+    X1 = rng.normal(size=(30, 2))
+    R = ns.rotation2d(0.7)
+    X2 = 1.7 * X1 @ R + np.array([3.0, -1.0])
+    res = ns.procrustes(X1, X2, echelle=True)
+    assert np.allclose(res["R"], R) and res["beta"] == pytest.approx(1.7)
+    assert res["distance"] < 1e-10
