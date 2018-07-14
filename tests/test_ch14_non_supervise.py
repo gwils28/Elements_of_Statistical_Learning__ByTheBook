@@ -193,3 +193,13 @@ def test_moyenne_procrustes_decroit():
     Xs = [ns.forme_s(rng=rng, deformation=0.1) @ ns.rotation2d(a) for a in (0, 1, 2)]
     res = ns.moyenne_procrustes(Xs, echelle=True)
     assert np.all(np.diff(res["critere"]) < 1e-9)
+
+
+def test_moyenne_affine_invariance():
+    rng = np.random.RandomState(12)
+    Xs = [ns.forme_s(rng=rng, deformation=0.1) for _ in range(3)]
+    m1 = ns.moyenne_affine(Xs)["M"]
+    Xs2 = [X @ rng.normal(size=(2, 2)) + 5 for X in Xs]
+    m2 = ns.moyenne_affine(Xs2)["M"]
+    # même sous-espace de colonnes
+    assert np.allclose(m1 @ m1.T, m2 @ m2.T, atol=1e-8)
