@@ -203,3 +203,13 @@ def test_moyenne_affine_invariance():
     m2 = ns.moyenne_affine(Xs2)["M"]
     # même sous-espace de colonnes
     assert np.allclose(m1 @ m1.T, m2 @ m2.T, atol=1e-8)
+
+
+def test_courbe_principale_ameliore_acp():
+    rng = np.random.RandomState(13)
+    t = rng.uniform(0, np.pi, 150)
+    X = np.column_stack([np.cos(t), np.sin(t)]) + 0.05 * rng.normal(size=(150, 2))
+    a = ns.acp(X, 1)
+    err_acp = ((X - a["reconstruction"]) ** 2).sum()
+    cp = ns.courbe_principale(X)
+    assert cp["distances"][-1] < 0.3 * err_acp
