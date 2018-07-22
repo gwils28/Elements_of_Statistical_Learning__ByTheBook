@@ -224,3 +224,11 @@ def test_mds_classique_euclidien_exact():
     Z, vals = ns.mds_classique(D, 2)
     assert np.allclose(np.sqrt(ns.distances_carrees(Z)), D, atol=1e-6)
     assert np.all(np.abs(vals[2:]) < 1e-8)
+
+
+def test_smacof_stress_decroit():
+    from esl import datasets
+    D = datasets.load_countries().to_numpy()
+    Z, h = ns.mds_moindres_carres(D, 2)
+    assert np.all(np.diff(h) <= 1e-9)
+    assert h[-1] <= ns.stress(D, ns.mds_classique(D, 2)[0]) + 1e-9
