@@ -213,3 +213,14 @@ def test_courbe_principale_ameliore_acp():
     err_acp = ((X - a["reconstruction"]) ** 2).sum()
     cp = ns.courbe_principale(X)
     assert cp["distances"][-1] < 0.3 * err_acp
+
+
+# --- MDS ---------------------------------------------------------------------
+
+def test_mds_classique_euclidien_exact():
+    rng = np.random.RandomState(14)
+    X = rng.normal(size=(20, 2))
+    D = np.sqrt(ns.distances_carrees(X))
+    Z, vals = ns.mds_classique(D, 2)
+    assert np.allclose(np.sqrt(ns.distances_carrees(Z)), D, atol=1e-6)
+    assert np.all(np.abs(vals[2:]) < 1e-8)
