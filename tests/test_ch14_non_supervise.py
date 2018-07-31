@@ -232,3 +232,16 @@ def test_smacof_stress_decroit():
     Z, h = ns.mds_moindres_carres(D, 2)
     assert np.all(np.diff(h) <= 1e-9)
     assert h[-1] <= ns.stress(D, ns.mds_classique(D, 2)[0]) + 1e-9
+
+
+# --- graphes, noyaux --------------------------------------------------------
+
+def test_laplacien_composantes_connexes():
+    W = np.zeros((6, 6))
+    for i, j in ((0, 1), (1, 2), (3, 4), (4, 5)):
+        W[i, j] = W[j, i] = 1.0
+    L = ns.laplacien(W)
+    f = np.arange(6.0)
+    assert f @ L @ f == pytest.approx(0.5 * (W * (f[:, None] - f[None]) ** 2).sum())
+    vals = np.linalg.eigvalsh(L)
+    assert np.sum(np.abs(vals) < 1e-10) == 2
