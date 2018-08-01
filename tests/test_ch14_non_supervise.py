@@ -245,3 +245,9 @@ def test_laplacien_composantes_connexes():
     assert f @ L @ f == pytest.approx(0.5 * (W * (f[:, None] - f[None]) ** 2).sum())
     vals = np.linalg.eigvalsh(L)
     assert np.sum(np.abs(vals) < 1e-10) == 2
+
+
+def test_spectral_cercles():
+    X, y = ns.donnees_cercles(rng=np.random.RandomState(0))
+    out = ns.clustering_spectral(X, 3, c=2.0, k_voisins=10, rng=np.random.RandomState(0))
+    assert ns.indice_rand_ajuste(out["labels"], y) > 0.95
