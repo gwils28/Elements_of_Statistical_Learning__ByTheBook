@@ -251,3 +251,13 @@ def test_spectral_cercles():
     X, y = ns.donnees_cercles(rng=np.random.RandomState(0))
     out = ns.clustering_spectral(X, 3, c=2.0, k_voisins=10, rng=np.random.RandomState(0))
     assert ns.indice_rand_ajuste(out["labels"], y) > 0.95
+
+
+def test_acp_noyau_lineaire_egale_acp():
+    rng = np.random.RandomState(15)
+    X = rng.normal(size=(40, 3)) * [3, 2, 1]
+    kp = ns.acp_noyau(X @ X.T, 2)
+    a = ns.acp(X, 2)
+    assert np.allclose(np.abs(kp["Z"]), np.abs(a["scores"]), atol=1e-8)
+    J = np.eye(40) - 1 / 40
+    assert np.allclose(J @ X @ X.T @ J @ kp["alpha"], kp["Z"], atol=1e-8)
