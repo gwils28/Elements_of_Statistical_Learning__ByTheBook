@@ -261,3 +261,17 @@ def test_acp_noyau_lineaire_egale_acp():
     assert np.allclose(np.abs(kp["Z"]), np.abs(a["scores"]), atol=1e-8)
     J = np.eye(40) - 1 / 40
     assert np.allclose(J @ X @ X.T @ J @ kp["alpha"], kp["Z"], atol=1e-8)
+
+
+# --- ACP parcimonieuse, NMF, ACI -------------------------------------------
+
+def test_elastic_net_conditions_optimalite():
+    rng = np.random.RandomState(16)
+    X = rng.normal(size=(50, 6))
+    y = X @ np.array([2, 0, 0, -1, 0, 0.5]) + rng.normal(size=50)
+    lam2, lam1 = 1.0, 10.0
+    b = ns.elastic_net(X, y, lam2, lam1)
+    g = -2 * X.T @ (y - X @ b) + 2 * lam2 * b
+    actifs = b != 0
+    assert np.allclose(g[actifs], -lam1 * np.sign(b[actifs]), atol=1e-6)
+    assert np.all(np.abs(g[~actifs]) <= lam1 + 1e-6)
