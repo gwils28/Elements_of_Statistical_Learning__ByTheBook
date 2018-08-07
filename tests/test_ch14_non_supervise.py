@@ -302,3 +302,12 @@ def test_nmf_vraisemblance_croissante():
     W, H, h = ns.nmf(X, 3, n_iter=200, rng=rng)
     assert np.all(W >= 0) and np.all(H >= 0)
     assert np.all(np.diff(h) > -1e-8)
+
+
+def test_fastica_separe_sources():
+    rng = np.random.RandomState(20)
+    S = np.column_stack([rng.uniform(-1, 1, 2000), np.sign(rng.normal(size=2000)) * rng.exponential(size=2000)])
+    X = S @ np.array([[1, 0.5], [0.7, 1]])
+    Shat, A, T = ns.fastica(X, rng=rng)
+    C = np.abs(np.corrcoef(S.T, Shat.T)[:2, 2:])
+    assert np.all(C.max(1) > 0.98)
