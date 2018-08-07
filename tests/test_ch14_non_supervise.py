@@ -275,3 +275,14 @@ def test_elastic_net_conditions_optimalite():
     actifs = b != 0
     assert np.allclose(g[actifs], -lam1 * np.sign(b[actifs]), atol=1e-6)
     assert np.all(np.abs(g[~actifs]) <= lam1 + 1e-6)
+
+
+def test_procrustes_reduit_maximise_trace():
+    rng = np.random.RandomState(17)
+    M = rng.normal(size=(6, 2))
+    T = ns.procrustes_reduit(M)
+    assert np.allclose(T.T @ T, np.eye(2))
+    best = np.trace(T.T @ M)
+    for _ in range(200):
+        Q = np.linalg.qr(rng.normal(size=(6, 2)))[0]
+        assert np.trace(Q.T @ M) <= best + 1e-10
