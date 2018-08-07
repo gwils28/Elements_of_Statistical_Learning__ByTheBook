@@ -286,3 +286,11 @@ def test_procrustes_reduit_maximise_trace():
     for _ in range(200):
         Q = np.linalg.qr(rng.normal(size=(6, 2)))[0]
         assert np.trace(Q.T @ M) <= best + 1e-10
+
+
+def test_acp_parcimonieuse_sans_penalite_l1():
+    rng = np.random.RandomState(18)
+    X = rng.normal(size=(100, 5)) * [4, 2, 1, 0.5, 0.3]
+    out = ns.acp_parcimonieuse(X, 1, lam2=1e-6, lam1=0.0)
+    v1 = ns.acp(X, 1)["V"][:, 0]
+    assert abs(out["directions"][:, 0] @ v1) == pytest.approx(1, abs=1e-6)
