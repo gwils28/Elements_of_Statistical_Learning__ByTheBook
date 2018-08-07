@@ -294,3 +294,11 @@ def test_acp_parcimonieuse_sans_penalite_l1():
     out = ns.acp_parcimonieuse(X, 1, lam2=1e-6, lam1=0.0)
     v1 = ns.acp(X, 1)["V"][:, 0]
     assert abs(out["directions"][:, 0] @ v1) == pytest.approx(1, abs=1e-6)
+
+
+def test_nmf_vraisemblance_croissante():
+    rng = np.random.RandomState(19)
+    X = rng.poisson(3, size=(30, 20)).astype(float)
+    W, H, h = ns.nmf(X, 3, n_iter=200, rng=rng)
+    assert np.all(W >= 0) and np.all(H >= 0)
+    assert np.all(np.diff(h) > -1e-8)
