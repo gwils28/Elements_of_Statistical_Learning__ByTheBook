@@ -311,3 +311,12 @@ def test_fastica_separe_sources():
     Shat, A, T = ns.fastica(X, rng=rng)
     C = np.abs(np.corrcoef(S.T, Shat.T)[:2, 2:])
     assert np.all(C.max(1) > 0.98)
+
+
+def test_som_batch_voisinage_nul_egal_kmeans():
+    rng = np.random.RandomState(21)
+    X = np.vstack([rng.normal(m, 0.5, size=(30, 2)) for m in ((0, 0), (3, 0), (0, 3), (3, 3))])
+    init = ns.init_som_acp(X, 2, 2)
+    o = ns.som_batch(X, 2, 2, n_iter=50, R=0.5, r_final=0.5, init=init)
+    km = ns.kmeans(X, 4, centres_init=init)
+    assert np.allclose(np.sort(o["prototypes"], 0), np.sort(km[1], 0))
