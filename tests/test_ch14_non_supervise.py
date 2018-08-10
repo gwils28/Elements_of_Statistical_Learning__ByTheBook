@@ -320,3 +320,10 @@ def test_som_batch_voisinage_nul_egal_kmeans():
     o = ns.som_batch(X, 2, 2, n_iter=50, R=0.5, r_final=0.5, init=init)
     km = ns.kmeans(X, 4, centres_init=init)
     assert np.allclose(np.sort(o["prototypes"], 0), np.sort(km[1], 0))
+
+
+def test_division_macnaughton_smith_pays():
+    from esl import datasets
+    C = datasets.load_countries()
+    G, H = ns.division_macnaughton_smith(C.to_numpy())
+    assert sorted(C.index[H]) == ["CHI", "CUB", "USS", "YUG"]
