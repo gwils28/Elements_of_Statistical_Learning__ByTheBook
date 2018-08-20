@@ -14,3 +14,9 @@ def test_project_on_polyline_segment():
     lam, d2 = nsc.project_on_polyline(X, F)
     np.testing.assert_allclose(lam, [0.5, 1.5, 0.0])
     np.testing.assert_allclose(d2, [0.09, 0.16, 1.0])
+
+
+def test_kernel_smoother_reproduces_lines():
+    t = np.linspace(0, 1, 50)
+    y = 2 * t + 1
+    np.testing.assert_allclose(nsc.kernel_smoother(t, y, t, 0.1), y, atol=1e-8)
