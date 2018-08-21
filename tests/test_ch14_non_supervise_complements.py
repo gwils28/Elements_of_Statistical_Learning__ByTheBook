@@ -30,3 +30,11 @@ def test_principal_curve_helix():
     assert abs(np.corrcoef(pc["lam"], s)[0, 1]) > 0.99
     # distance moyenne au carré de l'ordre du bruit (3 x 0.01)
     assert pc["d2"].mean() < 0.05
+
+
+def test_som_without_neighbourhood_moves_towards_data():
+    rng = np.random.RandomState(0)
+    X = np.r_[rng.randn(50, 2) * 0.1 + [3, 0], rng.randn(50, 2) * 0.1 - [3, 0]]
+    M, coords = nsc.som_fit(X, (2,), n_epochs=20, radius=(0.0, 0.0))
+    assert coords.shape == (2, 1)
+    assert np.allclose(sorted(M[:, 0]), [-3, 3], atol=0.2)
