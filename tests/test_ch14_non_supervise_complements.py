@@ -38,3 +38,11 @@ def test_som_without_neighbourhood_moves_towards_data():
     M, coords = nsc.som_fit(X, (2,), n_epochs=20, radius=(0.0, 0.0))
     assert coords.shape == (2, 1)
     assert np.allclose(sorted(M[:, 0]), [-3, 3], atol=0.2)
+
+
+# --- analyse factorielle (14.14, 14.15) --------------------------------------
+
+def _fa_data(seed=0):
+    rng = np.random.RandomState(seed)
+    A = rng.randn(4, 1)
+    return rng.randn(400, 1) @ A.T + rng.randn(400, 4) * [0.5, 0.8, 1.0, 0.3]
