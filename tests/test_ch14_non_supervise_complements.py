@@ -20,3 +20,13 @@ def test_kernel_smoother_reproduces_lines():
     t = np.linspace(0, 1, 50)
     y = 2 * t + 1
     np.testing.assert_allclose(nsc.kernel_smoother(t, y, t, 0.1), y, atol=1e-8)
+
+
+def test_principal_curve_helix():
+    rng = np.random.RandomState(0)
+    s = np.linspace(0, 2 * np.pi, 200)
+    X = np.c_[np.cos(s), np.sin(s), s] + 0.1 * rng.randn(200, 3)
+    pc = nsc.principal_curve(X, n_iter=10)
+    assert abs(np.corrcoef(pc["lam"], s)[0, 1]) > 0.99
+    # distance moyenne au carré de l'ordre du bruit (3 x 0.01)
+    assert pc["d2"].mean() < 0.05
