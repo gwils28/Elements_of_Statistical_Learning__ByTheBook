@@ -46,3 +46,14 @@ def _fa_data(seed=0):
     rng = np.random.RandomState(seed)
     A = rng.randn(4, 1)
     return rng.randn(400, 1) @ A.T + rng.randn(400, 4) * [0.5, 0.8, 1.0, 0.3]
+
+
+def test_factor_ml_beats_or_matches_em():
+    X = _fa_data()
+    S = np.cov(X.T, bias=True)
+    A, psi, ll = nsc.factor_analysis_ml(X, 1)
+    A2, psi2, hist = nsc.factor_analysis_em(X, 1, n_iter=2000)
+    assert np.all(np.diff(hist) > -1e-10)          # EM : vraisemblance croissante
+    assert ll >= hist[-1] - 1e-6
+    np.testing.assert_allclose(ll, nsc.factor_loglik(S, A, psi))
+    np.testing.assert_allclose(A @ A.T + np.diag(psi), A2 @ A2.T + np.diag(psi2), atol=1e-3)
