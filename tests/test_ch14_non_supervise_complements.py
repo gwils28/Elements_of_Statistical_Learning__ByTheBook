@@ -57,3 +57,14 @@ def test_factor_ml_beats_or_matches_em():
     assert ll >= hist[-1] - 1e-6
     np.testing.assert_allclose(ll, nsc.factor_loglik(S, A, psi))
     np.testing.assert_allclose(A @ A.T + np.diag(psi), A2 @ A2.T + np.diag(psi2), atol=1e-3)
+
+
+def test_factor_scale_equivariance():
+    X = _fa_data(1) * [1.0, 10.0, 0.1, 5.0]
+    A, psi, _ = nsc.factor_analysis_ml(X, 1)
+    As, psis, _ = nsc.factor_analysis_ml(X / X.std(0), 1)
+    A_star, psi_star = nsc.standardize_factor_model(A, psi)
+    np.testing.assert_allclose(A_star @ A_star.T, As @ As.T, atol=1e-4)
+    np.testing.assert_allclose(psi_star, psis, atol=1e-4)
+    # la décomposition standardisée a une diagonale unité
+    np.testing.assert_allclose((A_star ** 2).sum(1) + psi_star, 1.0)
