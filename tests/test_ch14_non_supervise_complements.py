@@ -80,3 +80,20 @@ def test_hinton_example():
     b = a[:, 0] / psi
     b /= np.linalg.norm(b)
     assert abs(b[2]) < 1e-4
+
+
+# --- ACP à noyau (14.16, 14.17) ----------------------------------------------
+
+def test_kernel_pca_matches_sklearn_and_linear_pca():
+    from sklearn.decomposition import KernelPCA
+    rng = np.random.RandomState(0)
+    X, X0 = rng.randn(40, 3), rng.randn(4, 3)
+    m = nsc.kernel_pca(nsc.rbf_kernel(X, X, 2.0))
+    z0 = nsc.kernel_pca_transform(m, nsc.rbf_kernel(X0, X, 2.0))[:, :3]
+    z0_sk = KernelPCA(3, kernel="rbf", gamma=0.5).fit(X).transform(X0)
+    np.testing.assert_allclose(np.abs(z0), np.abs(z0_sk), atol=1e-8)
+    # noyau linéaire : ACP classique, rang 3
+    ml = nsc.kernel_pca(X @ X.T)
+    assert len(ml["d"]) == 3
+    sv = np.linalg.svd(X - X.mean(0), compute_uv=False)
+    np.testing.assert_allclose(ml["d"], sv, rtol=1e-8)
