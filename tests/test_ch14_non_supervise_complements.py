@@ -68,3 +68,15 @@ def test_factor_scale_equivariance():
     np.testing.assert_allclose(psi_star, psis, atol=1e-4)
     # la décomposition standardisée a une diagonale unité
     np.testing.assert_allclose((A_star ** 2).sum(1) + psi_star, 1.0)
+
+
+def test_hinton_example():
+    rng = np.random.RandomState(0)
+    Z = rng.randn(200, 3)
+    X = np.c_[Z[:, 0], Z[:, 0] + 0.001 * Z[:, 1], 10 * Z[:, 2]]
+    v = np.linalg.svd(X - X.mean(0), full_matrices=False)[2][0]
+    assert abs(v[2]) > 0.99
+    a, psi, _ = nsc.factor_analysis_ml(X, 1)
+    b = a[:, 0] / psi
+    b /= np.linalg.norm(b)
+    assert abs(b[2]) < 1e-4
