@@ -97,3 +97,9 @@ def test_kernel_pca_matches_sklearn_and_linear_pca():
     assert len(ml["d"]) == 3
     sv = np.linalg.svd(X - X.mean(0), compute_uv=False)
     np.testing.assert_allclose(ml["d"], sv, rtol=1e-8)
+
+
+def test_kernel_pca_polynomial_rank():
+    rng = np.random.RandomState(1)
+    X = rng.randn(50, 2)
+    assert len(nsc.kernel_pca((1 + X @ X.T) ** 2)["d"]) == 5
