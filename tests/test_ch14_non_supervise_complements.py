@@ -116,3 +116,14 @@ def test_tilted_gaussian_moments(lam):
     t, f, d, y = fit["grid"], fit["f"], fit["delta"], fit["y"]
     for k in range(3):
         np.testing.assert_allclose((t ** k * f * d).sum(), (t ** k * y).sum(), atol=1e-8)
+
+
+def test_tilted_gaussian_second_order_variants():
+    rng = np.random.RandomState(0)
+    s = rng.uniform(-1, 1, 500)
+    s = (s - s.mean()) / s.std()
+    m2 = lambda fit: (fit["grid"] ** 2 * fit["f"] * fit["delta"]).sum()
+    target = (fit0 := nsc.tilted_gaussian_fit(s, 50.0, order=2))["grid"] ** 2 @ fit0["y"]
+    assert abs(m2(fit0) - target) > 1e-3
+    fit1 = nsc.tilted_gaussian_fit(s, 50.0, order=2, center_penalty=True)
+    np.testing.assert_allclose(m2(fit1), target, atol=1e-8)
