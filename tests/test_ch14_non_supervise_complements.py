@@ -127,3 +127,12 @@ def test_tilted_gaussian_second_order_variants():
     assert abs(m2(fit0) - target) > 1e-3
     fit1 = nsc.tilted_gaussian_fit(s, 50.0, order=2, center_penalty=True)
     np.testing.assert_allclose(m2(fit1), target, atol=1e-8)
+
+
+# --- ICA (14.19, 14.20) -----------------------------------------------------
+
+def test_gaussian_term_rotation_invariant():
+    rng = np.random.RandomState(0)
+    X = rng.randn(100, 3)
+    v = [nsc.gaussian_loglik_term(nsc.random_orthogonal(3, rng), X) for _ in range(5)]
+    np.testing.assert_allclose(v, v[0])
