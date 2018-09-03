@@ -136,3 +136,17 @@ def test_gaussian_term_rotation_invariant():
     X = rng.randn(100, 3)
     v = [nsc.gaussian_loglik_term(nsc.random_orthogonal(3, rng), X) for _ in range(5)]
     np.testing.assert_allclose(v, v[0])
+
+
+def test_whiten_and_fastica():
+    rng = np.random.RandomState(0)
+    S = rng.uniform(-np.sqrt(3), np.sqrt(3), (2000, 2))
+    X = S @ np.array([[1.0, 2.0], [1.0, -1.0]]).T
+    Z, _ = nsc.whiten(X)
+    np.testing.assert_allclose(Z.T @ Z / len(Z), np.eye(2), atol=1e-10)
+    A = nsc.fastica_symmetric(Z)
+    np.testing.assert_allclose(A.T @ A, np.eye(2), atol=1e-10)
+    C = np.abs(np.corrcoef((Z @ A).T, S.T)[:2, 2:])
+    assert np.all(C.max(1) > 0.99)
+    w, hist = nsc.fastica_one_unit(Z, rng.randn(2))
+    assert len(hist) < 15 and abs(np.linalg.norm(w) - 1) < 1e-12
