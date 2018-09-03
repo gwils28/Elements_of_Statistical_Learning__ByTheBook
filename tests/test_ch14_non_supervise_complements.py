@@ -103,3 +103,16 @@ def test_kernel_pca_polynomial_rank():
     rng = np.random.RandomState(1)
     X = rng.randn(50, 2)
     assert len(nsc.kernel_pca((1 + X @ X.T) ** 2)["d"]) == 5
+
+
+# --- densité gaussienne inclinée (14.18) -------------------------------------
+
+@pytest.mark.parametrize("lam", [0.1, 10.0, 1e3])
+def test_tilted_gaussian_moments(lam):
+    rng = np.random.RandomState(0)
+    s = rng.uniform(-1, 1, 500)
+    s = (s - s.mean()) / s.std()
+    fit = nsc.tilted_gaussian_fit(s, lam=lam, order=3)
+    t, f, d, y = fit["grid"], fit["f"], fit["delta"], fit["y"]
+    for k in range(3):
+        np.testing.assert_allclose((t ** k * f * d).sum(), (t ** k * y).sum(), atol=1e-8)
