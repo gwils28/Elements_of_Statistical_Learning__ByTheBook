@@ -170,3 +170,10 @@ def test_laplacian_nullspace_counts_components():
     ev = np.linalg.eigvalsh(L)
     assert np.sum(ev < 1e-10) == 3
     assert nsc.connected_components(W).max() + 1 == 3
+
+
+def test_knn_graph_symmetric():
+    rng = np.random.RandomState(0)
+    W = nsc.knn_graph(rng.randn(30, 2), 4, c=1.0)
+    np.testing.assert_allclose(W, W.T)
+    assert np.all(np.diag(W) == 0) and np.all((W > 0).sum(1) >= 4)
