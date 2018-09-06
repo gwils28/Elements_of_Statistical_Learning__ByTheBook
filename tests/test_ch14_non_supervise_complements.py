@@ -150,3 +150,23 @@ def test_whiten_and_fastica():
     assert np.all(C.max(1) > 0.99)
     w, hist = nsc.fastica_one_unit(Z, rng.randn(2))
     assert len(hist) < 15 and abs(np.linalg.norm(w) - 1) < 1e-12
+
+
+# --- graphes (14.21, 14.22) --------------------------------------------------
+
+def test_laplacian_nullspace_counts_components():
+    rng = np.random.RandomState(0)
+    blocks = [3, 4, 5]
+    N = sum(blocks)
+    W = np.zeros((N, N))
+    start = 0
+    for b in blocks:
+        B = rng.uniform(0.1, 1, (b, b))
+        W[start:start + b, start:start + b] = B + B.T
+        start += b
+    np.fill_diagonal(W, 0)
+    L = nsc.graph_laplacian(W)
+    np.testing.assert_allclose(L.sum(1), 0, atol=1e-12)
+    ev = np.linalg.eigvalsh(L)
+    assert np.sum(ev < 1e-10) == 3
+    assert nsc.connected_components(W).max() + 1 == 3
