@@ -177,3 +177,13 @@ def test_knn_graph_symmetric():
     W = nsc.knn_graph(rng.randn(30, 2), 4, c=1.0)
     np.testing.assert_allclose(W, W.T)
     assert np.all(np.diag(W) == 0) and np.all((W > 0).sum(1) >= 4)
+
+
+def test_pagerank_book_example():
+    L = np.array([[0, 0, 1, 0], [1, 0, 0, 0], [1, 1, 0, 1], [0, 0, 0, 0]])
+    p, _ = nsc.pagerank_power(L)
+    np.testing.assert_allclose(p, [1.49, 0.78, 1.58, 0.15], atol=0.005)
+    np.testing.assert_allclose(p.sum(), 4)
+    np.testing.assert_allclose(p, nsc.pagerank_linear(L), atol=1e-10)
+    A = nsc.pagerank_matrix(L)
+    np.testing.assert_allclose(A.sum(0), 1)
