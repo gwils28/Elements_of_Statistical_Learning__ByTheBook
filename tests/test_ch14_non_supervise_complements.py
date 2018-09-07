@@ -187,3 +187,15 @@ def test_pagerank_book_example():
     np.testing.assert_allclose(p, nsc.pagerank_linear(L), atol=1e-10)
     A = nsc.pagerank_matrix(L)
     np.testing.assert_allclose(A.sum(0), 1)
+
+
+# --- NMF (14.23 à 14.25) -----------------------------------------------------
+
+def test_nmf_minorizer_properties():
+    rng = np.random.RandomState(0)
+    X = rng.poisson(2.0, (8, 6)).astype(float)
+    Ws, Hs = rng.uniform(0.2, 1, (8, 2)), rng.uniform(0.2, 1, (2, 6))
+    np.testing.assert_allclose(nsc.nmf_minorizer(X, Ws, Hs, Ws, Hs), nsc.nmf_loglik(X, Ws, Hs))
+    for _ in range(20):
+        W, H = rng.uniform(0.01, 3, Ws.shape), rng.uniform(0.01, 3, Hs.shape)
+        assert nsc.nmf_minorizer(X, W, H, Ws, Hs) <= nsc.nmf_loglik(X, W, H) + 1e-10
