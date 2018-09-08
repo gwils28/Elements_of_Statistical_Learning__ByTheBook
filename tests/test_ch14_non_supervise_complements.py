@@ -199,3 +199,11 @@ def test_nmf_minorizer_properties():
     for _ in range(20):
         W, H = rng.uniform(0.01, 3, Ws.shape), rng.uniform(0.01, 3, Hs.shape)
         assert nsc.nmf_minorizer(X, W, H, Ws, Hs) <= nsc.nmf_loglik(X, W, H) + 1e-10
+
+
+def test_nmf_monotone_and_nonnegative():
+    rng = np.random.RandomState(0)
+    X = rng.poisson(3.0, (20, 10)).astype(float)
+    W, H, ll = nsc.nmf_kl(X, 3, n_iter=100)
+    assert np.all(np.diff(ll) > -1e-9)
+    assert W.min() >= 0 and H.min() >= 0
