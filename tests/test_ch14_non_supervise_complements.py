@@ -207,3 +207,15 @@ def test_nmf_monotone_and_nonnegative():
     W, H, ll = nsc.nmf_kl(X, 3, n_iter=100)
     assert np.all(np.diff(ll) > -1e-9)
     assert W.min() >= 0 and H.min() >= 0
+
+
+def test_rank_one_nmf_is_independence_model():
+    rng = np.random.RandomState(0)
+    X = rng.poisson(5.0, (5, 4)).astype(float) + 1
+    W, H, ll = nsc.nmf_kl(X, 1, n_iter=3)
+    expected = np.outer(X.sum(1), X.sum(0)) / X.sum()
+    np.testing.assert_allclose(W @ H, expected, atol=1e-10)
+    np.testing.assert_allclose(ll, ll[0])                 # point fixe dès la 1re itération
+    w, h = nsc.independence_fit(X, c=W.sum())
+    np.testing.assert_allclose(W[:, 0], w)
+    np.testing.assert_allclose(H[0], h)
