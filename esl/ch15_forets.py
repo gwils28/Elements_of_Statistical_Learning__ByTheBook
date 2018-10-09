@@ -1,0 +1,65 @@
+"""Forêts aléatoires - chapitre 15 de ESL.
+
+Ce module contient une implémentation pédagogique (en numpy pur) :
+
+* d'un arbre de régression CART « aléatoire » : à chaque nœud, seules ``m``
+  variables tirées au hasard sont candidates à la coupure (algorithme 15.1) ;
+* d'une forêt aléatoire (régression ou classification binaire) construite sur
+  des échantillons bootstrap ;
+* des outils associés : erreur *out-of-bag* (OOB), importance des variables
+  (Gini et permutation), matrice de proximité, positionnement multidimensionnel
+  classique ;
+* des formules fermées et des simulateurs utilisés dans le chapitre et ses
+  exercices (formule (15.1), modèle (15.8), sphères emboîtées, modèle
+  (15.11) de Mease et Wyner, etc.).
+
+Pour la classification binaire (y dans {0, 1}), l'arbre est construit comme un
+arbre de régression sur la variable 0/1 : la réduction de la somme des carrés
+des écarts coïncide alors (au facteur 1/2 près) avec la réduction de l'indice
+de Gini pondéré par les effectifs, donc les coupures choisies sont exactement
+celles du critère de Gini.
+"""
+
+import numpy as np
+
+# ---------------------------------------------------------------------------
+# Noms des 57 variables des données spam (ordre des colonnes A.1 ... A.57)
+# ---------------------------------------------------------------------------
+
+NOMS_SPAM = [
+    "make", "address", "all", "3d", "our", "over", "remove", "internet",
+    "order", "mail", "receive", "will", "people", "report", "addresses",
+    "free", "business", "email", "you", "credit", "your", "font", "000",
+    "money", "hp", "hpl", "george", "650", "lab", "labs", "telnet", "857",
+    "data", "415", "85", "technology", "1999", "parts", "pm", "direct", "cs",
+    "meeting", "original", "project", "re", "edu", "table", "conference",
+    ";", "(", "[", "!", "$", "#", "CAPAVE", "CAPMAX", "CAPTOT",
+]
+
+
+def separer_spam(df, n_test=1536, seed=0):
+    """Sépare les données spam en apprentissage / test.
+
+    Le livre utilise un ensemble test de 1536 courriels ; le fichier fourni ne
+    contient pas l'indicateur correspondant, on tire donc une séparation
+    aléatoire de même taille (graine fixée).
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Sortie de ``esl.datasets.load_spam()``.
+    n_test : int
+        Taille de l'ensemble test.
+    seed : int
+        Graine du générateur ``RandomState``.
+
+    Returns
+    -------
+    Xtr, ytr, Xte, yte : ndarray
+    """
+    rng = np.random.RandomState(seed)
+    X = df.drop(columns="spam").to_numpy(float)
+    y = df["spam"].to_numpy(int)
+    perm = rng.permutation(len(y))
+    te, tr = perm[:n_test], perm[n_test:]
+    return X[tr], y[tr], X[te], y[te]
