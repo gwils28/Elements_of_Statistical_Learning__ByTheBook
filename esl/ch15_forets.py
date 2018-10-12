@@ -75,3 +75,9 @@ def variance_moyenne_correlee(sigma2, rho, B):
     ``rho * sigma2 + (1 - rho) * sigma2 / B``."""
     B = np.asarray(B, dtype=float)
     return rho * sigma2 + (1.0 - rho) * sigma2 / B
+
+
+def rho_minimal(B):
+    """Plus petite corrélation commune admissible pour B variables
+    équicorrélées : ``-1 / (B - 1)`` (exercice 15.1)."""
+    return -1.0 / (np.asarray(B, dtype=float) - 1.0)
