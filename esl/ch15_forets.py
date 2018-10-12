@@ -63,3 +63,15 @@ def separer_spam(df, n_test=1536, seed=0):
     perm = rng.permutation(len(y))
     te, tr = perm[:n_test], perm[n_test:]
     return X[tr], y[tr], X[te], y[te]
+
+
+# ---------------------------------------------------------------------------
+# Formules fermées
+# ---------------------------------------------------------------------------
+
+def variance_moyenne_correlee(sigma2, rho, B):
+    """Variance de la moyenne de B variables de variance ``sigma2`` et de
+    corrélation deux à deux ``rho`` (formule (15.1)) :
+    ``rho * sigma2 + (1 - rho) * sigma2 / B``."""
+    B = np.asarray(B, dtype=float)
+    return rho * sigma2 + (1.0 - rho) * sigma2 / B
