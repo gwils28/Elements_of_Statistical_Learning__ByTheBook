@@ -81,3 +81,10 @@ def rho_minimal(B):
     """Plus petite corrélation commune admissible pour B variables
     équicorrélées : ``-1 / (B - 1)`` (exercice 15.1)."""
     return -1.0 / (np.asarray(B, dtype=float) - 1.0)
+
+
+def correlation_moyennes_bootstrap(n):
+    """Corrélation entre deux moyennes bootstrap d'un même échantillon de
+    taille n : ``n / (2n - 1)`` (exercice 15.4)."""
+    n = np.asarray(n, dtype=float)
+    return n / (2.0 * n - 1.0)
