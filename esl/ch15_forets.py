@@ -88,3 +88,9 @@ def correlation_moyennes_bootstrap(n):
     taille n : ``n / (2n - 1)`` (exercice 15.4)."""
     n = np.asarray(n, dtype=float)
     return n / (2.0 * n - 1.0)
+
+
+def variance_moyenne_bootstrap(sigma2, n):
+    """Variance (non conditionnelle) d'une moyenne bootstrap :
+    ``(2n - 1) sigma2 / n**2`` (exercice 15.4)."""
+    return (2.0 * n - 1.0) * sigma2 / n ** 2
