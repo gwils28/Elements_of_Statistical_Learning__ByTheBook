@@ -102,3 +102,21 @@ def proba_variable_pertinente(p, J, m):
     figure 15.7)."""
     from scipy.special import comb
     return 1.0 - comb(p - J, m) / comb(p, m)
+
+
+# ---------------------------------------------------------------------------
+# Simulateurs
+# ---------------------------------------------------------------------------
+
+def simuler_spheres(N, p=10, rng=None):
+    """Modèle des « sphères emboîtées » (éq. (10.2) du livre).
+
+    ``X`` gaussien standard dans R^p et ``Y = 1`` si ``sum X_j^2`` dépasse la
+    médiane de la loi du khi-deux à p degrés de liberté, ``Y = 0`` sinon.
+    L'erreur de Bayes est nulle.
+    """
+    from scipy.stats import chi2
+    rng = np.random.RandomState(0) if rng is None else rng
+    X = rng.randn(N, p)
+    y = (np.sum(X ** 2, axis=1) > chi2.ppf(0.5, p)).astype(int)
+    return X, y
