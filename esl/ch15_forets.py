@@ -129,3 +129,14 @@ def simuler_additif(N, p=50, rng=None):
     X = rng.randn(N, p)
     mu = X.sum(axis=1) / np.sqrt(p)
     return X, mu + rng.randn(N), mu
+
+
+def simuler_mease_wyner(N, p, J=2, q=0.15, rng=None):
+    """Modèle (15.11) : ``X ~ U[0,1]^p`` et
+    ``P(Y=1|X) = q + (1-2q) 1{sum_{j<=J} X_j > J/2}``."""
+    rng = np.random.RandomState(0) if rng is None else rng
+    X = rng.rand(N, p)
+    s = (X[:, :J].sum(axis=1) > J / 2.0)
+    prob = q + (1 - 2 * q) * s
+    y = (rng.rand(N) < prob).astype(int)
+    return X, y
