@@ -94,3 +94,11 @@ def variance_moyenne_bootstrap(sigma2, n):
     """Variance (non conditionnelle) d'une moyenne bootstrap :
     ``(2n - 1) sigma2 / n**2`` (exercice 15.4)."""
     return (2.0 * n - 1.0) * sigma2 / n ** 2
+
+
+def proba_variable_pertinente(p, J, m):
+    """Probabilité qu'au moins une des ``J`` variables pertinentes figure parmi
+    les ``m`` candidates tirées sans remise parmi ``p`` (loi hypergéométrique,
+    figure 15.7)."""
+    from scipy.special import comb
+    return 1.0 - comb(p - J, m) / comb(p, m)
