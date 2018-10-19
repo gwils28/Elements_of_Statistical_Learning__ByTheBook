@@ -120,3 +120,12 @@ def simuler_spheres(N, p=10, rng=None):
     X = rng.randn(N, p)
     y = (np.sum(X ** 2, axis=1) > chi2.ppf(0.5, p)).astype(int)
     return X, y
+
+
+def simuler_additif(N, p=50, rng=None):
+    """Modèle (15.8) : ``Y = (1/sqrt(50)) sum_j X_j + eps``, tout gaussien
+    standard. Retourne ``(X, y, mu)`` où ``mu`` est la vraie moyenne."""
+    rng = np.random.RandomState(0) if rng is None else rng
+    X = rng.randn(N, p)
+    mu = X.sum(axis=1) / np.sqrt(p)
+    return X, mu + rng.randn(N), mu
