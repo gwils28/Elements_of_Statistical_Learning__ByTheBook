@@ -152,3 +152,28 @@ def simuler_melange(means, N, rng=None):
     k = rng.randint(0, 10, N) + 10 * y
     X = means[k] + rng.randn(N, 2) / np.sqrt(5.0)
     return X, y
+
+
+# ---------------------------------------------------------------------------
+# Arbre CART aléatoire
+# ---------------------------------------------------------------------------
+
+def _meilleure_coupure(x, y, nmin):
+    """Meilleure coupure ``x <= s`` pour une variable : maximise la réduction
+    de la somme des carrés des écarts. Retourne ``(gain, seuil)`` ou ``None``."""
+    o = np.argsort(x, kind="mergesort")
+    xs, ys = x[o], y[o]
+    n = len(ys)
+    cs = np.cumsum(ys)
+    S = cs[-1]
+    nl = np.arange(1, n)
+    sl = cs[:-1]
+    nr = n - nl
+    sr = S - sl
+    valide = (xs[:-1] < xs[1:]) & (nl >= nmin) & (nr >= nmin)
+    if not valide.any():
+        return None
+    gain = sl ** 2 / nl + sr ** 2 / nr - S ** 2 / n
+    gain = np.where(valide, gain, -np.inf)
+    i = int(np.argmax(gain))
+    return gain[i], 0.5 * (xs[i] + xs[i + 1])
