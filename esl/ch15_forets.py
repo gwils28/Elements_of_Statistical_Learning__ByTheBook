@@ -140,3 +140,15 @@ def simuler_mease_wyner(N, p, J=2, q=0.15, rng=None):
     prob = q + (1 - 2 * q) * s
     y = (rng.rand(N) < prob).astype(int)
     return X, y
+
+
+def simuler_melange(means, N, rng=None):
+    """Tire N points du modèle « mixture » (chapitre 2) : la classe est tirée
+    à pile ou face, puis un centre parmi les 10 de la classe (lignes 0-9 de
+    ``means`` pour la classe 0, 10-19 pour la classe 1), puis
+    ``x ~ N(centre, I/5)``."""
+    rng = np.random.RandomState(0) if rng is None else rng
+    y = rng.randint(0, 2, N)
+    k = rng.randint(0, 10, N) + 10 * y
+    X = means[k] + rng.randn(N, 2) / np.sqrt(5.0)
+    return X, y
