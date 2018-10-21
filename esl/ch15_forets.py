@@ -177,3 +177,105 @@ def _meilleure_coupure(x, y, nmin):
     gain = np.where(valide, gain, -np.inf)
     i = int(np.argmax(gain))
     return gain[i], 0.5 * (xs[i] + xs[i + 1])
+
+
+class ArbreAleatoire:
+    """Arbre de régression CART avec sélection aléatoire de ``m`` variables
+    candidates à chaque nœud (étape 1(b) de l'algorithme 15.1).
+
+    Parameters
+    ----------
+    m : int or None
+        Nombre de variables candidates par nœud (``None`` : toutes, arbre CART
+        classique). Comme dans la plupart des logiciels, si les ``m`` premières
+        variables tirées sont constantes dans le nœud, on continue le tirage
+        jusqu'à en trouver ``m`` qui permettent une coupure.
+    nmin : int
+        Effectif minimal de chaque nœud terminal.
+    rng : numpy.random.RandomState
+
+    Attributes
+    ----------
+    variable, seuil, gauche, droite, valeur : ndarray
+        Description de l'arbre (``variable = -1`` pour une feuille).
+    importance_ : ndarray (p,)
+        Somme, pour chaque variable, des réductions de la somme des carrés
+        des écarts obtenues aux nœuds où elle sert à couper.
+    """
+
+    def __init__(self, m=None, nmin=1, rng=None):
+        self.m = m
+        self.nmin = nmin
+        self.rng = np.random.RandomState(0) if rng is None else rng
+
+    def fit(self, X, y):
+        X = np.asarray(X, float)
+        y = np.asarray(y, float)
+        N, p = X.shape
+        m = p if self.m is None else min(self.m, p)
+        var, seu, ga, dr, val = [], [], [], [], []
+        self.importance_ = np.zeros(p)
+
+        def nouveau_noeud(idx):
+            var.append(-1)
+            seu.append(0.0)
+            ga.append(-1)
+            dr.append(-1)
+            val.append(y[idx].mean())
+            return len(var) - 1
+
+        pile = [(np.arange(N), nouveau_noeud(np.arange(N)))]
+        while pile:
+            idx, k = pile.pop()
+            yk = y[idx]
+            if len(idx) < 2 * self.nmin or np.ptp(yk) == 0:
+                continue
+            meilleur = None
+            vues = 0
+            for j in self.rng.permutation(p):
+                res = _meilleure_coupure(X[idx, j], yk, self.nmin)
+                if res is None:
+                    continue
+                vues += 1
+                if meilleur is None or res[0] > meilleur[0]:
+                    meilleur = (res[0], res[1], j)
+                if vues >= m:
+                    break
+            if meilleur is None:
+                continue
+            gain, s, j = meilleur
+            self.importance_[j] += gain
+            g = idx[X[idx, j] <= s]
+            d = idx[X[idx, j] > s]
+            var[k], seu[k] = j, s
+            ga[k] = nouveau_noeud(g)
+            dr[k] = nouveau_noeud(d)
+            pile.append((g, ga[k]))
+            pile.append((d, dr[k]))
+        self.variable = np.array(var)
+        self.seuil = np.array(seu)
+        self.gauche = np.array(ga)
+        self.droite = np.array(dr)
+        self.valeur = np.array(val)
+        return self
+
+    @property
+    def n_feuilles(self):
+        """Nombre de nœuds terminaux."""
+        return int(np.sum(self.variable < 0))
+
+    def apply(self, X):
+        """Indice du nœud terminal atteint par chaque ligne de ``X``."""
+        X = np.asarray(X, float)
+        noeud = np.zeros(len(X), dtype=int)
+        actifs = np.flatnonzero(self.variable[noeud] >= 0)
+        while actifs.size:
+            k = noeud[actifs]
+            aller_gauche = X[actifs, self.variable[k]] <= self.seuil[k]
+            noeud[actifs] = np.where(aller_gauche, self.gauche[k], self.droite[k])
+            actifs = actifs[self.variable[noeud[actifs]] >= 0]
+        return noeud
+
+    def predict(self, X):
+        """Valeur (moyenne de y) du nœud terminal atteint."""
+        return self.valeur[self.apply(X)]
