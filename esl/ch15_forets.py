@@ -279,3 +279,78 @@ class ArbreAleatoire:
     def predict(self, X):
         """Valeur (moyenne de y) du nœud terminal atteint."""
         return self.valeur[self.apply(X)]
+
+
+# ---------------------------------------------------------------------------
+# Forêt aléatoire
+# ---------------------------------------------------------------------------
+
+class ForetAleatoire:
+    """Forêt aléatoire (algorithme 15.1) pour la régression ou la
+    classification binaire (y dans {0, 1}).
+
+    Parameters
+    ----------
+    B : int
+        Nombre d'arbres.
+    m : int or None
+        Nombre de variables candidates par nœud (``None`` : toutes, ce qui
+        donne le *bagging*).
+    nmin : int
+        Effectif minimal des feuilles (1 en classification, 5 en régression
+        selon les recommandations de la section 15.3).
+    classification : bool
+        Si vrai, la prédiction est le vote majoritaire des arbres.
+    seed : int
+        Graine.
+
+    Attributes
+    ----------
+    arbres : list of ArbreAleatoire
+    dans_sac : ndarray (B, N) de booléens
+        ``dans_sac[b, i]`` vaut ``True`` si l'observation i figure dans
+        l'échantillon bootstrap de l'arbre b.
+    """
+
+    def __init__(self, B=100, m=None, nmin=1, classification=False, seed=0):
+        self.B, self.m, self.nmin = B, m, nmin
+        self.classification = classification
+        self.seed = seed
+
+    def fit(self, X, y):
+        X = np.asarray(X, float)
+        y = np.asarray(y, float)
+        N = len(y)
+        rng = np.random.RandomState(self.seed)
+        self.arbres = []
+        self.dans_sac = np.zeros((self.B, N), dtype=bool)
+        for b in range(self.B):
+            boot = rng.randint(0, N, N)
+            self.dans_sac[b, boot] = True
+            arbre = ArbreAleatoire(self.m, self.nmin, rng).fit(X[boot], y[boot])
+            self.arbres.append(arbre)
+        return self
+
+    def predictions_arbres(self, X):
+        """Matrice (B, n) des prédictions de chaque arbre. En classification,
+        il s'agit du vote 0/1 de chaque arbre."""
+        P = np.array([a.predict(X) for a in self.arbres])
+        if self.classification:
+            P = (P > 0.5).astype(float)
+        return P
+
+    def predict(self, X):
+        """Moyenne des arbres (régression) ou vote majoritaire (classification)."""
+        moy = self.predictions_arbres(X).mean(axis=0)
+        return (moy > 0.5).astype(int) if self.classification else moy
+
+    @property
+    def importance_gini(self):
+        """Importance « Gini » : somme sur les arbres des réductions du
+        critère, en pourcentage du maximum."""
+        imp = np.sum([a.importance_ for a in self.arbres], axis=0)
+        return 100 * imp / imp.max()
+
+    def feuilles(self, X):
+        """Matrice (B, n) des feuilles atteintes dans chaque arbre."""
+        return np.array([a.apply(X) for a in self.arbres])
