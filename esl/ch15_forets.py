@@ -387,3 +387,12 @@ def erreur_oob_cumulee(P, dans_sac, y, classification=True):
         else:
             out[b] = np.mean((f - y[ok]) ** 2)
     return out
+
+
+def erreur_test_cumulee(P, y, classification=True):
+    """Erreur test (vote majoritaire ou erreur quadratique) en fonction du
+    nombre d'arbres, à partir de la matrice (B, n) des prédictions des arbres."""
+    f = np.cumsum(P, axis=0) / np.arange(1, P.shape[0] + 1)[:, None]
+    if classification:
+        return np.mean((f > 0.5).astype(int) != y[None, :], axis=1)
+    return np.mean((f - y[None, :]) ** 2, axis=1)
