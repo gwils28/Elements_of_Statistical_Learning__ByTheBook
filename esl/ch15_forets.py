@@ -354,3 +354,36 @@ class ForetAleatoire:
     def feuilles(self, X):
         """Matrice (B, n) des feuilles atteintes dans chaque arbre."""
         return np.array([a.apply(X) for a in self.arbres])
+
+
+def erreur_oob_cumulee(P, dans_sac, y, classification=True):
+    """Erreur OOB en fonction du nombre d'arbres.
+
+    Parameters
+    ----------
+    P : ndarray (B, N)
+        Prédictions de chaque arbre sur les données d'apprentissage (votes 0/1
+        en classification).
+    dans_sac : ndarray (B, N) de booléens
+    y : ndarray (N,)
+    classification : bool
+        Taux d'erreur (vote majoritaire) si vrai, erreur quadratique sinon.
+
+    Returns
+    -------
+    ndarray (B,)
+        Erreur OOB calculée avec les b premiers arbres, sur les observations
+        ayant au moins un arbre OOB.
+    """
+    hors = ~dans_sac
+    somme = np.cumsum(P * hors, axis=0)
+    nb = np.cumsum(hors, axis=0)
+    out = np.full(P.shape[0], np.nan)
+    for b in range(P.shape[0]):
+        ok = nb[b] > 0
+        f = somme[b, ok] / nb[b, ok]
+        if classification:
+            out[b] = np.mean((f > 0.5).astype(int) != y[ok])
+        else:
+            out[b] = np.mean((f - y[ok]) ** 2)
+    return out
