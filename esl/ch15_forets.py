@@ -396,3 +396,38 @@ def erreur_test_cumulee(P, y, classification=True):
     if classification:
         return np.mean((f > 0.5).astype(int) != y[None, :], axis=1)
     return np.mean((f - y[None, :]) ** 2, axis=1)
+
+
+def importance_permutation(foret, X, y, seed=0):
+    """Importance par permutation OOB (section 15.3.2).
+
+    Pour chaque arbre, on mesure la précision sur ses observations OOB, puis la
+    précision après permutation aléatoire de la colonne j parmi ces
+    observations ; la baisse de précision est moyennée sur les arbres.
+
+    Returns
+    -------
+    ndarray (p,)
+        Baisse moyenne de précision (classification) ou hausse moyenne de
+        l'erreur quadratique (régression).
+    """
+    rng = np.random.RandomState(seed)
+    X = np.asarray(X, float)
+    p = X.shape[1]
+    imp = np.zeros(p)
+    for b, arbre in enumerate(foret.arbres):
+        oob = np.flatnonzero(~foret.dans_sac[b])
+        Xo, yo = X[oob], y[oob]
+
+        def score(Z):
+            f = arbre.predict(Z)
+            if foret.classification:
+                return np.mean((f > 0.5) == yo)
+            return -np.mean((f - yo) ** 2)
+
+        ref = score(Xo)
+        for j in range(p):
+            Z = Xo.copy()
+            Z[:, j] = rng.permutation(Z[:, j])
+            imp[j] += ref - score(Z)
+    return imp / len(foret.arbres)
