@@ -431,3 +431,34 @@ def importance_permutation(foret, X, y, seed=0):
             Z[:, j] = rng.permutation(Z[:, j])
             imp[j] += ref - score(Z)
     return imp / len(foret.arbres)
+
+
+def proximite(feuilles, dans_sac):
+    """Matrice de proximité OOB (section 15.3.3).
+
+    Pour chaque arbre, toute paire d'observations OOB qui tombent dans la même
+    feuille voit sa proximité augmenter de 1 ; on divise ensuite par le nombre
+    d'arbres pour lesquels les deux observations sont OOB.
+
+    Parameters
+    ----------
+    feuilles : ndarray (B, N)
+        Feuille atteinte par chaque observation dans chaque arbre.
+    dans_sac : ndarray (B, N) de booléens
+
+    Returns
+    -------
+    ndarray (N, N), symétrique, à valeurs dans [0, 1], diagonale égale à 1.
+    """
+    B, N = feuilles.shape
+    num = np.zeros((N, N))
+    den = np.zeros((N, N))
+    for b in range(B):
+        o = (~dans_sac[b]).astype(float)
+        both = np.outer(o, o)
+        same = feuilles[b][:, None] == feuilles[b][None, :]
+        num += both * same
+        den += both
+    P = np.divide(num, den, out=np.zeros_like(num), where=den > 0)
+    np.fill_diagonal(P, 1.0)
+    return P
