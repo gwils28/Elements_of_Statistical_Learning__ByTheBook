@@ -462,3 +462,19 @@ def proximite(feuilles, dans_sac):
     P = np.divide(num, den, out=np.zeros_like(num), where=den > 0)
     np.fill_diagonal(P, 1.0)
     return P
+
+
+def mds_classique(D, k=2):
+    """Positionnement multidimensionnel classique (section 14.8).
+
+    À partir d'une matrice de dissimilarités ``D`` (N, N), on forme
+    ``B = -1/2 J D^2 J`` (J : matrice de centrage) et on garde les k premiers
+    vecteurs propres, multipliés par la racine des valeurs propres.
+    """
+    D = np.asarray(D, float)
+    N = len(D)
+    Jc = np.eye(N) - np.ones((N, N)) / N
+    Bm = -0.5 * Jc @ (D ** 2) @ Jc
+    vals, vecs = np.linalg.eigh(Bm)
+    ordre = np.argsort(vals)[::-1][:k]
+    return vecs[:, ordre] * np.sqrt(np.maximum(vals[ordre], 0))
