@@ -478,3 +478,58 @@ def mds_classique(D, k=2):
     vals, vecs = np.linalg.eigh(Bm)
     ordre = np.argsort(vals)[::-1][:k]
     return vecs[:, ordre] * np.sqrt(np.maximum(vals[ordre], 0))
+
+
+# ---------------------------------------------------------------------------
+# Décomposition biais / variance (section 15.4, exercice 15.5)
+# ---------------------------------------------------------------------------
+
+def decomposition_variance(T, mu=None):
+    """Décomposition (15.9) de la variance d'un arbre de forêt aléatoire.
+
+    Parameters
+    ----------
+    T : ndarray (nZ, nT, nx)
+        ``T[z, t, i]`` : prédiction au point x_i du t-ième arbre construit sur
+        le z-ième échantillon d'apprentissage.
+    mu : ndarray (nx,), optional
+        Vraie fonction de régression aux points x_i (pour le biais).
+
+    Returns
+    -------
+    dict
+        Tableaux de taille (nx,). La variance de la forêt limite est corrigée
+        du terme ``intra / nT`` dû au nombre fini d'arbres :
+        ``totale`` = Var_{Theta,Z} T, ``intra`` = E_Z Var_{Theta|Z} T,
+        ``var_rf`` = Var_Z E_{Theta|Z} T, ``rho`` = var_rf / totale
+        (formule (15.12)) et, si ``mu`` est fourni, ``biais2`` =
+        (mu - E_Z E_{Theta|Z} T)^2.
+    """
+    T = np.asarray(T, float)
+    nT = T.shape[1]
+    f_rf = T.mean(axis=1)                       # (nZ, nx) : E_{Theta|Z} T estimée
+    intra = T.var(axis=1, ddof=1).mean(axis=0)  # E_Z Var_{Theta|Z}
+    # la moyenne de nT arbres a une variance conditionnelle Var_{Theta|Z} / nT
+    # en trop par rapport à la forêt limite : on la retranche (estimateur sans biais)
+    var_rf = np.maximum(f_rf.var(axis=0, ddof=1) - intra / nT, 0.0)  # Var_Z E_{Theta|Z}
+    totale = var_rf + intra
+    out = {"totale": totale, "intra": intra, "var_rf": var_rf,
+           "rho": var_rf / totale}
+    if mu is not None:
+        # même correction : E_Z[(mu - fbar)^2] contient var(fbar) / nZ
+        nZ = T.shape[0]
+        b2 = (np.asarray(mu) - f_rf.mean(axis=0)) ** 2
+        out["biais2"] = np.maximum(b2 - f_rf.var(axis=0, ddof=1) / nZ, 0.0)
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Exercice 15.7 : importance par permutation en régression linéaire
+# ---------------------------------------------------------------------------
+
+def rss_permute(X, y, beta, j, perm):
+    """Erreur quadratique moyenne ``(1/N) ||y - X* beta||^2`` où ``X*`` est
+    ``X`` dont la colonne j est permutée selon ``perm``."""
+    Z = np.array(X, float, copy=True)
+    Z[:, j] = Z[perm, j]
+    return np.mean((y - Z @ beta) ** 2)
