@@ -533,3 +533,21 @@ def rss_permute(X, y, beta, j, perm):
     Z = np.array(X, float, copy=True)
     Z[:, j] = Z[perm, j]
     return np.mean((y - Z @ beta) ** 2)
+
+
+def esperance_hausse_rss(X, y, beta, j):
+    """Valeur exacte de ``E_P[RSS_j* - RSS]`` sur toutes les permutations
+    (formule obtenue dans l'exercice 15.7, valable sans supposer les résidus
+    orthogonaux aux variables) :
+
+    ``(2 b_j / N) sum_i r_i (x_ij - xbar_j) + (b_j^2 / N) sum_i E(x_ij - x_pi(i)j)^2``
+    """
+    X = np.asarray(X, float)
+    N = len(y)
+    r = y - X @ beta
+    x = X[:, j]
+    b = beta[j]
+    terme1 = 2 * b / N * np.sum(r * (x - x.mean()))
+    # E (x_i - x_pi(i))^2 = x_i^2 - 2 x_i xbar + mean(x^2)
+    terme2 = b ** 2 / N * np.sum(x ** 2 - 2 * x * x.mean() + np.mean(x ** 2))
+    return terme1 + terme2
