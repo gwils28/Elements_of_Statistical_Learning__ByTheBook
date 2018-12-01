@@ -18,3 +18,21 @@ def test_variance_moyenne_correlee_simulation():
     # formule exacte : 1^T C 1 / B^2
     assert np.ones(B) @ C @ np.ones(B) / B ** 2 == pytest.approx(
         rf.variance_moyenne_correlee(s2, rho, B))
+
+
+def test_rho_minimal_annule_variance():
+    for B in (2, 5, 10):
+        assert rf.variance_moyenne_correlee(1.0, rf.rho_minimal(B), B) == pytest.approx(0)
+
+
+def test_correlation_bootstrap():
+    rng = np.random.RandomState(1)
+    n = 5
+    x = rng.randn(40000, n)
+    i1 = rng.randint(0, n, (40000, n))
+    i2 = rng.randint(0, n, (40000, n))
+    m1 = np.take_along_axis(x, i1, 1).mean(1)
+    m2 = np.take_along_axis(x, i2, 1).mean(1)
+    assert np.corrcoef(m1, m2)[0, 1] == pytest.approx(
+        rf.correlation_moyennes_bootstrap(n), abs=0.02)
+    assert m1.var() == pytest.approx(rf.variance_moyenne_bootstrap(1.0, n), rel=0.03)
