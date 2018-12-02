@@ -36,3 +36,11 @@ def test_correlation_bootstrap():
     assert np.corrcoef(m1, m2)[0, 1] == pytest.approx(
         rf.correlation_moyennes_bootstrap(n), abs=0.02)
     assert m1.var() == pytest.approx(rf.variance_moyenne_bootstrap(1.0, n), rel=0.03)
+
+
+def test_proba_variable_pertinente_valeurs_du_livre():
+    # en-têtes de la figure 15.7 : (2, 5) -> 0.52 ; (2, 25) -> 0.34
+    for bruit, attendu in [(5, 0.52), (25, 0.34), (50, 0.25), (100, 0.19), (150, 0.15)]:
+        p = 2 + bruit
+        m = int(np.floor(np.sqrt(p)))
+        assert rf.proba_variable_pertinente(p, 2, m) == pytest.approx(attendu, abs=0.01)
