@@ -44,3 +44,12 @@ def test_proba_variable_pertinente_valeurs_du_livre():
         p = 2 + bruit
         m = int(np.floor(np.sqrt(p)))
         assert rf.proba_variable_pertinente(p, 2, m) == pytest.approx(attendu, abs=0.01)
+
+
+def test_arbre_complet_interpole():
+    rng = np.random.RandomState(0)
+    X = rng.randn(60, 3)
+    y = rng.randn(60)
+    a = rf.ArbreAleatoire(m=None, nmin=1).fit(X, y)
+    assert np.allclose(a.predict(X), y)
+    assert a.n_feuilles == 60
