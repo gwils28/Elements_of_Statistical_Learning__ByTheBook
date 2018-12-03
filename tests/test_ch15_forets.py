@@ -68,3 +68,14 @@ def test_arbre_nmin_et_comparaison_sklearn():
     e1 = np.mean((a.predict(X) - y) ** 2)
     e2 = np.mean((sk.predict(X) - y) ** 2)
     assert e1 == pytest.approx(e2, rel=0.15)
+
+
+def test_premiere_coupure_identique_a_sklearn():
+    from sklearn.tree import DecisionTreeRegressor
+    rng = np.random.RandomState(3)
+    X = rng.randn(100, 4)
+    y = 2 * (X[:, 2] > 0.3) + 0.2 * rng.randn(100)
+    a = rf.ArbreAleatoire(m=None).fit(X, y)
+    sk = DecisionTreeRegressor(max_depth=1).fit(X, y)
+    assert a.variable[0] == sk.tree_.feature[0]
+    assert a.seuil[0] == pytest.approx(sk.tree_.threshold[0])
