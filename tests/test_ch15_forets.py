@@ -53,3 +53,18 @@ def test_arbre_complet_interpole():
     a = rf.ArbreAleatoire(m=None, nmin=1).fit(X, y)
     assert np.allclose(a.predict(X), y)
     assert a.n_feuilles == 60
+
+
+def test_arbre_nmin_et_comparaison_sklearn():
+    from sklearn.tree import DecisionTreeRegressor
+    rng = np.random.RandomState(0)
+    X = rng.rand(200, 2)
+    y = np.sin(6 * X[:, 0]) + 0.1 * rng.randn(200)
+    a = rf.ArbreAleatoire(m=None, nmin=5).fit(X, y)
+    feuilles = a.apply(X)
+    assert np.bincount(feuilles)[np.unique(feuilles)].min() >= 5
+    sk = DecisionTreeRegressor(min_samples_leaf=5, random_state=0).fit(X, y)
+    # même critère (SCE) : erreur d'apprentissage comparable
+    e1 = np.mean((a.predict(X) - y) ** 2)
+    e2 = np.mean((sk.predict(X) - y) ** 2)
+    assert e1 == pytest.approx(e2, rel=0.15)
