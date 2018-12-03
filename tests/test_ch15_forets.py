@@ -79,3 +79,19 @@ def test_premiere_coupure_identique_a_sklearn():
     sk = DecisionTreeRegressor(max_depth=1).fit(X, y)
     assert a.variable[0] == sk.tree_.feature[0]
     assert a.seuil[0] == pytest.approx(sk.tree_.threshold[0])
+
+
+def test_foret_classification_et_oob():
+    rng = np.random.RandomState(0)
+    X, y = rf.simuler_spheres(300, p=4, rng=rng)
+    f = rf.ForetAleatoire(B=30, m=2, classification=True).fit(X, y)
+    Xt, yt = rf.simuler_spheres(500, p=4, rng=rng)
+    err = np.mean(f.predict(Xt) != yt)
+    assert err < 0.3
+    P = f.predictions_arbres(X)
+    oob = rf.erreur_oob_cumulee(P, f.dans_sac, y)
+    assert oob.shape == (30,)
+    assert abs(oob[-1] - err) < 0.1
+    # environ 36,8 % d'observations hors sac par arbre
+    assert (~f.dans_sac).mean() == pytest.approx(np.exp(-1), abs=0.02)
+    assert f.importance_gini.max() == pytest.approx(100)
