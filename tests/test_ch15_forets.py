@@ -95,3 +95,11 @@ def test_foret_classification_et_oob():
     # environ 36,8 % d'observations hors sac par arbre
     assert (~f.dans_sac).mean() == pytest.approx(np.exp(-1), abs=0.02)
     assert f.importance_gini.max() == pytest.approx(100)
+
+
+def test_erreur_test_cumulee_derniere_valeur():
+    rng = np.random.RandomState(0)
+    P = (rng.rand(11, 50) > 0.4).astype(float)
+    y = rng.randint(0, 2, 50)
+    e = rf.erreur_test_cumulee(P, y)
+    assert e[-1] == pytest.approx(np.mean((P.mean(0) > 0.5) != y))
