@@ -113,3 +113,12 @@ def test_proximite_proprietes():
     assert np.allclose(P, P.T)
     assert np.all((P >= 0) & (P <= 1))
     assert np.allclose(np.diag(P), 1)
+
+
+def test_mds_classique_retrouve_configuration():
+    rng = np.random.RandomState(0)
+    Y = rng.randn(30, 2)
+    D = np.sqrt(((Y[:, None] - Y[None]) ** 2).sum(-1))
+    Z = rf.mds_classique(D, 2)
+    D2 = np.sqrt(((Z[:, None] - Z[None]) ** 2).sum(-1))
+    assert np.allclose(D, D2, atol=1e-8)
