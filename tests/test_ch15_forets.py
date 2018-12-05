@@ -103,3 +103,13 @@ def test_erreur_test_cumulee_derniere_valeur():
     y = rng.randint(0, 2, 50)
     e = rf.erreur_test_cumulee(P, y)
     assert e[-1] == pytest.approx(np.mean((P.mean(0) > 0.5) != y))
+
+
+def test_proximite_proprietes():
+    rng = np.random.RandomState(0)
+    X, y = rf.simuler_spheres(80, p=3, rng=rng)
+    f = rf.ForetAleatoire(B=40, m=1, classification=True).fit(X, y)
+    P = rf.proximite(f.feuilles(X), f.dans_sac)
+    assert np.allclose(P, P.T)
+    assert np.all((P >= 0) & (P <= 1))
+    assert np.allclose(np.diag(P), 1)
