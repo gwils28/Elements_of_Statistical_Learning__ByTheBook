@@ -122,3 +122,15 @@ def test_mds_classique_retrouve_configuration():
     Z = rf.mds_classique(D, 2)
     D2 = np.sqrt(((Z[:, None] - Z[None]) ** 2).sum(-1))
     assert np.allclose(D, D2, atol=1e-8)
+
+
+def test_decomposition_variance():
+    rng = np.random.RandomState(0)
+    # T = A(Z) + E(Theta) : Var_Z = 4, intra = 1 -> rho = 0.8
+    A = 2 * rng.randn(4000, 1, 3)
+    T = A + rng.randn(4000, 30, 3)
+    d = rf.decomposition_variance(T, mu=np.zeros(3))
+    assert np.allclose(d["intra"], 1, atol=0.05)
+    assert np.allclose(d["totale"], 5, atol=0.3)
+    assert np.allclose(d["rho"], 0.8, atol=0.02)
+    assert np.all(d["biais2"] < 0.01)
