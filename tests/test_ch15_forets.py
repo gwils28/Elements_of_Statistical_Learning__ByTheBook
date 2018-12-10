@@ -134,3 +134,30 @@ def test_decomposition_variance():
     assert np.allclose(d["totale"], 5, atol=0.3)
     assert np.allclose(d["rho"], 0.8, atol=0.02)
     assert np.all(d["biais2"] < 0.01)
+
+
+def test_exercice_15_7_enumeration_exacte():
+    rng = np.random.RandomState(0)
+    N = 6
+    X = rng.randn(N, 2)
+    y = X @ np.array([1.0, -0.5]) + rng.randn(N)
+    X = (X - X.mean(0)) / X.std(0)
+    y = (y - y.mean()) / y.std()
+    beta = np.linalg.lstsq(X, y, rcond=None)[0]
+    rss = np.mean((y - X @ beta) ** 2)
+    for j in range(2):
+        moy = np.mean([rf.rss_permute(X, y, beta, j, np.array(p)) - rss
+                       for p in itertools.permutations(range(N))])
+        assert moy == pytest.approx(2 * beta[j] ** 2)
+        assert moy == pytest.approx(rf.esperance_hausse_rss(X, y, beta, j))
+
+
+def test_simulateurs():
+    rng = np.random.RandomState(0)
+    X, y = rf.simuler_spheres(20000, rng=rng)
+    assert y.mean() == pytest.approx(0.5, abs=0.02)
+    X, y = rf.simuler_mease_wyner(20000, 5, J=2, q=0.1, rng=rng)
+    bayes = (X[:, :2].sum(1) > 1).astype(int)
+    assert np.mean(bayes != y) == pytest.approx(0.1, abs=0.01)
+    X, y, mu = rf.simuler_additif(20000, rng=rng)
+    assert np.var(mu) == pytest.approx(1, abs=0.05)
