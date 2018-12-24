@@ -47,3 +47,53 @@ def standardize(X, mean=None, sd=None):
         sd = X.std(axis=0)
         sd = np.where(sd > 0, sd, 1.0)
     return (X - mean) / sd, mean, sd
+
+
+# ---------------------------------------------------------------------------
+# Forward stagewise (algorithme 16.1)
+# ---------------------------------------------------------------------------
+
+def forward_stagewise(X, y, eps=0.01, n_steps=200):
+    """Régression linéaire « forward stagewise » incrémentale (algorithme 16.1).
+
+    À chaque étape on choisit la fonction de base ``k*`` qui ajuste le mieux
+    le résidu courant au sens des moindres carrés (c'est-à-dire qui maximise
+    ``(x_k^T r)^2 / ||x_k||^2``), puis on ajoute ``eps * signe(x_k^T r)`` à son
+    coefficient.
+
+    Parameters
+    ----------
+    X : ndarray (N, K)
+        Fonctions de base évaluées aux points d'apprentissage (en général
+        centrées ; aucune constante n'est ajoutée).
+    y : ndarray (N,)
+        Réponse (en général centrée).
+    eps : float
+        Taille du pas.
+    n_steps : int
+        Nombre d'itérations ``M``.
+
+    Returns
+    -------
+    path : ndarray (n_steps + 1, K)
+        Coefficients après 0, 1, ..., ``n_steps`` itérations.
+    """
+    X = np.asarray(X, float)
+    r = np.asarray(y, float).copy()
+    N, K = X.shape
+    norm2 = (X ** 2).sum(axis=0)
+    norm2 = np.where(norm2 > 0, norm2, np.inf)
+    alpha = np.zeros(K)
+    path = np.zeros((n_steps + 1, K))
+    for m in range(1, n_steps + 1):
+        c = X.T @ r
+        score = c ** 2 / norm2
+        k = int(np.argmax(score))
+        if score[k] <= 0:  # résidu orthogonal à toutes les bases : on s'arrête
+            path[m:] = alpha
+            break
+        step = eps * np.sign(c[k])
+        alpha[k] += step
+        r -= step * X[:, k]
+        path[m] = alpha
+    return path
