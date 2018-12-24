@@ -61,8 +61,8 @@ Lancer les tests : `pytest tests/`.
 | 12 | [SVM et discriminants flexibles](notebooks/ch12_svm_discriminants_flexibles) | ✅ |
 | 13 | [Méthodes de prototypes et plus proches voisins](notebooks/ch13_prototypes_plus_proches_voisins) | ✅ |
 | 14 | [Apprentissage non supervisé](notebooks/ch14_apprentissage_non_supervise) | ✅ |
-| 15 | Forêts aléatoires | 🚧 |
-| 16 | Apprentissage ensembliste | - |
+| 15 | [Forêts aléatoires](notebooks/ch15_forets_aleatoires) | ✅ |
+| 16 | Apprentissage ensembliste | 🚧 |
 | 17 | Modèles graphiques non orientés | - |
 | 18 | Problèmes en grande dimension (p ≫ N) | - |
 
