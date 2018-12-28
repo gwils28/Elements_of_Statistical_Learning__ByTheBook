@@ -97,3 +97,12 @@ def forward_stagewise(X, y, eps=0.01, n_steps=200):
         r -= step * X[:, k]
         path[m] = alpha
     return path
+
+
+# ---------------------------------------------------------------------------
+# Lasso par descente de coordonnées
+# ---------------------------------------------------------------------------
+
+def _soft(z, lam):
+    """Seuillage doux ``S(z, lam) = signe(z) (|z| - lam)_+``."""
+    return np.sign(z) * max(abs(z) - lam, 0.0)
