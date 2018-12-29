@@ -106,3 +106,48 @@ def forward_stagewise(X, y, eps=0.01, n_steps=200):
 def _soft(z, lam):
     """Seuillage doux ``S(z, lam) = signe(z) (|z| - lam)_+``."""
     return np.sign(z) * max(abs(z) - lam, 0.0)
+
+
+def _cd_gram(G, c, lam, b, tol, max_sweeps):
+    """Descente de coordonnées sur la forme quadratique ``b'Gb/2 - c'b + lam|b|_1``.
+
+    Stratégie « ensemble actif » : un balayage complet, puis des balayages
+    restreints aux coefficients non nuls jusqu'à convergence, et ainsi de suite
+    jusqu'à ce qu'un balayage complet ne modifie plus rien.
+    """
+    diag = np.diag(G).copy()
+    ok = diag > 0
+    Gb = G @ b
+    K = len(b)
+    full = np.flatnonzero(ok)
+    sweeps = 0
+    while sweeps < max_sweeps:
+        # balayage complet
+        sweeps += 1
+        dmax = 0.0
+        for j in full:
+            z = c[j] - Gb[j] + diag[j] * b[j]
+            new = _soft(z, lam) / diag[j]
+            d = new - b[j]
+            if d != 0.0:
+                Gb += G[:, j] * d
+                b[j] = new
+                dmax = max(dmax, abs(d) * np.sqrt(diag[j]))
+        if dmax < tol:
+            break
+        # balayages sur l'ensemble actif
+        while sweeps < max_sweeps:
+            sweeps += 1
+            active = np.flatnonzero(b != 0)
+            dmax = 0.0
+            for j in active:
+                z = c[j] - Gb[j] + diag[j] * b[j]
+                new = _soft(z, lam) / diag[j]
+                d = new - b[j]
+                if d != 0.0:
+                    Gb += G[:, j] * d
+                    b[j] = new
+                    dmax = max(dmax, abs(d) * np.sqrt(diag[j]))
+            if dmax < tol:
+                break
+    return b, sweeps
