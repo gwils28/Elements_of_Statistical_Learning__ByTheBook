@@ -151,3 +151,41 @@ def _cd_gram(G, c, lam, b, tol, max_sweeps):
             if dmax < tol:
                 break
     return b, sweeps
+
+
+def lasso_cd(X, y, lam, coef_init=None, tol=1e-7, max_sweeps=10000):
+    """Lasso par descente de coordonnées (avec constante non pénalisée).
+
+    Minimise ``(1 / 2N) * ||y - b0 - X b||^2 + lam * ||b||_1``
+    (même normalisation que ``sklearn.linear_model.Lasso(alpha=lam)``).
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+    y : ndarray (N,)
+    lam : float
+        Paramètre de pénalisation (>= 0).
+    coef_init : ndarray (p,), optionnel
+        Point de départ (« démarrage à chaud »).
+    tol : float
+        Critère d'arrêt sur la plus grande variation (pondérée) d'un coefficient,
+        relativement à l'écart-type de ``y``.
+    max_sweeps : int
+        Nombre maximal de balayages.
+
+    Returns
+    -------
+    b0 : float
+    b : ndarray (p,)
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    N = len(y)
+    xm, ym = X.mean(axis=0), y.mean()
+    Xc, yc = X - xm, y - ym
+    G = Xc.T @ Xc / N
+    c = Xc.T @ yc / N
+    b = np.zeros(X.shape[1]) if coef_init is None else np.array(coef_init, float)
+    scale = max(yc.std(), 1e-12)
+    b, _ = _cd_gram(G, c, lam, b, tol * scale, max_sweeps)
+    return ym - xm @ b, b
