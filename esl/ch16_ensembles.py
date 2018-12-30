@@ -255,3 +255,23 @@ def lasso_path_fast(X, y, lambdas=None, n_lambdas=50, lambda_ratio=1e-3):
     _, coefs, _ = lasso_path(Xc, yc, alphas=lambdas, tol=1e-6, max_iter=10000)
     coefs = coefs.T
     return lambdas, ym - coefs @ xm, coefs
+
+
+# ---------------------------------------------------------------------------
+# Ridge paramétrée par les degrés de liberté
+# ---------------------------------------------------------------------------
+
+def ridge_lambda_for_df(d2, df):
+    """Valeur de ``lam`` telle que ``sum d_j^2 / (d_j^2 + lam) = df``.
+
+    Parameters
+    ----------
+    d2 : ndarray
+        Carrés des valeurs singulières de la matrice (centrée) des prédicteurs.
+    df : float
+        Degrés de liberté visés, ``0 < df < nombre de d_j > 0``.
+    """
+    d2 = np.asarray(d2, float)
+    f = lambda lam: np.sum(d2 / (d2 + lam)) - df
+    hi = d2.max() * 1e8 + 1.0
+    return brentq(f, 0.0, hi, xtol=1e-12 * hi)
