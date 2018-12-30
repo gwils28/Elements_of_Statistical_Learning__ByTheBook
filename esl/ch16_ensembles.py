@@ -189,3 +189,43 @@ def lasso_cd(X, y, lam, coef_init=None, tol=1e-7, max_sweeps=10000):
     scale = max(yc.std(), 1e-12)
     b, _ = _cd_gram(G, c, lam, b, tol * scale, max_sweeps)
     return ym - xm @ b, b
+
+
+def lasso_path_cd(X, y, lambdas=None, n_lambdas=50, lambda_ratio=1e-3,
+                  tol=1e-7, max_sweeps=10000):
+    """Chemin complet du lasso (descente de coordonnées, démarrages à chaud).
+
+    Parameters
+    ----------
+    X, y : données (une constante non pénalisée est ajustée).
+    lambdas : ndarray, optionnel
+        Grille décroissante de valeurs de ``lam`` ; par défaut une grille
+        logarithmique de ``lam_max`` (plus petite valeur annulant tous les
+        coefficients) à ``lambda_ratio * lam_max``.
+    n_lambdas, lambda_ratio : paramètres de la grille par défaut.
+
+    Returns
+    -------
+    lambdas : ndarray (L,)
+    intercepts : ndarray (L,)
+    coefs : ndarray (L, p)
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    N, p = X.shape
+    xm, ym = X.mean(axis=0), y.mean()
+    Xc, yc = X - xm, y - ym
+    G = Xc.T @ Xc / N
+    c = Xc.T @ yc / N
+    if lambdas is None:
+        lmax = np.abs(c).max()
+        lambdas = lmax * np.logspace(0, np.log10(lambda_ratio), n_lambdas)
+    lambdas = np.asarray(lambdas, float)
+    scale = max(yc.std(), 1e-12)
+    b = np.zeros(p)
+    coefs = np.zeros((len(lambdas), p))
+    for i, lam in enumerate(lambdas):
+        b, _ = _cd_gram(G, c, lam, b, tol * scale, max_sweeps)
+        coefs[i] = b
+    intercepts = ym - coefs @ xm
+    return lambdas, intercepts, coefs
