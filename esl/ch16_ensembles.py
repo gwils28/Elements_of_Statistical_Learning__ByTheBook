@@ -229,3 +229,29 @@ def lasso_path_cd(X, y, lambdas=None, n_lambdas=50, lambda_ratio=1e-3,
         coefs[i] = b
     intercepts = ym - coefs @ xm
     return lambdas, intercepts, coefs
+
+
+def lasso_path_fast(X, y, lambdas=None, n_lambdas=50, lambda_ratio=1e-3):
+    """Même chemin que :func:`lasso_path_cd`, calculé par scikit-learn.
+
+    La descente de coordonnées de scikit-learn est écrite en Cython : elle est
+    bien plus rapide que notre boucle Python lorsque le dictionnaire compte des
+    milliers de fonctions de base (post-traitement d'ensembles, règles).  Elle
+    minimise exactement le même critère ``(1/2N)||y - b0 - Xb||^2 + lam ||b||_1``.
+
+    Returns
+    -------
+    lambdas, intercepts, coefs : comme :func:`lasso_path_cd`.
+    """
+    from sklearn.linear_model import lasso_path
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    xm, ym = X.mean(axis=0), y.mean()
+    Xc, yc = X - xm, y - ym
+    if lambdas is None:
+        lmax = np.abs(Xc.T @ yc).max() / len(y)
+        lambdas = lmax * np.logspace(0, np.log10(lambda_ratio), n_lambdas)
+    lambdas = np.asarray(lambdas, float)
+    _, coefs, _ = lasso_path(Xc, yc, alphas=lambdas, tol=1e-6, max_iter=10000)
+    coefs = coefs.T
+    return lambdas, ym - coefs @ xm, coefs
