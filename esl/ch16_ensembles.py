@@ -275,3 +275,29 @@ def ridge_lambda_for_df(d2, df):
     f = lambda lam: np.sum(d2 / (d2 + lam)) - df
     hi = d2.max() * 1e8 + 1.0
     return brentq(f, 0.0, hi, xtol=1e-12 * hi)
+
+
+def ridge_path_df(X, y, dfs):
+    """Coefficients ridge (sans constante) pour une liste de degrés de liberté.
+
+    On utilise la décomposition en valeurs singulières ``X = U D V^T`` :
+    ``b(lam) = V diag(d_j / (d_j^2 + lam)) U^T y`` (éq. (3.47) du livre).
+
+    Parameters
+    ----------
+    X : ndarray (N, p), supposée centrée.
+    y : ndarray (N,), supposée centrée.
+    dfs : liste de degrés de liberté (strictement entre 0 et rang(X)).
+
+    Returns
+    -------
+    lambdas : ndarray (L,)
+    coefs : ndarray (L, p)
+    """
+    U, d, Vt = np.linalg.svd(np.asarray(X, float), full_matrices=False)
+    keep = d > 1e-10 * d.max()
+    U, d, Vt = U[:, keep], d[keep], Vt[keep]
+    uty = U.T @ y
+    lambdas = np.array([ridge_lambda_for_df(d ** 2, df) for df in dfs])
+    coefs = np.array([Vt.T @ (d / (d ** 2 + lam) * uty) for lam in lambdas])
+    return lambdas, coefs
