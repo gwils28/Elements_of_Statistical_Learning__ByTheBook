@@ -349,3 +349,88 @@ def block_correlated_data(n, beta=None, n_blocks=50, block_size=20, rho=0.95,
     sigma = np.sqrt(nsr * np.sum(beta ** 2))
     y = X @ beta + sigma * rng.randn(n)
     return X, y, beta, sigma
+
+
+# ---------------------------------------------------------------------------
+# Longueur d'arc L1 (exercice 16.2)
+# ---------------------------------------------------------------------------
+
+def l1_arc_length(path):
+    """Longueur d'arc L1 cumulée d'un chemin de coefficients affine par morceaux.
+
+    Parameters
+    ----------
+    path : ndarray (T, p)
+        Coefficients aux instants successifs (le chemin est supposé affine
+        entre deux instants consécutifs).
+
+    Returns
+    -------
+    ndarray (T,)
+        ``Lambda(t_i) = sum_{l < i} |alpha(t_{l+1}) - alpha(t_l)|_1`` avec
+        ``Lambda(t_0) = 0``.
+    """
+    path = np.asarray(path, float)
+    inc = np.abs(np.diff(path, axis=0)).sum(axis=1)
+    return np.concatenate([[0.0], np.cumsum(inc)])
+
+
+# ---------------------------------------------------------------------------
+# AdaBoost discret avec rétrécissement (figure 16.5)
+# ---------------------------------------------------------------------------
+
+def adaboost_shrunk(X, y, n_trees=1000, nu=0.1, max_leaf_nodes=4, X_test=None,
+                    y_test=None, random_state=0):
+    """AdaBoost.M1 (algorithme 10.1) avec un facteur de rétrécissement ``nu``.
+
+    Le m-ième classifieur ``G_m(x) in {-1, +1}`` est un arbre à
+    ``max_leaf_nodes`` feuilles ajusté aux poids courants ; il reçoit le poids
+    ``alpha_m = nu * log((1 - err_m) / err_m)``.  On suit au fil des
+    itérations la marge L1 normalisée (16.7)
+    ``m(f) = min_i y_i f(x_i) / sum_m |alpha_m|``.
+
+    Parameters
+    ----------
+    X, y : données d'apprentissage, ``y`` dans {-1, +1}.
+    n_trees : int
+    nu : float
+        Rétrécissement (``nu = 1`` : AdaBoost.M1 usuel).
+    max_leaf_nodes : int
+    X_test, y_test : échantillon test optionnel.
+
+    Returns
+    -------
+    dict
+        ``alpha`` (poids), ``margin``, ``train_error`` et, si un échantillon
+        test est fourni, ``test_error`` (tableaux de longueur ``n_trees``).
+    """
+    from sklearn.tree import DecisionTreeClassifier
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    N = len(y)
+    w = np.full(N, 1.0 / N)
+    F = np.zeros(N)
+    Ft = None if X_test is None else np.zeros(len(X_test))
+    out = {k: np.zeros(n_trees) for k in ("alpha", "margin", "train_error")}
+    if X_test is not None:
+        out["test_error"] = np.zeros(n_trees)
+    total = 0.0
+    for m in range(n_trees):
+        tree = DecisionTreeClassifier(max_leaf_nodes=max_leaf_nodes,
+                                      random_state=random_state)
+        tree.fit(X, y, sample_weight=w)
+        g = tree.predict(X)
+        miss = g != y
+        err = np.clip(w[miss].sum() / w.sum(), 1e-10, 1 - 1e-10)
+        a = nu * np.log((1 - err) / err)
+        w = w * np.exp(a * miss)
+        w /= w.sum()
+        F += a * g
+        total += abs(a)
+        out["alpha"][m] = a
+        out["margin"][m] = np.min(y * F) / total
+        out["train_error"][m] = np.mean(np.sign(F) != y)
+        if X_test is not None:
+            Ft += a * tree.predict(X_test)
+            out["test_error"][m] = np.mean(np.sign(Ft) != y_test)
+    return out
