@@ -301,3 +301,51 @@ def ridge_path_df(X, y, dfs):
     lambdas = np.array([ridge_lambda_for_df(d ** 2, df) for df in dfs])
     coefs = np.array([Vt.T @ (d / (d ** 2 + lam) * uty) for lam in lambdas])
     return lambdas, coefs
+
+
+# ---------------------------------------------------------------------------
+# Données corrélées par blocs (section 16.2.3 / exercice 16.1)
+# ---------------------------------------------------------------------------
+
+def block_correlated_data(n, beta=None, n_blocks=50, block_size=20, rho=0.95,
+                          nsr=0.72, rng=None):
+    """Simule les données corrélées par blocs de la figure 16.3.
+
+    Chaque variable s'écrit ``X_j = sqrt(rho) Z_b + sqrt(1 - rho) E_j`` où
+    ``Z_b`` est un facteur commun à son bloc ``b`` et les ``Z_b, E_j`` sont
+    i.i.d. N(0, 1) : on a ``Var X_j = 1``, ``corr(X_j, X_k) = rho`` dans un même
+    bloc et 0 entre deux blocs.  Le vrai vecteur ``beta`` a un coefficient non
+    nul N(0, 1) par bloc (position tirée au hasard) ; le bruit gaussien a une
+    variance ``sigma^2 = nsr * Var(f(X)) = nsr * ||beta||^2``.
+
+    Parameters
+    ----------
+    n : int
+        Nombre d'observations.
+    beta : ndarray (n_blocks * block_size,), optionnel
+        Vrais coefficients (à réutiliser pour simuler un échantillon test) ;
+        tirés selon la règle ci-dessus s'ils ne sont pas fournis.
+    n_blocks, block_size, rho, nsr : paramètres de la simulation.
+    rng : numpy.random.RandomState
+
+    Returns
+    -------
+    X : ndarray (n, p)
+    y : ndarray (n,)
+    beta : ndarray (p,)
+    sigma : float
+        Écart-type du bruit.
+    """
+    rng = np.random.RandomState(0) if rng is None else rng
+    p = n_blocks * block_size
+    if beta is None:
+        beta = np.zeros(p)
+        for b in range(n_blocks):
+            j = b * block_size + rng.randint(block_size)
+            beta[j] = rng.randn()
+    Z = rng.randn(n, n_blocks)
+    E = rng.randn(n, p)
+    X = np.sqrt(rho) * np.repeat(Z, block_size, axis=1) + np.sqrt(1 - rho) * E
+    sigma = np.sqrt(nsr * np.sum(beta ** 2))
+    y = X @ beta + sigma * rng.randn(n)
+    return X, y, beta, sigma
