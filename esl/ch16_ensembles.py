@@ -434,3 +434,57 @@ def adaboost_shrunk(X, y, n_trees=1000, nu=0.1, max_leaf_nodes=4, X_test=None,
             Ft += a * tree.predict(X_test)
             out["test_error"][m] = np.mean(np.sign(Ft) != y_test)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Ensembles ISLE (algorithme 16.2) et post-traitement lasso (16.9)
+# ---------------------------------------------------------------------------
+
+def isle_ensemble(X, y, n_trees=100, eta=0.5, nu=0.1, max_leaf_nodes=6,
+                  max_features=None, rng=None):
+    """Génère un ensemble d'arbres de régression selon l'algorithme 16.2 (ISLE).
+
+    Perte quadratique : à l'étape ``m`` on tire sans remise un sous-échantillon
+    ``S_m`` de taille ``eta * N``, on ajuste un arbre aux résidus
+    ``y_i - f_{m-1}(x_i)`` sur ``S_m`` puis ``f_m = f_{m-1} + nu * arbre``.
+    ``nu = 0`` donne des arbres indépendants (proche du bagging / des forêts
+    aléatoires) ; ``eta = 1, nu > 0`` donne le gradient boosting usuel.
+
+    Parameters
+    ----------
+    X, y : données d'apprentissage.
+    n_trees : int
+    eta : float dans ]0, 1]
+        Fraction sous-échantillonnée.
+    nu : float dans [0, 1]
+        « Mémoire » (taux d'apprentissage).
+    max_leaf_nodes : int ou None
+        Taille des arbres (``None`` : arbres maximaux).
+    max_features : paramètre ``max_features`` de scikit-learn (forêts aléatoires).
+    rng : numpy.random.RandomState
+
+    Returns
+    -------
+    f0 : float
+        Constante initiale (moyenne de ``y``).
+    trees : liste d'arbres scikit-learn ajustés.
+    """
+    from sklearn.tree import DecisionTreeRegressor
+    rng = np.random.RandomState(0) if rng is None else rng
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    N = len(y)
+    size = max(2, int(round(eta * N)))
+    f0 = y.mean()
+    f = np.full(N, f0)
+    trees = []
+    for m in range(n_trees):
+        idx = rng.choice(N, size=size, replace=False) if size < N else np.arange(N)
+        tree = DecisionTreeRegressor(max_leaf_nodes=max_leaf_nodes,
+                                     max_features=max_features,
+                                     random_state=rng.randint(2 ** 31 - 1))
+        tree.fit(X[idx], (y - f)[idx])
+        trees.append(tree)
+        if nu > 0:
+            f += nu * tree.predict(X)
+    return f0, trees
