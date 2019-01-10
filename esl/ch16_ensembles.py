@@ -488,3 +488,9 @@ def isle_ensemble(X, y, n_trees=100, eta=0.5, nu=0.1, max_leaf_nodes=6,
         if nu > 0:
             f += nu * tree.predict(X)
     return f0, trees
+
+
+def tree_predictions(trees, X):
+    """Matrice ``(N, M)`` des prédictions ``T_m(x_i)`` d'une liste d'arbres."""
+    X = np.asarray(X, float)
+    return np.column_stack([t.predict(X) for t in trees])
