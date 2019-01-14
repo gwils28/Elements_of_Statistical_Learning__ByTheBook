@@ -515,3 +515,40 @@ def staged_ensemble_predictions(f0, nu, T):
     if nu is None:
         return cum / np.arange(1, T.shape[1] + 1)[:, None]
     return f0 + nu * cum
+
+
+# ---------------------------------------------------------------------------
+# Règles (16.14) et régression logistique
+# ---------------------------------------------------------------------------
+
+def extract_rules(tree):
+    """Extrait les règles (16.14) d'un arbre scikit-learn ajusté.
+
+    Chaque nœud autre que la racine définit une règle : la conjonction des
+    conditions rencontrées sur le chemin depuis la racine.
+
+    Parameters
+    ----------
+    tree : DecisionTreeRegressor ou DecisionTreeClassifier ajusté.
+
+    Returns
+    -------
+    rules : liste de tuples de conditions ``(j, seuil, gauche)`` où
+        ``gauche=True`` signifie ``x_j <= seuil`` et ``False`` ``x_j > seuil``.
+    is_leaf : ndarray de booléens (la règle correspond-elle à une feuille ?)
+    """
+    t = tree.tree_
+    rules, is_leaf = [], []
+
+    def visit(node, conds):
+        left, right = t.children_left[node], t.children_right[node]
+        if node != 0:
+            rules.append(tuple(conds))
+            is_leaf.append(left == -1)
+        if left != -1:
+            j, s = int(t.feature[node]), float(t.threshold[node])
+            visit(left, conds + [(j, s, True)])
+            visit(right, conds + [(j, s, False)])
+
+    visit(0, [])
+    return rules, np.array(is_leaf, bool)
