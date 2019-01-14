@@ -494,3 +494,24 @@ def tree_predictions(trees, X):
     """Matrice ``(N, M)`` des prédictions ``T_m(x_i)`` d'une liste d'arbres."""
     X = np.asarray(X, float)
     return np.column_stack([t.predict(X) for t in trees])
+
+
+def staged_ensemble_predictions(f0, nu, T):
+    """Prédictions successives ``f_m = f0 + nu * sum_{l<=m} T_l`` (boosting).
+
+    Parameters
+    ----------
+    f0 : float
+    nu : float
+        Taux d'apprentissage (``None`` : moyenne des arbres, comme une forêt).
+    T : ndarray (N, M)
+        Prédictions de chaque arbre.
+
+    Returns
+    -------
+    ndarray (M, N)
+    """
+    cum = np.cumsum(T, axis=1).T
+    if nu is None:
+        return cum / np.arange(1, T.shape[1] + 1)[:, None]
+    return f0 + nu * cum
