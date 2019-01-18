@@ -552,3 +552,13 @@ def extract_rules(tree):
 
     visit(0, [])
     return rules, np.array(is_leaf, bool)
+
+
+def rule_matrix(rules, X):
+    """Évalue des règles : matrice ``(N, R)`` des indicatrices ``R_r(x_i)``."""
+    X = np.asarray(X, float)
+    out = np.ones((len(X), len(rules)))
+    for r, conds in enumerate(rules):
+        for j, s, left in conds:
+            out[:, r] *= (X[:, j] <= s) if left else (X[:, j] > s)
+    return out
