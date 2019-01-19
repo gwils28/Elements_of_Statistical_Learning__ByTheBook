@@ -562,3 +562,12 @@ def rule_matrix(rules, X):
         for j, s, left in conds:
             out[:, r] *= (X[:, j] <= s) if left else (X[:, j] > s)
     return out
+
+
+def rule_to_str(conds, names=None):
+    """Écriture lisible d'une règle, par ex. ``x1 > 2.10 et x3 <= 0.50``."""
+    parts = []
+    for j, s, left in conds:
+        name = names[j] if names is not None else "x%d" % (j + 1)
+        parts.append("%s %s %.3g" % (name, "<=" if left else ">", s))
+    return " et ".join(parts)
