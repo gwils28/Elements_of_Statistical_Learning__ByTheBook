@@ -571,3 +571,32 @@ def rule_to_str(conds, names=None):
         name = names[j] if names is not None else "x%d" % (j + 1)
         parts.append("%s %s %.3g" % (name, "<=" if left else ">", s))
     return " et ".join(parts)
+
+
+def logistic_irls(X, y, max_iter=100, tol=1e-10):
+    """Régression logistique (sans pénalité) par Newton-Raphson / IRLS.
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+        Matrice du modèle (ajouter soi-même une colonne de 1 si besoin).
+    y : ndarray (N,) dans {0, 1}.
+
+    Returns
+    -------
+    beta : ndarray (p,)
+    """
+    X = np.asarray(X, float)
+    y = np.asarray(y, float)
+    beta = np.zeros(X.shape[1])
+    for _ in range(max_iter):
+        eta = X @ beta
+        p = 1.0 / (1.0 + np.exp(-eta))
+        W = p * (1 - p)
+        grad = X.T @ (y - p)
+        H = X.T @ (X * W[:, None])
+        step = np.linalg.solve(H, grad)
+        beta += step
+        if np.max(np.abs(step)) < tol:
+            break
+    return beta
