@@ -13,3 +13,11 @@ def _data(n=80, p=10, seed=0):
     beta = np.r_[3, -2, 1.5, np.zeros(p - 3)]
     y = X @ beta + rng.randn(n)
     return X, y
+
+
+def test_standardize():
+    X, _ = _data()
+    Xs, m, s = standardize(X)
+    assert np.allclose(Xs.mean(0), 0) and np.allclose(Xs.std(0), 1)
+    Xs2, _, _ = standardize(X, m, s)
+    assert np.allclose(Xs, Xs2)
