@@ -81,3 +81,15 @@ def test_ridge_df():
         assert np.allclose(b, direct)
     d2 = np.linalg.svd(Xc, compute_uv=False) ** 2
     assert np.isclose(np.sum(d2 / (d2 + lams[0])), 2.0)
+
+
+def test_block_correlated_data():
+    rng = np.random.RandomState(0)
+    X, y, beta, sigma = block_correlated_data(20000, n_blocks=3, block_size=4, rng=rng)
+    C = np.corrcoef(X.T)
+    assert np.allclose(C[0, 1:4], 0.95, atol=0.01)
+    assert np.allclose(C[0, 4:], 0.0, atol=0.03)
+    assert np.sum(beta != 0) == 3
+    assert np.isclose(sigma ** 2, 0.72 * np.sum(beta ** 2))
+    resid = y - X @ beta
+    assert np.isclose(resid.var() / (X @ beta).var(), 0.72, rtol=0.05)
