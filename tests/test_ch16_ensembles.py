@@ -43,3 +43,30 @@ def test_lasso_kkt_and_path():
         act = b != 0
         assert np.allclose(g[act], lam * np.sign(b[act]), atol=1e-6)
         assert np.all(np.abs(g[~act]) <= lam + 1e-6)
+
+
+def test_stagewise_equals_lasso_orthogonal_design():
+    # base orthonormée : forward stagewise (eps -> 0) = lasso (soft-thresholding)
+    rng = np.random.RandomState(1)
+    Q, _ = np.linalg.qr(rng.randn(50, 5))
+    y = Q @ np.array([3.0, -2.0, 1.0, 0.5, 0.0]) + 0.1 * rng.randn(50)
+    eps, M = 1e-3, 3000
+    path = forward_stagewise(Q, y, eps=eps, n_steps=M)
+    a = path[-1]
+    t = np.abs(a).sum()
+    z = Q.T @ y
+    # solution lasso de borne t : seuillage doux de z au niveau gamma
+    from scipy.optimize import brentq
+    gam = brentq(lambda g: np.maximum(np.abs(z) - g, 0).sum() - t, 0, np.abs(z).max())
+    lasso = np.sign(z) * np.maximum(np.abs(z) - gam, 0)
+    assert np.allclose(a, lasso, atol=5 * eps)
+    assert np.isclose(np.abs(path[1]).sum(), eps)
+
+
+def test_stagewise_reaches_least_squares():
+    X, y = _data(p=4)
+    Xs, _, _ = standardize(X)
+    yc = y - y.mean()
+    path = forward_stagewise(Xs, yc, eps=1e-3, n_steps=20000)
+    ls = np.linalg.lstsq(Xs, yc, rcond=None)[0]
+    assert np.allclose(path[-1], ls, atol=1e-2)
