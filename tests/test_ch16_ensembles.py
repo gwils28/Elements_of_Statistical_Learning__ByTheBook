@@ -70,3 +70,14 @@ def test_stagewise_reaches_least_squares():
     path = forward_stagewise(Xs, yc, eps=1e-3, n_steps=20000)
     ls = np.linalg.lstsq(Xs, yc, rcond=None)[0]
     assert np.allclose(path[-1], ls, atol=1e-2)
+
+
+def test_ridge_df():
+    X, y = _data()
+    Xc, yc = X - X.mean(0), y - y.mean()
+    lams, coefs = ridge_path_df(Xc, yc, [2.0, 5.0])
+    for lam, b in zip(lams, coefs):
+        direct = np.linalg.solve(Xc.T @ Xc + lam * np.eye(X.shape[1]), Xc.T @ yc)
+        assert np.allclose(b, direct)
+    d2 = np.linalg.svd(Xc, compute_uv=False) ** 2
+    assert np.isclose(np.sum(d2 / (d2 + lams[0])), 2.0)
