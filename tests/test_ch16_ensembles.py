@@ -93,3 +93,23 @@ def test_block_correlated_data():
     assert np.isclose(sigma ** 2, 0.72 * np.sum(beta ** 2))
     resid = y - X @ beta
     assert np.isclose(resid.var() / (X @ beta).var(), 0.72, rtol=0.05)
+
+
+def test_arc_length():
+    t = np.linspace(0, 1, 50)[:, None]
+    mono = np.hstack([t, -2 * t ** 2])
+    assert np.isclose(l1_arc_length(mono)[-1], np.abs(mono[-1]).sum())
+    wave = np.hstack([np.sin(4 * t), t])
+    assert l1_arc_length(wave)[-1] > np.abs(wave[-1]).sum() + 0.5
+
+
+def test_leaf_rules_reproduce_tree():
+    from sklearn.tree import DecisionTreeRegressor
+    X, y = _data(n=200, p=3)
+    tree = DecisionTreeRegressor(max_leaf_nodes=6).fit(X, y)
+    rules, leaf = extract_rules(tree)
+    R = rule_matrix(rules, X)
+    assert np.allclose(R[:, leaf].sum(1), 1)          # les feuilles partitionnent
+    coef = np.linalg.lstsq(R[:, leaf], y, rcond=None)[0]
+    assert np.allclose(R[:, leaf] @ coef, tree.predict(X))
+    assert len(rules) == 2 * leaf.sum() - 2
