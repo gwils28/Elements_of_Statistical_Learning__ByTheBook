@@ -113,3 +113,13 @@ def test_leaf_rules_reproduce_tree():
     coef = np.linalg.lstsq(R[:, leaf], y, rcond=None)[0]
     assert np.allclose(R[:, leaf] @ coef, tree.predict(X))
     assert len(rules) == 2 * leaf.sum() - 2
+
+
+def test_logistic_on_leaves_gives_proportions():
+    rng = np.random.RandomState(0)
+    g = rng.randint(3, size=300)
+    y = (rng.rand(300) < np.array([0.2, 0.5, 0.7])[g]).astype(float)
+    Z = np.eye(3)[g]
+    beta = logistic_irls(Z, y)
+    p = 1 / (1 + np.exp(-beta))
+    assert np.allclose(p, [y[g == k].mean() for k in range(3)])
