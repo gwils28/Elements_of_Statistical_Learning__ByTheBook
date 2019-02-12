@@ -123,3 +123,14 @@ def test_logistic_on_leaves_gives_proportions():
     beta = logistic_irls(Z, y)
     p = 1 / (1 + np.exp(-beta))
     assert np.allclose(p, [y[g == k].mean() for k in range(3)])
+
+
+def test_isle_and_adaboost_shapes():
+    X, y = _data(n=100, p=4)
+    f0, trees = isle_ensemble(X, y, n_trees=5, eta=0.5, nu=0.1,
+                              rng=np.random.RandomState(0))
+    assert len(trees) == 5 and tree_predictions(trees, X).shape == (100, 5)
+    ys = np.sign(y - np.median(y))
+    out = adaboost_shrunk(X, ys, n_trees=20, nu=0.5)
+    assert np.all(np.abs(out["margin"]) <= 1 + 1e-12)
+    assert np.all(out["alpha"] > 0)
