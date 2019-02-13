@@ -134,3 +134,10 @@ def test_isle_and_adaboost_shapes():
     out = adaboost_shrunk(X, ys, n_trees=20, nu=0.5)
     assert np.all(np.abs(out["margin"]) <= 1 + 1e-12)
     assert np.all(out["alpha"] > 0)
+
+
+def test_lasso_path_fast_matches_cd():
+    X, y = _data()
+    lams, b0, c = lasso_path_cd(X, y, n_lambdas=15, tol=1e-10)
+    lams2, b02, c2 = lasso_path_fast(X, y, lambdas=lams)
+    assert np.allclose(c, c2, atol=1e-4) and np.allclose(b0, b02, atol=1e-4)
