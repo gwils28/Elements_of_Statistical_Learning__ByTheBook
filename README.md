@@ -62,8 +62,8 @@ Lancer les tests : `pytest tests/`.
 | 13 | [Méthodes de prototypes et plus proches voisins](notebooks/ch13_prototypes_plus_proches_voisins) | ✅ |
 | 14 | [Apprentissage non supervisé](notebooks/ch14_apprentissage_non_supervise) | ✅ |
 | 15 | [Forêts aléatoires](notebooks/ch15_forets_aleatoires) | ✅ |
-| 16 | Apprentissage ensembliste | 🚧 |
-| 17 | Modèles graphiques non orientés | - |
+| 16 | [Apprentissage ensembliste](notebooks/ch16_apprentissage_ensembliste) | ✅ |
+| 17 | Modèles graphiques non orientés | 🚧 |
 | 18 | Problèmes en grande dimension (p ≫ N) | - |
 
 ## Références
