@@ -49,3 +49,10 @@ def adjacency_from_edges(p, edges):
         if j != k:
             A[j, k] = A[k, j] = True
     return A
+
+
+def edges_from_adjacency(A):
+    """Liste des arêtes ``(j, k)`` avec ``j < k`` d'une matrice d'adjacence."""
+    A = np.asarray(A, dtype=bool)
+    p = A.shape[0]
+    return [(j, k) for j in range(p) for k in range(j + 1, p) if A[j, k]]
