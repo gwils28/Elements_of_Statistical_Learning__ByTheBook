@@ -56,3 +56,10 @@ def edges_from_adjacency(A):
     A = np.asarray(A, dtype=bool)
     p = A.shape[0]
     return [(j, k) for j in range(p) for k in range(j + 1, p) if A[j, k]]
+
+
+def support_graph(Theta, tol=1e-8):
+    """Graphe (adjacence) des coefficients hors diagonale non nuls de ``Theta``."""
+    A = np.abs(np.asarray(Theta)) > tol
+    np.fill_diagonal(A, False)
+    return A | A.T
