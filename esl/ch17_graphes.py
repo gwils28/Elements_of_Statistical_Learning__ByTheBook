@@ -117,3 +117,25 @@ def separates(A, a, b, c):
             seen.add(v)
             stack.append(v)
     return True
+
+
+def connected_components(A):
+    """Composantes connexes (liste de listes triées de sommets)."""
+    A = np.asarray(A, dtype=bool)
+    p = A.shape[0]
+    label = -np.ones(p, dtype=int)
+    comps = []
+    for s in range(p):
+        if label[s] >= 0:
+            continue
+        stack, comp = [s], []
+        label[s] = len(comps)
+        while stack:
+            u = stack.pop()
+            comp.append(u)
+            for v in np.flatnonzero(A[u]):
+                if label[v] < 0:
+                    label[v] = len(comps)
+                    stack.append(int(v))
+        comps.append(sorted(comp))
+    return comps
