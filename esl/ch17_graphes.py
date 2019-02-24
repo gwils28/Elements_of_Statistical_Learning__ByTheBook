@@ -63,3 +63,57 @@ def support_graph(Theta, tol=1e-8):
     A = np.abs(np.asarray(Theta)) > tol
     np.fill_diagonal(A, False)
     return A | A.T
+
+
+def maximal_cliques(A):
+    """Cliques maximales d'un graphe (algorithme de Bron–Kerbosch avec pivot).
+
+    Returns
+    -------
+    list de tuples triés, eux-mêmes triés par ordre lexicographique.
+    """
+    A = np.asarray(A, dtype=bool)
+    p = A.shape[0]
+    nbrs = [set(np.flatnonzero(A[j])) for j in range(p)]
+    cliques = []
+
+    def bk(R, P, X):
+        if not P and not X:
+            cliques.append(tuple(sorted(int(r) for r in R)))
+            return
+        pivot = max(P | X, key=lambda u: len(nbrs[u] & P))
+        for v in list(P - nbrs[pivot]):
+            bk(R | {v}, P & nbrs[v], X & nbrs[v])
+            P = P - {v}
+            X = X | {v}
+
+    bk(set(), set(range(p)), set())
+    return sorted(cliques)
+
+
+def separates(A, a, b, c):
+    """Teste si l'ensemble ``c`` sépare les ensembles ``a`` et ``b``.
+
+    ``c`` sépare ``a`` et ``b`` si tout chemin d'un sommet de ``a`` à un
+    sommet de ``b`` passe par un sommet de ``c`` ; autrement dit, après
+    suppression des sommets de ``c``, aucun sommet de ``b`` n'est atteignable
+    depuis ``a`` (parcours en largeur).
+    """
+    A = np.asarray(A, dtype=bool)
+    a, b, c = set(a), set(b), set(c)
+    if (a & b) - c:
+        return False
+    start = a - c
+    seen = set(start)
+    stack = list(start)
+    while stack:
+        u = stack.pop()
+        for v in np.flatnonzero(A[u]):
+            v = int(v)
+            if v in c or v in seen:
+                continue
+            if v in b:
+                return False
+            seen.add(v)
+            stack.append(v)
+    return True
