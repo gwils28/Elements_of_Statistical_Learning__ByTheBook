@@ -139,3 +139,10 @@ def connected_components(A):
                     stack.append(int(v))
         comps.append(sorted(comp))
     return comps
+
+
+def circle_layout(p, start=np.pi / 2):
+    """Positions de ``p`` sommets régulièrement répartis sur le cercle unité
+    (sens horaire, premier sommet en haut)."""
+    ang = start - 2 * np.pi * np.arange(p) / p
+    return np.c_[np.cos(ang), np.sin(ang)]
