@@ -146,3 +146,72 @@ def circle_layout(p, start=np.pi / 2):
     (sens horaire, premier sommet en haut)."""
     ang = start - 2 * np.pi * np.arange(p) / p
     return np.c_[np.cos(ang), np.sin(ang)]
+
+
+def draw_graph(A, labels=None, pos=None, weights=None, ax=None, title=None,
+               node_color="#f0efec", edge_color="#2a78d6", node_size=0.11,
+               fontsize=10, cmap=None, vmax=None):
+    """Dessine un graphe non orienté avec matplotlib.
+
+    Parameters
+    ----------
+    A : ndarray (p, p) booléen
+        Matrice d'adjacence.
+    labels : liste de str, optionnelle
+        Étiquettes des sommets (par défaut ``X1, ..., Xp``).
+    pos : ndarray (p, 2), optionnel
+        Positions des sommets (par défaut disposition circulaire).
+    weights : ndarray (p, p), optionnel
+        Poids des arêtes (par ex. corrélations partielles). L'épaisseur est
+        proportionnelle à ``|poids|`` ; si ``cmap`` est donné, la couleur
+        code le signe et l'intensité.
+    ax : axes matplotlib, optionnel.
+    title : str, optionnel.
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Circle
+
+    A = np.asarray(A, dtype=bool)
+    p = A.shape[0]
+    if labels is None:
+        labels = ["$X_{%d}$" % (j + 1) for j in range(p)]
+    if pos is None:
+        pos = circle_layout(p)
+    pos = np.asarray(pos, dtype=float)
+    if ax is None:
+        ax = plt.gca()
+    if weights is not None and vmax is None:
+        w = np.abs(np.asarray(weights)[A])
+        vmax = w.max() if w.size else 1.0
+    for j, k in edges_from_adjacency(A):
+        lw, col = 1.6, edge_color
+        if weights is not None:
+            wjk = weights[j, k]
+            lw = 0.6 + 4.0 * abs(wjk) / vmax
+            if cmap is not None:
+                col = cmap(0.5 + 0.5 * np.clip(wjk / vmax, -1, 1))
+        ax.plot(pos[[j, k], 0], pos[[j, k], 1], color=col, lw=lw,
+                solid_capstyle="round", zorder=1)
+    for j in range(p):
+        ax.add_patch(Circle(pos[j], node_size, facecolor=node_color,
+                            edgecolor="#52514e", lw=1.0, zorder=2))
+        ax.text(pos[j, 0], pos[j, 1], labels[j], ha="center", va="center",
+                fontsize=fontsize, zorder=3)
+    pad = node_size + 0.08
+    ax.set_xlim(pos[:, 0].min() - pad, pos[:, 0].max() + pad)
+    ax.set_ylim(pos[:, 1].min() - pad, pos[:, 1].max() + pad)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    if title is not None:
+        ax.set_title(title)
+    return ax
+
+
+# ---------------------------------------------------------------------------
+# 2. Modèles graphiques gaussiens
+# ---------------------------------------------------------------------------
+
+
+def soft_threshold(x, t):
+    """Opérateur de seuillage doux ``S(x, t) = sign(x) (|x| - t)_+`` (éq. 17.27)."""
+    return np.sign(x) * np.maximum(np.abs(x) - t, 0.0)
