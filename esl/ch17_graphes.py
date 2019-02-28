@@ -215,3 +215,23 @@ def draw_graph(A, labels=None, pos=None, weights=None, ax=None, title=None,
 def soft_threshold(x, t):
     """Opérateur de seuillage doux ``S(x, t) = sign(x) (|x| - t)_+`` (éq. 17.27)."""
     return np.sign(x) * np.maximum(np.abs(x) - t, 0.0)
+
+
+def partial_correlations(Theta):
+    """Corrélations partielles ``rho_{jk|reste} = -theta_jk / sqrt(theta_jj theta_kk)``.
+
+    La diagonale est fixée à 1 (convention).
+    """
+    Theta = np.asarray(Theta, dtype=float)
+    d = 1.0 / np.sqrt(np.diag(Theta))
+    R = -Theta * np.outer(d, d)
+    np.fill_diagonal(R, 1.0)
+    return R
+
+
+def gaussian_loglik(Theta, S):
+    """Log-vraisemblance profilée (éq. 17.11) : ``log det Theta - tr(S Theta)``."""
+    sign, logdet = np.linalg.slogdet(Theta)
+    if sign <= 0:
+        return -np.inf
+    return logdet - np.trace(S @ Theta)
