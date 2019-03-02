@@ -242,3 +242,22 @@ def empirical_covariance(X):
     X = np.asarray(X, dtype=float)
     Xc = X - X.mean(axis=0)
     return Xc.T @ Xc / X.shape[0]
+
+
+def _theta_from_w(W, B):
+    """Reconstruit Theta = W^{-1} à partir des coefficients de régression.
+
+    ``B[:, j]`` contient le vecteur beta (de longueur p, composante j
+    ignorée) obtenu pour la variable j. On applique l'étape 3 des
+    algorithmes 17.1 et 17.2 : 1/theta_jj = w_jj - w_12^T beta et
+    theta_12 = -beta theta_jj.
+    """
+    p = W.shape[0]
+    Theta = np.zeros_like(W)
+    for j in range(p):
+        idx = np.arange(p) != j
+        beta = B[idx, j]
+        theta_jj = 1.0 / (W[j, j] - W[idx, j] @ beta)
+        Theta[j, j] = theta_jj
+        Theta[idx, j] = -beta * theta_jj
+    return (Theta + Theta.T) / 2
