@@ -261,3 +261,54 @@ def _theta_from_w(W, B):
         Theta[j, j] = theta_jj
         Theta[idx, j] = -beta * theta_jj
     return (Theta + Theta.T) / 2
+
+
+def fit_known_graph(S, A, tol=1e-10, max_iter=1000, return_n_iter=False):
+    """Algorithme 17.1 : estimation d'un modèle graphique gaussien à
+    structure connue par régressions modifiées.
+
+    Maximise ``log det Theta - tr(S Theta)`` sous la contrainte
+    ``theta_jk = 0`` pour toute paire ``(j, k)`` non reliée dans ``A``.
+
+    Parameters
+    ----------
+    S : ndarray (p, p)
+        Covariance empirique.
+    A : ndarray (p, p) booléen
+        Graphe imposé (``A[j, k]`` vrai si l'arête est présente).
+    tol : float
+        Critère d'arrêt sur la variation maximale de ``W`` lors d'un cycle.
+    max_iter : int
+        Nombre maximal de cycles sur les p variables.
+
+    Returns
+    -------
+    W : ndarray (p, p)
+        Covariance estimée ``Sigma_hat``.
+    Theta : ndarray (p, p)
+        Matrice de précision estimée ``Sigma_hat^{-1}``.
+    n_iter : int (si ``return_n_iter``)
+    """
+    S = np.asarray(S, dtype=float)
+    A = np.asarray(A, dtype=bool)
+    p = S.shape[0]
+    W = S.copy()
+    B = np.zeros((p, p))
+    for it in range(1, max_iter + 1):
+        W_old = W.copy()
+        for j in range(p):
+            idx = np.flatnonzero(np.arange(p) != j)
+            nb = idx[A[j, idx]]  # voisins de j (arêtes libres)
+            beta = np.zeros(p)
+            if nb.size:
+                beta[nb] = np.linalg.solve(W[np.ix_(nb, nb)], S[nb, j])
+            B[:, j] = beta
+            w12 = W[np.ix_(idx, idx)] @ beta[idx]
+            W[idx, j] = w12
+            W[j, idx] = w12
+        if np.max(np.abs(W - W_old)) < tol:
+            break
+    Theta = _theta_from_w(W, B)
+    if return_n_iter:
+        return W, Theta, it
+    return W, Theta
