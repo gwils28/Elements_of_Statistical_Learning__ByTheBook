@@ -235,3 +235,10 @@ def gaussian_loglik(Theta, S):
     if sign <= 0:
         return -np.inf
     return logdet - np.trace(S @ Theta)
+
+
+def empirical_covariance(X):
+    """Covariance empirique ``S`` normalisée par ``N`` (éq. 17.10)."""
+    X = np.asarray(X, dtype=float)
+    Xc = X - X.mean(axis=0)
+    return Xc.T @ Xc / X.shape[0]
