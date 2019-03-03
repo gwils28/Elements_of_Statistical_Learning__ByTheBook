@@ -417,3 +417,19 @@ def graphical_lasso(S, lam, tol=1e-6, max_iter=500, penalize_diagonal=True,
     if return_n_iter:
         out.append(it)
     return tuple(out)
+
+
+def _lasso_cd_weighted(V, s, lams, beta, tol=1e-10, max_iter=5000):
+    """Lasso modifié avec une pénalité propre à chaque coordonnée."""
+    beta = np.array(beta, dtype=float)
+    q = s.size
+    for _ in range(max_iter):
+        delta = 0.0
+        for j in range(q):
+            r = s[j] - V[j] @ beta + V[j, j] * beta[j]
+            new = soft_threshold(r, lams[j]) / V[j, j]
+            delta = max(delta, abs(new - beta[j]))
+            beta[j] = new
+        if delta < tol:
+            break
+    return beta
