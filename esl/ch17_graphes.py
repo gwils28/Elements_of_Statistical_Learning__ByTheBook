@@ -312,3 +312,38 @@ def fit_known_graph(S, A, tol=1e-10, max_iter=1000, return_n_iter=False):
     if return_n_iter:
         return W, Theta, it
     return W, Theta
+
+
+def lasso_cd(V, s, lam, beta=None, tol=1e-10, max_iter=5000):
+    """Lasso « modifié » par descente de coordonnées cyclique (éq. 17.26).
+
+    Minimise ``1/2 beta^T V beta - s^T beta + lam * ||beta||_1``, dont les
+    équations d'estimation sont ``V beta - s + lam Sign(beta) = 0``
+    (éq. 17.23 et 17.25). Avec ``V = Z^T Z / N`` et ``s = Z^T y / N`` on
+    retrouve le lasso usuel ``(1/2N) ||y - Z beta||^2 + lam ||beta||_1``.
+
+    Parameters
+    ----------
+    V : ndarray (q, q) symétrique semi-définie positive, diagonale > 0.
+    s : ndarray (q,)
+    lam : float >= 0
+    beta : ndarray (q,), optionnel - point de départ (démarrage à chaud).
+
+    Returns
+    -------
+    beta : ndarray (q,)
+    """
+    V = np.asarray(V, dtype=float)
+    s = np.asarray(s, dtype=float)
+    q = s.size
+    beta = np.zeros(q) if beta is None else np.array(beta, dtype=float)
+    for _ in range(max_iter):
+        delta = 0.0
+        for j in range(q):
+            r = s[j] - V[j] @ beta + V[j, j] * beta[j]
+            new = soft_threshold(r, lam) / V[j, j]
+            delta = max(delta, abs(new - beta[j]))
+            beta[j] = new
+        if delta < tol:
+            break
+    return beta
