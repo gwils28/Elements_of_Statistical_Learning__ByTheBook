@@ -347,3 +347,73 @@ def lasso_cd(V, s, lam, beta=None, tol=1e-10, max_iter=5000):
         if delta < tol:
             break
     return beta
+
+
+def graphical_lasso(S, lam, tol=1e-6, max_iter=500, penalize_diagonal=True,
+                    W_init=None, B_init=None, return_n_iter=False,
+                    return_beta=False):
+    """Algorithme 17.2 : graphical lasso (Friedman, Hastie, Tibshirani 2008).
+
+    Maximise ``log det Theta - tr(S Theta) - lam * ||Theta||_1`` (éq. 17.21).
+    Si ``penalize_diagonal=False``, seuls les coefficients hors diagonale
+    sont pénalisés (variante de la note 3 du livre, utilisée par
+    ``sklearn.covariance.graphical_lasso``).
+
+    Parameters
+    ----------
+    S : ndarray (p, p)
+        Covariance empirique.
+    lam : float >= 0, ou ndarray (p, p) de pénalités par arête
+        (``np.inf`` force l'absence d'arête, cf. algorithme 17.1).
+    tol : float
+        Critère d'arrêt : variation moyenne de ``W`` relative à la moyenne
+        des ``|s_jk|`` hors diagonale.
+    W_init, B_init : démarrage à chaud (sortie d'un appel précédent).
+
+    Returns
+    -------
+    W : ndarray (p, p) - covariance estimée.
+    Theta : ndarray (p, p) - précision estimée.
+    """
+    S = np.asarray(S, dtype=float)
+    p = S.shape[0]
+    Lam = np.broadcast_to(np.asarray(lam, dtype=float), (p, p))
+    diag_shift = np.diag(Lam) if penalize_diagonal else np.zeros(p)
+    if W_init is None:
+        W = S.copy()
+        W[np.diag_indices(p)] += diag_shift
+    else:
+        W = np.array(W_init, dtype=float)
+        W[np.diag_indices(p)] = np.diag(S) + diag_shift
+    B = np.zeros((p, p)) if B_init is None else np.array(B_init, dtype=float)
+    off = np.abs(S[~np.eye(p, dtype=bool)]).mean() if p > 1 else 1.0
+    scale = off if off > 0 else 1.0
+    for it in range(1, max_iter + 1):
+        W_old = W.copy()
+        for j in range(p):
+            idx = np.flatnonzero(np.arange(p) != j)
+            V = W[np.ix_(idx, idx)]
+            lj = Lam[idx, j]
+            free = np.isfinite(lj)
+            beta = np.zeros(p - 1)
+            if free.any():
+                f = np.flatnonzero(free)
+                Vf = V[np.ix_(f, f)]
+                # lasso à pénalités éventuellement différentes : on remet à
+                # l'échelle chaque coordonnée (pénalité commune si lam scalaire)
+                bstart = B[idx, j][f]
+                beta[f] = _lasso_cd_weighted(Vf, S[idx, j][f], lj[f], bstart)
+            B[idx, j] = beta
+            B[j, j] = 0.0
+            w12 = V @ beta
+            W[idx, j] = w12
+            W[j, idx] = w12
+        if np.abs(W - W_old).mean() < tol * scale:
+            break
+    Theta = _theta_from_w(W, B)
+    out = [W, Theta]
+    if return_beta:
+        out.append(B)
+    if return_n_iter:
+        out.append(it)
+    return tuple(out)
