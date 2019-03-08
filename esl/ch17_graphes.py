@@ -450,3 +450,25 @@ def graphical_lasso_path(S, lams, **kwargs):
                                       return_beta=True, **kwargs)
         out[i] = Theta
     return out
+
+
+def meinshausen_buhlmann(S, lam, rule="or"):
+    """Sélection de graphe de Meinshausen–Bühlmann (section 17.3.2).
+
+    Pour chaque variable j, lasso de ``X_j`` sur les autres (forme
+    covariance : ``V = S_{-j,-j}``, ``s = S_{-j,j}``). L'arête (j, k) est
+    retenue si le coefficient de k dans la régression de j **ou** (``"or"``)
+    **et** (``"and"``) celui de j dans la régression de k est non nul.
+
+    Returns
+    -------
+    A : ndarray (p, p) booléen.
+    """
+    S = np.asarray(S, dtype=float)
+    p = S.shape[0]
+    NZ = np.zeros((p, p), dtype=bool)
+    for j in range(p):
+        idx = np.arange(p) != j
+        b = lasso_cd(S[np.ix_(idx, idx)], S[idx, j], lam)
+        NZ[idx, j] = np.abs(b) > 1e-12
+    return (NZ | NZ.T) if rule == "or" else (NZ & NZ.T)
