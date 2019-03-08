@@ -497,3 +497,52 @@ def make_sparse_precision(A, rng, low=0.3, high=0.6, min_eig=0.2):
     Sigma = np.linalg.inv(T)
     d = np.sqrt(np.diag(Sigma))
     return T * np.outer(d, d)  # Theta pour la covariance D^{-1} Sigma D^{-1}
+
+
+def em_gaussian_graph(X, A, n_iter=100, tol=1e-8):
+    """Algorithme EM pour un modèle graphique gaussien à graphe connu, avec
+    valeurs manquantes codées ``np.nan`` (exercice 17.9).
+
+    Étape E : imputation par l'espérance conditionnelle (éq. 17.43) et
+    accumulation de la covariance conditionnelle des composantes manquantes
+    (terme correctif de l'éq. 17.44). Étape M : moyenne empirique, puis
+    algorithme 17.1 appliqué à la covariance « complétée ».
+
+    Returns
+    -------
+    mu : ndarray (p,)
+    W : ndarray (p, p) - covariance estimée.
+    Theta : ndarray (p, p) - précision estimée.
+    X_hat : ndarray (N, p) - données imputées (dernière étape E).
+    """
+    X = np.asarray(X, dtype=float)
+    N, p = X.shape
+    miss = np.isnan(X)
+    mu = np.nanmean(X, axis=0)
+    X_hat = np.where(miss, mu, X)
+    W = empirical_covariance(X_hat)
+    W[np.diag_indices(p)] = np.nanvar(X, axis=0)
+    patterns = {}
+    for i in range(N):
+        patterns.setdefault(miss[i].tobytes(), []).append(i)
+    for _ in range(n_iter):
+        C = np.zeros((p, p))
+        for key, rows in patterns.items():
+            m = miss[rows[0]]
+            if not m.any():
+                continue
+            o = ~m
+            rows = np.asarray(rows)
+            K = np.linalg.solve(W[np.ix_(o, o)], W[np.ix_(o, m)])  # Soo^-1 Som
+            X_hat[np.ix_(rows, np.flatnonzero(m))] = (
+                mu[m] + (X[np.ix_(rows, np.flatnonzero(o))] - mu[o]) @ K)
+            Cmm = W[np.ix_(m, m)] - W[np.ix_(m, o)] @ K
+            C[np.ix_(m, m)] += len(rows) * Cmm
+        mu_new = X_hat.mean(axis=0)
+        S = empirical_covariance(X_hat) + C / N
+        W_new, Theta = fit_known_graph(S, A)
+        change = np.max(np.abs(W_new - W)) + np.max(np.abs(mu_new - mu))
+        W, mu = W_new, mu_new
+        if change < tol:
+            break
+    return mu, W, Theta, X_hat
