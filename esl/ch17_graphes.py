@@ -433,3 +433,20 @@ def _lasso_cd_weighted(V, s, lams, beta, tol=1e-10, max_iter=5000):
         if delta < tol:
             break
     return beta
+
+
+def graphical_lasso_path(S, lams, **kwargs):
+    """Chemin du graphical lasso pour une suite de pénalités ``lams``.
+
+    Les pénalités sont parcourues dans l'ordre décroissant avec démarrage à
+    chaud. Retourne une liste de matrices ``Theta`` dans l'ordre de ``lams``.
+    """
+    lams = np.asarray(lams, dtype=float)
+    order = np.argsort(-lams)
+    out = [None] * len(lams)
+    W = B = None
+    for i in order:
+        W, Theta, B = graphical_lasso(S, lams[i], W_init=W, B_init=B,
+                                      return_beta=True, **kwargs)
+        out[i] = Theta
+    return out
