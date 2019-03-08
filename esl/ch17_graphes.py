@@ -472,3 +472,28 @@ def meinshausen_buhlmann(S, lam, rule="or"):
         b = lasso_cd(S[np.ix_(idx, idx)], S[idx, j], lam)
         NZ[idx, j] = np.abs(b) > 1e-12
     return (NZ | NZ.T) if rule == "or" else (NZ & NZ.T)
+
+
+def make_sparse_precision(A, rng, low=0.3, high=0.6, min_eig=0.2):
+    """Matrice de précision aléatoire de support ``A`` (pour simulations).
+
+    Les coefficients hors diagonale des arêtes sont tirés uniformément dans
+    ``[low, high]`` avec un signe aléatoire ; la diagonale est ensuite
+    choisie pour que la plus petite valeur propre vaille ``min_eig``, puis la
+    matrice est remise à l'échelle pour que ``Sigma`` ait une diagonale
+    unité.
+
+    Returns
+    -------
+    Theta : ndarray (p, p) définie positive.
+    """
+    A = np.asarray(A, dtype=bool)
+    p = A.shape[0]
+    T = np.zeros((p, p))
+    for j, k in edges_from_adjacency(A):
+        T[j, k] = T[k, j] = rng.uniform(low, high) * rng.choice([-1.0, 1.0])
+    lmin = np.linalg.eigvalsh(T).min()
+    T[np.diag_indices(p)] = min_eig - lmin
+    Sigma = np.linalg.inv(T)
+    d = np.sqrt(np.diag(Sigma))
+    return T * np.outer(d, d)  # Theta pour la covariance D^{-1} Sigma D^{-1}
