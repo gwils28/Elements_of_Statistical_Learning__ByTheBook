@@ -546,3 +546,13 @@ def em_gaussian_graph(X, A, n_iter=100, tol=1e-8):
         if change < tol:
             break
     return mu, W, Theta, X_hat
+
+
+# ---------------------------------------------------------------------------
+# 3. Modèles de Ising (petit p)
+# ---------------------------------------------------------------------------
+
+
+def ising_states(p):
+    """Les ``2^p`` états de ``{0, 1}^p`` (tableau (2^p, p) d'entiers)."""
+    return np.array(list(itertools.product([0, 1], repeat=p)), dtype=float)
