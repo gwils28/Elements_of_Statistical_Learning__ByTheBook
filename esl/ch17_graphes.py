@@ -556,3 +556,21 @@ def em_gaussian_graph(X, A, n_iter=100, tol=1e-8):
 def ising_states(p):
     """Les ``2^p`` états de ``{0, 1}^p`` (tableau (2^p, p) d'entiers)."""
     return np.array(list(itertools.product([0, 1], repeat=p)), dtype=float)
+
+
+def ising_energy(X, theta0, Theta):
+    """« Énergie » (logit non normalisé)
+    ``sum_j theta0_j x_j + sum_{j<k} Theta_jk x_j x_k`` pour chaque ligne de X."""
+    X = np.atleast_2d(np.asarray(X, dtype=float))
+    Theta = np.asarray(Theta, dtype=float)
+    Tu = np.triu(Theta, 1)
+    return X @ np.asarray(theta0, dtype=float) + np.einsum("ij,jk,ik->i", X, Tu, X)
+
+
+def ising_log_partition(theta0, Theta):
+    """Logarithme de la fonction de partition ``Phi(Theta)`` (éq. 17.29),
+    calculé par énumération des ``2^p`` états (log-sum-exp stable)."""
+    p = len(theta0)
+    e = ising_energy(ising_states(p), theta0, Theta)
+    m = e.max()
+    return m + np.log(np.exp(e - m).sum())
