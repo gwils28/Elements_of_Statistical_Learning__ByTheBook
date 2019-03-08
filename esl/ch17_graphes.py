@@ -574,3 +574,26 @@ def ising_log_partition(theta0, Theta):
     e = ising_energy(ising_states(p), theta0, Theta)
     m = e.max()
     return m + np.log(np.exp(e - m).sum())
+
+
+def ising_probs(theta0, Theta):
+    """Probabilités des ``2^p`` états. Retourne ``(states, probs)``."""
+    p = len(theta0)
+    X = ising_states(p)
+    e = ising_energy(X, theta0, Theta)
+    w = np.exp(e - e.max())
+    return X, w / w.sum()
+
+
+def ising_moments(theta0, Theta):
+    """Moments exacts par énumération : ``E[X_j]`` et ``E[X_j X_k]``.
+
+    Returns
+    -------
+    m1 : ndarray (p,)
+    M2 : ndarray (p, p) avec ``M2[j, k] = E[X_j X_k]`` (``M2[j, j] = E[X_j]``).
+    """
+    X, pr = ising_probs(theta0, Theta)
+    m1 = pr @ X
+    M2 = (X * pr[:, None]).T @ X
+    return m1, M2
