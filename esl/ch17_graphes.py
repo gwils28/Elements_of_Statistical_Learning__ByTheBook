@@ -597,3 +597,10 @@ def ising_moments(theta0, Theta):
     m1 = pr @ X
     M2 = (X * pr[:, None]).T @ X
     return m1, M2
+
+
+def ising_sample(theta0, Theta, N, rng):
+    """Échantillon exact de taille N (tirage multinomial sur les 2^p états)."""
+    X, pr = ising_probs(theta0, Theta)
+    idx = rng.choice(len(pr), size=N, p=pr)
+    return X[idx]
