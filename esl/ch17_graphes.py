@@ -612,3 +612,19 @@ def ising_conditional(X, j, theta0, Theta):
     Theta = np.asarray(Theta, dtype=float)
     eta = theta0[j] + X @ Theta[:, j] - X[:, j] * Theta[j, j]
     return 1.0 / (1.0 + np.exp(-eta))
+
+
+def ising_gibbs(theta0, Theta, n_sweeps, rng, x0=None, burn=0):
+    """Échantillonneur de Gibbs : tire successivement chaque ``X_j`` selon
+    sa loi conditionnelle (17.30). Retourne les états après chaque balayage
+    (après ``burn`` balayages de chauffe)."""
+    p = len(theta0)
+    x = rng.randint(0, 2, size=p).astype(float) if x0 is None else np.array(x0, float)
+    out = []
+    for t in range(burn + n_sweeps):
+        for j in range(p):
+            pj = 1.0 / (1.0 + np.exp(-(theta0[j] + Theta[j] @ x - Theta[j, j] * x[j])))
+            x[j] = float(rng.rand() < pj)
+        if t >= burn:
+            out.append(x.copy())
+    return np.array(out)
