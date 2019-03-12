@@ -604,3 +604,11 @@ def ising_sample(theta0, Theta, N, rng):
     X, pr = ising_probs(theta0, Theta)
     idx = rng.choice(len(pr), size=N, p=pr)
     return X[idx]
+
+
+def ising_conditional(X, j, theta0, Theta):
+    """``Pr(X_j = 1 | X_{-j})`` (forme logistique, éq. 17.30) pour chaque ligne."""
+    X = np.atleast_2d(np.asarray(X, dtype=float))
+    Theta = np.asarray(Theta, dtype=float)
+    eta = theta0[j] + X @ Theta[:, j] - X[:, j] * Theta[j, j]
+    return 1.0 / (1.0 + np.exp(-eta))
