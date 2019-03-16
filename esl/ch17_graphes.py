@@ -636,3 +636,11 @@ def _ising_design(p, A):
     X = ising_states(p)
     T = np.c_[X, np.array([X[:, j] * X[:, k] for j, k in edges]).T.reshape(len(X), -1)]
     return edges, X, T
+
+
+def _ising_unpack(par, p, edges):
+    theta0 = par[:p].copy()
+    Theta = np.zeros((p, p))
+    for v, (j, k) in zip(par[p:], edges):
+        Theta[j, k] = Theta[k, j] = v
+    return theta0, Theta
