@@ -628,3 +628,11 @@ def ising_gibbs(theta0, Theta, n_sweeps, rng, x0=None, burn=0):
         if t >= burn:
             out.append(x.copy())
     return np.array(out)
+
+
+def _ising_design(p, A):
+    """Liste des arêtes libres et matrice des statistiques suffisantes."""
+    edges = edges_from_adjacency(A)
+    X = ising_states(p)
+    T = np.c_[X, np.array([X[:, j] * X[:, k] for j, k in edges]).T.reshape(len(X), -1)]
+    return edges, X, T
