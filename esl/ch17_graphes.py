@@ -644,3 +644,66 @@ def _ising_unpack(par, p, edges):
     for v, (j, k) in zip(par[p:], edges):
         Theta[j, k] = Theta[k, j] = v
     return theta0, Theta
+
+
+def ising_loglik(X, theta0, Theta):
+    """Log-vraisemblance moyenne ``(1/N) sum_i log p(x_i)`` (éq. 17.31 / N)."""
+    return ising_energy(X, theta0, Theta).mean() - ising_log_partition(theta0, Theta)
+
+
+def ising_fit_mle(X, A, max_iter=100, tol=1e-10, return_n_iter=False,
+                  sample_weight=None):
+    """Maximum de vraisemblance exact d'un modèle de Ising à graphe ``A``
+    par méthode de Newton, en énumérant les 2^p états.
+
+    Le gradient de la log-vraisemblance moyenne est ``E_hat[t] - E_theta[t]``
+    (éq. 17.34) où ``t(x) = (x_j, x_j x_k)`` ; la hessienne est
+    ``-Cov_theta(t)``.
+
+    ``sample_weight`` (poids positifs, normalisés en interne) permet de
+    remplacer la loi empirique par une loi quelconque sur les observations,
+    par exemple une loi exacte sur les ``2^p`` états.
+
+    Returns
+    -------
+    theta0 : ndarray (p,)
+    Theta : ndarray (p, p) symétrique, nulle hors des arêtes de ``A``.
+    """
+    X = np.asarray(X, dtype=float)
+    p = X.shape[1]
+    edges, states, T = _ising_design(p, A)
+    w = np.ones(len(X)) if sample_weight is None else np.asarray(sample_weight, float)
+    w = w / w.sum()
+    tbar = w @ np.c_[X, np.array([X[:, j] * X[:, k] for j, k in edges]).T.reshape(len(X), -1)]
+    def loglik(par):
+        e = T @ par
+        m = e.max()
+        return par @ tbar - (m + np.log(np.exp(e - m).sum()))
+
+    par = np.zeros(T.shape[1])
+    ll = loglik(par)
+    for it in range(1, max_iter + 1):
+        e = T @ par
+        w = np.exp(e - e.max())
+        pr = w / w.sum()
+        Et = pr @ T
+        grad = tbar - Et
+        if np.max(np.abs(grad)) < tol:
+            break
+        Tc = T - Et
+        H = (Tc * pr[:, None]).T @ Tc + 1e-12 * np.eye(len(par))
+        step = np.linalg.solve(H, grad)
+        # recherche linéaire (Newton amorti) : on divise le pas par 2 tant
+        # que la log-vraisemblance n'augmente pas suffisamment
+        t = 1.0
+        while t > 1e-10:
+            new = par + t * step
+            ll_new = loglik(new)
+            if ll_new >= ll + 0.25 * t * (grad @ step):
+                break
+            t /= 2
+        par, ll = new, ll_new
+    theta0, Theta = _ising_unpack(par, p, edges)
+    if return_n_iter:
+        return theta0, Theta, it
+    return theta0, Theta
