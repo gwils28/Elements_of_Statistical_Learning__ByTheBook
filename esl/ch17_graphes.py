@@ -707,3 +707,12 @@ def ising_fit_mle(X, A, max_iter=100, tol=1e-10, return_n_iter=False,
     if return_n_iter:
         return theta0, Theta, it
     return theta0, Theta
+
+
+def ising_pseudo_loglik(X, theta0, Theta):
+    """Pseudo-log-vraisemblance moyenne (Besag) :
+    ``(1/N) sum_i sum_j log Pr(X_j = x_ij | x_{i,-j})``."""
+    X = np.asarray(X, dtype=float)
+    Theta = np.asarray(Theta, dtype=float)
+    Eta = theta0 + X @ Theta - X * np.diag(Theta)
+    return np.mean(np.sum(X * Eta - np.logaddexp(0.0, Eta), axis=1))
