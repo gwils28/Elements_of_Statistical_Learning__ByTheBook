@@ -744,3 +744,87 @@ def ising_fit_pseudolikelihood(X, A):
     res = minimize(f, np.zeros(p + len(edges)), jac=True, method="L-BFGS-B",
                    options={"maxiter": 2000, "gtol": 1e-10})
     return _ising_unpack(res.x, p, edges)
+
+
+def logistic_l1(Z, y, lam, max_iter=5000, tol=1e-9):
+    """Régression logistique avec pénalité L1 (ordonnée à l'origine non
+    pénalisée) par gradient proximal (ISTA).
+
+    Minimise ``-(1/N) sum_i [y_i eta_i - log(1 + e^{eta_i})] + lam ||b||_1``
+    avec ``eta_i = b0 + z_i^T b``.
+
+    Returns
+    -------
+    b0 : float, b : ndarray
+    """
+    Z = np.asarray(Z, dtype=float)
+    y = np.asarray(y, dtype=float)
+    N, q = Z.shape
+    Z1 = np.c_[np.ones(N), Z]
+    L = 0.25 * np.linalg.eigvalsh(Z1.T @ Z1 / N).max()
+    step = 1.0 / L
+    par = np.zeros(q + 1)
+    for _ in range(max_iter):
+        eta = Z1 @ par
+        g = Z1.T @ (1.0 / (1.0 + np.exp(-eta)) - y) / N
+        new = par - step * g
+        new[1:] = soft_threshold(new[1:], step * lam)
+        if np.max(np.abs(new - par)) < tol:
+            par = new
+            break
+        par = new
+    return par[0], par[1:]
+
+
+def nodewise_logistic(X, lam=0.0, rule="min"):
+    """Approche de Wainwright et al. (2007) : régression logistique L1 de
+    chaque nœud sur les autres, puis symétrisation.
+
+    Parameters
+    ----------
+    X : ndarray (N, p) binaire.
+    lam : float - pénalité L1.
+    rule : ``"min"``, ``"max"`` ou ``"mean"`` - règle de symétrisation
+        (``"min"`` garde le coefficient de plus petite valeur absolue).
+
+    Returns
+    -------
+    theta0 : ndarray (p,) - ordonnées à l'origine.
+    Theta : ndarray (p, p) symétrique.
+    Theta_tilde : ndarray (p, p) non symétrique (ligne j = régression de j).
+    """
+    X = np.asarray(X, dtype=float)
+    N, p = X.shape
+    Tt = np.zeros((p, p))
+    theta0 = np.zeros(p)
+    for j in range(p):
+        idx = np.arange(p) != j
+        b0, b = logistic_l1(X[:, idx], X[:, j], lam)
+        theta0[j] = b0
+        Tt[j, idx] = b
+    if rule == "mean":
+        Theta = (Tt + Tt.T) / 2
+    else:
+        pick = np.abs(Tt) <= np.abs(Tt.T) if rule == "min" else np.abs(Tt) >= np.abs(Tt.T)
+        Theta = np.where(pick, Tt, Tt.T)
+    return theta0, Theta, Tt
+
+
+# ---------------------------------------------------------------------------
+# 4. Données simulées « façon cytométrie » (graphe de la figure 17.1)
+# ---------------------------------------------------------------------------
+
+#: Noms des 11 protéines (ordre des colonnes du jeu de Sachs et al.).
+CYTO_NAMES = ["Raf", "Mek", "Plcg", "PIP2", "PIP3", "Erk", "Akt", "PKA",
+              "PKC", "P38", "Jnk"]
+
+#: Arêtes lues sur la figure 17.1 du livre (graphical lasso, lambda = 14).
+CYTO_EDGES = [("Raf", "Mek"), ("Mek", "P38"), ("Mek", "PIP2"), ("Mek", "Akt"),
+              ("Mek", "PKA"), ("Jnk", "P38"), ("Jnk", "PIP2"), ("Plcg", "P38"),
+              ("Plcg", "PIP2"), ("Plcg", "PKA"), ("PIP2", "P38"),
+              ("PIP2", "PKA"), ("PIP2", "Akt"), ("P38", "PKC"), ("P38", "PKA"),
+              ("P38", "Akt")]
+
+#: Ordre (sens horaire, à partir du haut) des sommets sur la figure 17.1.
+_CYTO_CIRCLE = ["Raf", "Jnk", "P38", "PKC", "PKA", "Akt", "Erk", "PIP3",
+                "PIP2", "Plcg", "Mek"]
