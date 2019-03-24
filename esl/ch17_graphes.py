@@ -716,3 +716,31 @@ def ising_pseudo_loglik(X, theta0, Theta):
     Theta = np.asarray(Theta, dtype=float)
     Eta = theta0 + X @ Theta - X * np.diag(Theta)
     return np.mean(np.sum(X * Eta - np.logaddexp(0.0, Eta), axis=1))
+
+
+def ising_fit_pseudolikelihood(X, A):
+    """Maximum de pseudo-vraisemblance (paramètres symétriques) par L-BFGS.
+
+    Ne nécessite pas la fonction de partition : coût ``O(N p^2)`` par
+    évaluation, utilisable pour ``p`` grand.
+    """
+    from scipy.optimize import minimize
+
+    X = np.asarray(X, dtype=float)
+    N, p = X.shape
+    edges = edges_from_adjacency(A)
+
+    def f(par):
+        theta0, Theta = _ising_unpack(par, p, edges)
+        Eta = theta0 + X @ Theta
+        P = 1.0 / (1.0 + np.exp(-Eta))
+        val = -np.mean(np.sum(X * Eta - np.logaddexp(0.0, Eta), axis=1))
+        R = X - P  # résidus
+        g0 = -R.mean(0)
+        G = R.T @ X / N  # G[j, k] = mean (x_j - p_j) x_k
+        ge = np.array([-(G[j, k] + G[k, j]) for j, k in edges])
+        return val, np.r_[g0, ge]
+
+    res = minimize(f, np.zeros(p + len(edges)), jac=True, method="L-BFGS-B",
+                   options={"maxiter": 2000, "gtol": 1e-10})
+    return _ising_unpack(res.x, p, edges)
