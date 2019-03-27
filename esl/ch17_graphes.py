@@ -828,3 +828,15 @@ CYTO_EDGES = [("Raf", "Mek"), ("Mek", "P38"), ("Mek", "PIP2"), ("Mek", "Akt"),
 #: Ordre (sens horaire, à partir du haut) des sommets sur la figure 17.1.
 _CYTO_CIRCLE = ["Raf", "Jnk", "P38", "PKC", "PKA", "Akt", "Erk", "PIP3",
                 "PIP2", "Plcg", "Mek"]
+
+
+def cytometry_like_graph():
+    """Graphe de la figure 17.1 : retourne ``(names, A, pos)``.
+
+    ``pos`` reproduit la disposition circulaire du livre.
+    """
+    idx = {n: i for i, n in enumerate(CYTO_NAMES)}
+    A = adjacency_from_edges(len(CYTO_NAMES), [(idx[a], idx[b]) for a, b in CYTO_EDGES])
+    circ = circle_layout(len(CYTO_NAMES))
+    pos = np.array([circ[_CYTO_CIRCLE.index(n)] for n in CYTO_NAMES])
+    return list(CYTO_NAMES), A, pos
