@@ -840,3 +840,22 @@ def cytometry_like_graph():
     circ = circle_layout(len(CYTO_NAMES))
     pos = np.array([circ[_CYTO_CIRCLE.index(n)] for n in CYTO_NAMES])
     return list(CYTO_NAMES), A, pos
+
+
+def simulate_cytometry_like(N=7466, seed=0):
+    """Données gaussiennes simulées dont le graphe vrai est celui de la
+    figure 17.1 (les vraies données de cytométrie ne sont pas disponibles).
+
+    Returns
+    -------
+    X : ndarray (N, 11) - observations (variables de variance 1).
+    Theta : ndarray (11, 11) - vraie matrice de précision.
+    A : ndarray (11, 11) - vrai graphe.
+    """
+    rng = np.random.RandomState(seed)
+    names, A, _ = cytometry_like_graph()
+    Theta = make_sparse_precision(A, rng, low=0.25, high=0.5, min_eig=0.25)
+    Sigma = np.linalg.inv(Theta)
+    L = np.linalg.cholesky(Sigma)
+    X = rng.randn(N, len(names)) @ L.T
+    return X, Theta, A
