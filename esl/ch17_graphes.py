@@ -859,3 +859,23 @@ def simulate_cytometry_like(N=7466, seed=0):
     L = np.linalg.cholesky(Sigma)
     X = rng.randn(N, len(names)) @ L.T
     return X, Theta, A
+
+
+# ---------------------------------------------------------------------------
+# 5. Machine de Boltzmann restreinte (RBM)
+# ---------------------------------------------------------------------------
+
+
+def sigmoid(z):
+    """Fonction logistique ``1 / (1 + e^{-z})``."""
+    return 0.5 * (1.0 + np.tanh(0.5 * z))
+
+
+def rbm_free_energy(V, W, b, c):
+    """Énergie libre ``F(v) = -b^T v - sum_h log(1 + exp(c_h + v^T W_h))``.
+
+    On a ``Pr(v) = exp(-F(v)) / Z`` : la somme sur les unités cachées
+    (binaires, indépendantes sachant v) se calcule en forme fermée.
+    """
+    V = np.atleast_2d(V)
+    return -V @ b - np.logaddexp(0.0, V @ W + c).sum(axis=1)
