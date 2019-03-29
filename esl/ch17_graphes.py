@@ -879,3 +879,36 @@ def rbm_free_energy(V, W, b, c):
     """
     V = np.atleast_2d(V)
     return -V @ b - np.logaddexp(0.0, V @ W + c).sum(axis=1)
+
+
+def rbm_fit_cd(V, n_hidden, rng, n_epochs=20, lr=0.05, batch_size=50,
+               momentum=0.5, weight_decay=1e-4, softmax_slice=None):
+    """Apprentissage d'une RBM binaire par divergence contrastive CD-1.
+
+    Le gradient (17.37) ``E_data[v h^T] - E_model[v h^T]`` est approché en
+    remplaçant le second terme par une seule étape de Gibbs partant des
+    données (Hinton, 2002).
+
+    Parameters
+    ----------
+    V : ndarray (N, n_visible) à valeurs dans {0, 1}.
+    n_hidden : int
+    rng : np.random.RandomState
+    softmax_slice : slice, optionnel
+        Bloc d'unités visibles formant une unité multinomiale (une seule
+        vaut 1, par ex. l'étiquette de classe) : leur reconstruction se fait
+        par softmax.
+
+    Returns
+    -------
+    W : ndarray (n_visible, n_hidden), b : ndarray (n_visible,),
+    c : ndarray (n_hidden,)
+    """
+    try:  # petits produits matriciels : le multi-threading BLAS ralentit
+        from threadpoolctl import threadpool_limits
+        with threadpool_limits(1):
+            return _rbm_fit_cd(V, n_hidden, rng, n_epochs, lr, batch_size,
+                               momentum, weight_decay, softmax_slice)
+    except ImportError:
+        return _rbm_fit_cd(V, n_hidden, rng, n_epochs, lr, batch_size,
+                           momentum, weight_decay, softmax_slice)
