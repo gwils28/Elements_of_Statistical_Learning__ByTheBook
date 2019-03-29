@@ -912,3 +912,35 @@ def rbm_fit_cd(V, n_hidden, rng, n_epochs=20, lr=0.05, batch_size=50,
     except ImportError:
         return _rbm_fit_cd(V, n_hidden, rng, n_epochs, lr, batch_size,
                            momentum, weight_decay, softmax_slice)
+
+
+def _rbm_fit_cd(V, n_hidden, rng, n_epochs, lr, batch_size, momentum,
+                weight_decay, softmax_slice):
+    V = np.asarray(V, dtype=float)
+    N, nv = V.shape
+    W = 0.01 * rng.randn(nv, n_hidden)
+    b = np.log((V.mean(0) + 1e-3) / (1 - V.mean(0) + 1e-3))
+    c = np.zeros(n_hidden)
+    dW, db, dc = np.zeros_like(W), np.zeros_like(b), np.zeros_like(c)
+    for epoch in range(n_epochs):
+        perm = rng.permutation(N)
+        for start in range(0, N, batch_size):
+            v0 = V[perm[start:start + batch_size]]
+            ph0 = sigmoid(v0 @ W + c)
+            h0 = (rng.rand(*ph0.shape) < ph0).astype(float)
+            a = h0 @ W.T + b
+            v1 = sigmoid(a)
+            if softmax_slice is not None:
+                z = a[:, softmax_slice]
+                z = np.exp(z - z.max(axis=1, keepdims=True))
+                v1[:, softmax_slice] = z / z.sum(axis=1, keepdims=True)
+            ph1 = sigmoid(v1 @ W + c)
+            n = len(v0)
+            gW = (v0.T @ ph0 - v1.T @ ph1) / n - weight_decay * W
+            dW = momentum * dW + lr * gW
+            db = momentum * db + lr * (v0 - v1).mean(0)
+            dc = momentum * dc + lr * (ph0 - ph1).mean(0)
+            W += dW
+            b += db
+            c += dc
+    return W, b, c
