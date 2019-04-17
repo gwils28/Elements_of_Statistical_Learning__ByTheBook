@@ -12,3 +12,14 @@ def _cov(seed=0, N=60, p=7):
     X = rng.randn(N, p) @ rng.randn(p, p)
     X /= X.std(axis=0)
     return g.empirical_covariance(X)
+
+
+# --- Graphes ---------------------------------------------------------------
+
+def test_cliques_figure_17_2():
+    # (a) chemin X - Y - Z ; (b) triangle X,Y,W + Z isolé ; (c) cycle de 4
+    assert g.maximal_cliques(g.adjacency_from_edges(3, [(0, 1), (1, 2)])) == [(0, 1), (1, 2)]
+    A = g.adjacency_from_edges(4, [(0, 1), (0, 3), (1, 3)])
+    assert g.maximal_cliques(A) == [(0, 1, 3), (2,)]
+    A = g.adjacency_from_edges(4, [(0, 1), (1, 2), (2, 3), (3, 0)])
+    assert g.maximal_cliques(A) == [(0, 1), (0, 3), (1, 2), (2, 3)]
