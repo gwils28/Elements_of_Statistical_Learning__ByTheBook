@@ -23,3 +23,8 @@ def test_cliques_figure_17_2():
     assert g.maximal_cliques(A) == [(0, 1, 3), (2,)]
     A = g.adjacency_from_edges(4, [(0, 1), (1, 2), (2, 3), (3, 0)])
     assert g.maximal_cliques(A) == [(0, 1), (0, 3), (1, 2), (2, 3)]
+
+
+def test_cliques_figure_17_8():
+    A = g.adjacency_from_edges(6, [(0, 1), (0, 3), (0, 5), (1, 5), (2, 3), (4, 5)])
+    assert g.maximal_cliques(A) == [(0, 1, 5), (0, 3), (2, 3), (4, 5)]
