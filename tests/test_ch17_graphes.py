@@ -28,3 +28,15 @@ def test_cliques_figure_17_2():
 def test_cliques_figure_17_8():
     A = g.adjacency_from_edges(6, [(0, 1), (0, 3), (0, 5), (1, 5), (2, 3), (4, 5)])
     assert g.maximal_cliques(A) == [(0, 1, 5), (0, 3), (2, 3), (4, 5)]
+
+
+def test_separation():
+    # figure 17.2 (d) : X - Y - Z - W
+    A = g.adjacency_from_edges(4, [(0, 1), (1, 2), (2, 3)])
+    assert g.separates(A, [0], [2, 3], [1])
+    assert g.separates(A, [1], [3], [2])
+    assert not g.separates(A, [0], [3], [])
+    # cycle (c) : {X, Z} sépare Y et W
+    C = g.adjacency_from_edges(4, [(0, 1), (1, 2), (2, 3), (3, 0)])
+    assert g.separates(C, [1], [3], [0, 2])
+    assert not g.separates(C, [1], [3], [0])
