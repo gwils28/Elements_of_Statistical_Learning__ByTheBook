@@ -40,3 +40,22 @@ def test_separation():
     C = g.adjacency_from_edges(4, [(0, 1), (1, 2), (2, 3), (3, 0)])
     assert g.separates(C, [1], [3], [0, 2])
     assert not g.separates(C, [1], [3], [0])
+
+
+def test_components():
+    A = g.adjacency_from_edges(5, [(0, 1), (3, 4)])
+    assert g.connected_components(A) == [[0, 1], [2], [3, 4]]
+
+
+# --- Gaussien --------------------------------------------------------------
+
+def test_algorithme_17_1_exemple_whittaker():
+    S = np.array([[10, 1, 5, 4], [1, 10, 2, 6], [5, 2, 10, 3], [4, 6, 3, 10.]])
+    A = g.adjacency_from_edges(4, [(0, 1), (1, 2), (2, 3), (3, 0)])
+    W, Theta = g.fit_known_graph(S, A)
+    assert abs(W[0, 2] - 1.31) < 5e-3 and abs(W[1, 3] - 0.87) < 5e-3
+    # seules les entrées des arêtes absentes diffèrent de S
+    mask = A | np.eye(4, dtype=bool)
+    assert np.allclose(W[mask], S[mask])
+    assert abs(Theta[0, 2]) < 1e-10 and abs(Theta[1, 3]) < 1e-10
+    assert np.allclose(W @ Theta, np.eye(4), atol=1e-8)
