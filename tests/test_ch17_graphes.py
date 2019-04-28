@@ -67,3 +67,17 @@ def test_graphe_complet_donne_S():
     W, Theta = g.fit_known_graph(S, A)
     assert np.allclose(W, S, atol=1e-8)
     assert np.allclose(Theta, np.linalg.inv(S), atol=1e-6)
+
+
+def test_lasso_cd_vs_sklearn():
+    from sklearn.linear_model import Lasso
+    rng = np.random.RandomState(1)
+    N, q = 80, 6
+    Z = rng.randn(N, q)
+    y = Z @ np.array([2, -1, 0, 0, 0.5, 0]) + rng.randn(N)
+    Z -= Z.mean(0)
+    y -= y.mean()
+    lam = 0.2
+    b = g.lasso_cd(Z.T @ Z / N, Z.T @ y / N, lam)
+    ref = Lasso(alpha=lam, fit_intercept=False, tol=1e-12, max_iter=100000).fit(Z, y).coef_
+    assert np.allclose(b, ref, atol=1e-6)
