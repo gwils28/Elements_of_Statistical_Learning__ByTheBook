@@ -59,3 +59,11 @@ def test_algorithme_17_1_exemple_whittaker():
     assert np.allclose(W[mask], S[mask])
     assert abs(Theta[0, 2]) < 1e-10 and abs(Theta[1, 3]) < 1e-10
     assert np.allclose(W @ Theta, np.eye(4), atol=1e-8)
+
+
+def test_graphe_complet_donne_S():
+    S = _cov()
+    A = ~np.eye(S.shape[0], dtype=bool)
+    W, Theta = g.fit_known_graph(S, A)
+    assert np.allclose(W, S, atol=1e-8)
+    assert np.allclose(Theta, np.linalg.inv(S), atol=1e-6)
