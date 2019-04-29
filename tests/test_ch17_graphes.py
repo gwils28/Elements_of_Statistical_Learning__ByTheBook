@@ -115,3 +115,13 @@ def test_graphical_lasso_kkt_et_diagonale():
     nz = (np.abs(Theta) > 1e-10) & off
     assert np.allclose(G[nz], lam * np.sign(Theta[nz]), atol=1e-7)
     assert np.all(np.abs(G[off & ~nz]) <= lam + 1e-7)
+
+
+def test_graphical_lasso_lam_infini_retrouve_17_1():
+    S = _cov(seed=4, p=5)
+    A = g.adjacency_from_edges(5, [(0, 1), (1, 2), (2, 3), (3, 4)])
+    Lam = np.where(A, 0.0, np.inf)
+    np.fill_diagonal(Lam, 0.0)
+    W1, T1 = g.fit_known_graph(S, A)
+    W2, T2 = g.graphical_lasso(S, Lam, tol=1e-13)
+    assert np.allclose(T1, T2, atol=1e-6)
