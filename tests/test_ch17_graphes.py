@@ -145,3 +145,13 @@ def test_correlations_partielles():
     r0 = X[:, 0] - Z @ np.linalg.lstsq(Z, X[:, 0], rcond=None)[0]
     r1 = X[:, 1] - Z @ np.linalg.lstsq(Z, X[:, 1], rcond=None)[0]
     assert abs(R[0, 1] - np.corrcoef(r0, r1)[0, 1]) < 1e-10
+
+
+def test_em_sans_manquant_egal_17_1():
+    rng = np.random.RandomState(7)
+    A = g.adjacency_from_edges(4, [(0, 1), (1, 2), (2, 3)])
+    X = rng.randn(200, 4)
+    mu, W, Theta, _ = g.em_gaussian_graph(X, A)
+    W2, _ = g.fit_known_graph(g.empirical_covariance(X), A)
+    assert np.allclose(W, W2, atol=1e-8)
+    assert np.allclose(mu, X.mean(0))
