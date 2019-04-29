@@ -133,3 +133,15 @@ def test_chemin_creux_quand_lam_grand():
     path = g.graphical_lasso_path(S, [lam_max * 1.01, 0.5 * lam_max, 0.01])
     assert g.support_graph(path[0]).sum() == 0
     assert g.support_graph(path[1]).sum() <= g.support_graph(path[2]).sum()
+
+
+def test_correlations_partielles():
+    # rho_{12|3} via la régression des résidus
+    rng = np.random.RandomState(6)
+    X = rng.randn(4000, 3) @ np.array([[1, .5, .2], [0, 1, .4], [0, 0, 1.]])
+    S = g.empirical_covariance(X)
+    R = g.partial_correlations(np.linalg.inv(S))
+    Z = np.c_[np.ones(len(X)), X[:, 2]]
+    r0 = X[:, 0] - Z @ np.linalg.lstsq(Z, X[:, 0], rcond=None)[0]
+    r1 = X[:, 1] - Z @ np.linalg.lstsq(Z, X[:, 1], rcond=None)[0]
+    assert abs(R[0, 1] - np.corrcoef(r0, r1)[0, 1]) < 1e-10
