@@ -100,3 +100,18 @@ def test_graphical_lasso_vs_sklearn(lam):
     def obj(T):
         return -g.gaussian_loglik(T, S) + lam * (np.abs(T).sum() - np.abs(np.diag(T)).sum())
     assert obj(Theta) <= obj(prec_sk) + 1e-8
+
+
+def test_graphical_lasso_kkt_et_diagonale():
+    S = _cov(seed=3)
+    p = S.shape[0]
+    lam = 0.15
+    W, Theta = g.graphical_lasso(S, lam, tol=1e-12)
+    # diagonale de W = s_jj + lam (diagonale pénalisée)
+    assert np.allclose(np.diag(W), np.diag(S) + lam)
+    assert np.allclose(W @ Theta, np.eye(p), atol=1e-8)
+    G = W - S  # = lam * Sign(Theta) (éq. 17.22)
+    off = ~np.eye(p, dtype=bool)
+    nz = (np.abs(Theta) > 1e-10) & off
+    assert np.allclose(G[nz], lam * np.sign(Theta[nz]), atol=1e-7)
+    assert np.all(np.abs(G[off & ~nz]) <= lam + 1e-7)
