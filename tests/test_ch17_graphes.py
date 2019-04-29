@@ -125,3 +125,11 @@ def test_graphical_lasso_lam_infini_retrouve_17_1():
     W1, T1 = g.fit_known_graph(S, A)
     W2, T2 = g.graphical_lasso(S, Lam, tol=1e-13)
     assert np.allclose(T1, T2, atol=1e-6)
+
+
+def test_chemin_creux_quand_lam_grand():
+    S = _cov(seed=5)
+    lam_max = np.abs(S[~np.eye(S.shape[0], dtype=bool)]).max()
+    path = g.graphical_lasso_path(S, [lam_max * 1.01, 0.5 * lam_max, 0.01])
+    assert g.support_graph(path[0]).sum() == 0
+    assert g.support_graph(path[1]).sum() <= g.support_graph(path[2]).sum()
