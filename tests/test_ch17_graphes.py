@@ -81,3 +81,22 @@ def test_lasso_cd_vs_sklearn():
     b = g.lasso_cd(Z.T @ Z / N, Z.T @ y / N, lam)
     ref = Lasso(alpha=lam, fit_intercept=False, tol=1e-12, max_iter=100000).fit(Z, y).coef_
     assert np.allclose(b, ref, atol=1e-6)
+
+
+@pytest.mark.parametrize("lam", [0.05, 0.2, 0.5])
+def test_graphical_lasso_vs_sklearn(lam):
+    from sklearn.covariance import graphical_lasso as sk_gl
+    S = _cov(seed=2)
+    W, Theta = g.graphical_lasso(S, lam, penalize_diagonal=False, tol=1e-12)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        cov_sk, prec_sk = sk_gl(S, lam, tol=1e-10, max_iter=2000)
+    # sklearn s'arrête sur un critère de saut de dualité moins strict : on
+    # compare avec une tolérance relative de 1 %
+    assert np.allclose(Theta, prec_sk, atol=1e-2 * np.abs(prec_sk).max())
+    assert np.allclose(W, cov_sk, atol=1e-2)
+
+    # notre solution vérifie au moins aussi bien l'optimalité
+    def obj(T):
+        return -g.gaussian_loglik(T, S) + lam * (np.abs(T).sum() - np.abs(np.diag(T)).sum())
+    assert obj(Theta) <= obj(prec_sk) + 1e-8
