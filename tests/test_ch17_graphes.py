@@ -167,3 +167,11 @@ def _ising(seed=0, p=5):
     for j, k in g.edges_from_adjacency(A):
         Th[j, k] = Th[k, j] = rng.uniform(-1.5, 1.5)
     return rng, A, th0, Th
+
+
+def test_ising_probas_et_partition():
+    _, A, th0, Th = _ising()
+    X, pr = g.ising_probs(th0, Th)
+    assert abs(pr.sum() - 1) < 1e-12
+    Phi = g.ising_log_partition(th0, Th)
+    assert np.allclose(np.log(pr), g.ising_energy(X, th0, Th) - Phi)
