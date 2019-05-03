@@ -155,3 +155,15 @@ def test_em_sans_manquant_egal_17_1():
     W2, _ = g.fit_known_graph(g.empirical_covariance(X), A)
     assert np.allclose(W, W2, atol=1e-8)
     assert np.allclose(mu, X.mean(0))
+
+
+# --- Ising -----------------------------------------------------------------
+
+def _ising(seed=0, p=5):
+    rng = np.random.RandomState(seed)
+    A = g.adjacency_from_edges(p, [(j, j + 1) for j in range(p - 1)] + [(0, p - 1)])
+    th0 = rng.uniform(-1, 0.5, p)
+    Th = np.zeros((p, p))
+    for j, k in g.edges_from_adjacency(A):
+        Th[j, k] = Th[k, j] = rng.uniform(-1.5, 1.5)
+    return rng, A, th0, Th
