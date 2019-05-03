@@ -175,3 +175,15 @@ def test_ising_probas_et_partition():
     assert abs(pr.sum() - 1) < 1e-12
     Phi = g.ising_log_partition(th0, Th)
     assert np.allclose(np.log(pr), g.ising_energy(X, th0, Th) - Phi)
+
+
+def test_ising_conditionnelle_logistique():
+    _, A, th0, Th = _ising(1)
+    X, pr = g.ising_probs(th0, Th)
+    j = 2
+    for x in X[:8]:
+        x1, x0 = x.copy(), x.copy()
+        x1[j], x0[j] = 1, 0
+        p1 = np.exp(g.ising_energy(x1, th0, Th))[0]
+        p0 = np.exp(g.ising_energy(x0, th0, Th))[0]
+        assert abs(g.ising_conditional(x, j, th0, Th)[0] - p1 / (p0 + p1)) < 1e-12
