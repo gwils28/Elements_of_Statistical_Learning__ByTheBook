@@ -187,3 +187,14 @@ def test_ising_conditionnelle_logistique():
         p1 = np.exp(g.ising_energy(x1, th0, Th))[0]
         p0 = np.exp(g.ising_energy(x0, th0, Th))[0]
         assert abs(g.ising_conditional(x, j, th0, Th)[0] - p1 / (p0 + p1)) < 1e-12
+
+
+def test_ising_mle_egalise_les_moments():
+    rng, A, th0, Th = _ising(2)
+    X = g.ising_sample(th0, Th, 3000, rng)
+    t0, T = g.ising_fit_mle(X, A)
+    m1, M2 = g.ising_moments(t0, T)
+    assert np.allclose(m1, X.mean(0), atol=1e-9)
+    for j, k in g.edges_from_adjacency(A):
+        assert abs(M2[j, k] - np.mean(X[:, j] * X[:, k])) < 1e-9
+    assert np.all(T[~A] == 0)
