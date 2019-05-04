@@ -198,3 +198,12 @@ def test_ising_mle_egalise_les_moments():
     for j, k in g.edges_from_adjacency(A):
         assert abs(M2[j, k] - np.mean(X[:, j] * X[:, k])) < 1e-9
     assert np.all(T[~A] == 0)
+
+
+def test_pseudo_vraisemblance_proche_mle():
+    rng, A, th0, Th = _ising(3)
+    X = g.ising_sample(th0, Th, 20000, rng)
+    _, T_mle = g.ising_fit_mle(X, A)
+    _, T_pl = g.ising_fit_pseudolikelihood(X, A)
+    assert np.abs(T_pl - T_mle).max() < 0.1
+    assert np.abs(T_pl - Th).max() < 0.2
