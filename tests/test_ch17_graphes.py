@@ -207,3 +207,14 @@ def test_pseudo_vraisemblance_proche_mle():
     _, T_pl = g.ising_fit_pseudolikelihood(X, A)
     assert np.abs(T_pl - T_mle).max() < 0.1
     assert np.abs(T_pl - Th).max() < 0.2
+
+
+def test_logistic_l1_sans_penalite_vs_sklearn():
+    from sklearn.linear_model import LogisticRegression
+    rng = np.random.RandomState(8)
+    Z = rng.randint(0, 2, size=(500, 3)).astype(float)
+    y = (rng.rand(500) < 1 / (1 + np.exp(-(Z @ [1, -1, 0.5] - 0.3)))).astype(float)
+    b0, b = g.logistic_l1(Z, y, 0.0, max_iter=50000, tol=1e-12)
+    ref = LogisticRegression(C=1e12, tol=1e-12, max_iter=10000).fit(Z, y)
+    assert np.allclose(b, ref.coef_[0], atol=1e-4)
+    assert abs(b0 - ref.intercept_[0]) < 1e-4
