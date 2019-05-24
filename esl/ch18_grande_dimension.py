@@ -35,3 +35,37 @@ def soft_threshold(x, delta):
     """
     x = np.asarray(x, dtype=float)
     return np.sign(x) * np.maximum(np.abs(x) - delta, 0.0)
+
+
+def class_statistics(X, y):
+    """Moyennes par classe et écart-type intra-classe poolé de chaque variable.
+
+    Parameters
+    ----------
+    X : ndarray, forme (N, p)
+        Données (une ligne par observation).
+    y : array_like, forme (N,)
+        Étiquettes de classe.
+
+    Returns
+    -------
+    classes : ndarray, forme (K,)
+        Étiquettes distinctes (triées).
+    counts : ndarray, forme (K,)
+        Effectifs ``N_k``.
+    means : ndarray, forme (K, p)
+        Centroïdes ``xbar_kj``.
+    s : ndarray, forme (p,)
+        Écart-type intra-classe poolé ``s_j`` (diviseur ``N - K``).
+    """
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y)
+    classes, inv = np.unique(y, return_inverse=True)
+    K, N = len(classes), X.shape[0]
+    counts = np.bincount(inv, minlength=K)
+    means = np.zeros((K, X.shape[1]))
+    np.add.at(means, inv, X)
+    means /= counts[:, None]
+    resid = X - means[inv]
+    s = np.sqrt((resid ** 2).sum(axis=0) / (N - K))
+    return classes, counts, means, s
