@@ -63,8 +63,8 @@ Lancer les tests : `pytest tests/`.
 | 14 | [Apprentissage non supervisé](notebooks/ch14_apprentissage_non_supervise) | ✅ |
 | 15 | [Forêts aléatoires](notebooks/ch15_forets_aleatoires) | ✅ |
 | 16 | [Apprentissage ensembliste](notebooks/ch16_apprentissage_ensembliste) | ✅ |
-| 17 | Modèles graphiques non orientés | 🚧 |
-| 18 | Problèmes en grande dimension (p ≫ N) | - |
+| 17 | [Modèles graphiques non orientés](notebooks/ch17_modeles_graphiques_non_orientes) | ✅ |
+| 18 | Problèmes en grande dimension (p ≫ N) | 🚧 |
 
 ## Références
 
