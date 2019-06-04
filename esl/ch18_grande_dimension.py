@@ -171,3 +171,31 @@ def stratified_folds(y, n_folds, rng):
         start = rng.randint(n_folds)
         folds[idx] = (start + np.arange(len(idx))) % n_folds
     return folds
+
+
+# ---------------------------------------------------------------------------
+# Ridge via la SVD
+# ---------------------------------------------------------------------------
+
+def svd_reduce(X):
+    """Réduction ``X = U D V^T = R V^T`` (éq. (18.12)-(18.13)).
+
+    Parameters
+    ----------
+    X : ndarray, forme (N, p)
+
+    Returns
+    -------
+    R : ndarray, forme (N, r)
+        ``R = U D`` (lignes ``r_i``), avec ``r = min(N, p)``.
+    V : ndarray, forme (p, r)
+        Colonnes orthonormées.
+    """
+    U, d, Vt = np.linalg.svd(np.asarray(X, dtype=float), full_matrices=False)
+    return U * d, Vt.T
+
+
+def ridge_direct(X, y, lam):
+    """Ridge sans intercept par la formule (18.14) : résout un système p x p."""
+    p = X.shape[1]
+    return np.linalg.solve(X.T @ X + lam * np.eye(p), X.T @ y)
