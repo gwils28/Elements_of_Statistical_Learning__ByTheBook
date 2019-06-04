@@ -199,3 +199,32 @@ def ridge_direct(X, y, lam):
     """Ridge sans intercept par la formule (18.14) : résout un système p x p."""
     p = X.shape[1]
     return np.linalg.solve(X.T @ X + lam * np.eye(p), X.T @ y)
+
+
+def ridge_svd(X, y, lam):
+    """Ridge sans intercept par la formule (18.15) : ``V (R^T R + lam I)^{-1} R^T y``.
+
+    Coût en ``O(N^2 p)`` au lieu de ``O(p^3)``.
+
+    Parameters
+    ----------
+    X : ndarray, forme (N, p)
+    y : ndarray, forme (N,) ou (N, q)
+    lam : float ou array_like
+        Paramètre(s) de régularisation ; si c'est un tableau de longueur L,
+        le résultat a une dimension supplémentaire en tête (L, p, ...).
+
+    Returns
+    -------
+    ndarray
+        Coefficients ``beta``.
+    """
+    U, d, Vt = np.linalg.svd(np.asarray(X, dtype=float), full_matrices=False)
+    uty = U.T @ y
+    lams = np.atleast_1d(lam).astype(float)
+    out = []
+    for l in lams:
+        f = d / (d ** 2 + l)
+        out.append(Vt.T @ (f.reshape((-1,) + (1,) * (uty.ndim - 1)) * uty))
+    out = np.array(out)
+    return out[0] if np.ndim(lam) == 0 else out
