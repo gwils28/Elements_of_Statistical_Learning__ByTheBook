@@ -236,3 +236,63 @@ def ridge_df(X, lam):
     lams = np.atleast_1d(lam).astype(float)
     df = np.array([(d ** 2 / (d ** 2 + l)).sum() for l in lams])
     return df[0] if np.ndim(lam) == 0 else df
+
+
+# ---------------------------------------------------------------------------
+# Lasso et fused lasso
+# ---------------------------------------------------------------------------
+
+def lasso_cd(X, y, lam, alpha=1.0, beta0=None, n_iter=1000, tol=1e-8):
+    """Elastic net / lasso par descente de coordonnées cyclique (sans intercept).
+
+    Minimise ``(1/2) ||y - X b||^2 + lam * sum_j (alpha |b_j| + (1-alpha)/2 b_j^2)``.
+
+    Parameters
+    ----------
+    X : ndarray, forme (N, p)
+    y : ndarray, forme (N,)
+    lam : float
+        Niveau de pénalité.
+    alpha : float
+        Mélange L1 / L2 (``alpha = 1`` : lasso).
+    beta0 : ndarray ou None
+        Point de départ (démarrage à chaud).
+    n_iter : int
+        Nombre maximal de balayages.
+    tol : float
+        Critère d'arrêt sur la variation maximale des coefficients.
+
+    Returns
+    -------
+    ndarray, forme (p,)
+    """
+    X = np.asarray(X, dtype=float)
+    N, p = X.shape
+    b = np.zeros(p) if beta0 is None else np.array(beta0, dtype=float)
+    col2 = (X ** 2).sum(axis=0)
+    r = y - X @ b
+
+    def sweep(idx):
+        maxch = 0.0
+        for j in idx:
+            if col2[j] == 0:
+                continue
+            old = b[j]
+            rho = X[:, j] @ r + col2[j] * old
+            new = soft_threshold(rho, lam * alpha) / (col2[j] + lam * (1 - alpha))
+            if new != old:
+                r[:] -= X[:, j] * (new - old)
+                b[j] = new
+                maxch = max(maxch, abs(new - old))
+        return maxch
+
+    # stratégie « ensemble actif » : on itère sur les coefficients non nuls
+    # jusqu'à convergence, puis on vérifie par un balayage complet.
+    for _ in range(n_iter):
+        if sweep(range(p)) < tol:
+            break
+        active = np.flatnonzero(b)
+        for _ in range(n_iter):
+            if sweep(active) < tol:
+                break
+    return b
