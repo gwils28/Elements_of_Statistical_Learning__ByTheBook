@@ -228,3 +228,11 @@ def ridge_svd(X, y, lam):
         out.append(Vt.T @ (f.reshape((-1,) + (1,) * (uty.ndim - 1)) * uty))
     out = np.array(out)
     return out[0] if np.ndim(lam) == 0 else out
+
+
+def ridge_df(X, lam):
+    """Degrés de liberté effectifs ``sum_j d_j^2 / (d_j^2 + lam)`` (éq. (3.50))."""
+    d = np.linalg.svd(np.asarray(X, dtype=float), compute_uv=False)
+    lams = np.atleast_1d(lam).astype(float)
+    df = np.array([(d ** 2 / (d ** 2 + l)).sum() for l in lams])
+    return df[0] if np.ndim(lam) == 0 else df
