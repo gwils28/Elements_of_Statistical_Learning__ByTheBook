@@ -305,3 +305,34 @@ def lasso_path(X, y, lams, alpha=1.0, **kw):
         b = lasso_cd(X, y, l, alpha=alpha, beta0=b, **kw)
         out.append(b.copy())
     return np.array(out)
+
+
+def tv_denoise(y, lam, n_iter=50000, tol=1e-12):
+    """Débruitage par variation totale 1D (fused lasso avec ``lambda_1 = 0``).
+
+    Minimise ``(1/2) sum (y_i - b_i)^2 + lam sum |b_{i+1} - b_i|`` par gradient
+    projeté accéléré (FISTA) sur le problème dual
+    ``min_{|u|_inf <= lam} (1/2) ||y - D^T u||^2`` ; ``b = y - D^T u``.
+    """
+    y = np.asarray(y, dtype=float)
+    n = len(y)
+
+    def Dt(u):  # D^T u, avec (D b)_i = b_{i+1} - b_i
+        out = np.zeros(n)
+        out[:-1] -= u
+        out[1:] += u
+        return out
+
+    u = np.zeros(n - 1)
+    z, t = u.copy(), 1.0
+    step = 0.25  # 1 / ||D D^T|| (majorant 4)
+    for _ in range(n_iter):
+        b = y - Dt(z)
+        u_new = np.clip(z + step * np.diff(b), -lam, lam)
+        t_new = (1 + np.sqrt(1 + 4 * t * t)) / 2
+        z = u_new + (t - 1) / t_new * (u_new - u)
+        if np.max(np.abs(u_new - u)) < tol:
+            u = u_new
+            break
+        u, t = u_new, t_new
+    return y - Dt(u)
