@@ -296,3 +296,12 @@ def lasso_cd(X, y, lam, alpha=1.0, beta0=None, n_iter=1000, tol=1e-8):
             if sweep(active) < tol:
                 break
     return b
+
+
+def lasso_path(X, y, lams, alpha=1.0, **kw):
+    """Chemin de solutions de :func:`lasso_cd` (démarrages à chaud), forme (L, p)."""
+    out, b = [], None
+    for l in lams:
+        b = lasso_cd(X, y, l, alpha=alpha, beta0=b, **kw)
+        out.append(b.copy())
+    return np.array(out)
