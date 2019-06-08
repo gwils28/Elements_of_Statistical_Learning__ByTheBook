@@ -359,3 +359,32 @@ def double_center(B):
     """Double centrage ``(I - M) B (I - M)`` avec ``M = 11^T / N`` (éq. (18.31))."""
     B = np.asarray(B, dtype=float)
     return B - B.mean(axis=0, keepdims=True) - B.mean(axis=1, keepdims=True) + B.mean()
+
+
+def kernel_centroid_distances(K, K0, k00, y):
+    """Distances carrées aux centroïdes calculées avec des produits scalaires (18.28).
+
+    Parameters
+    ----------
+    K : ndarray, forme (N, N)
+        Produits scalaires entre observations d'apprentissage.
+    K0 : ndarray, forme (n, N)
+        Produits scalaires entre points test et points d'apprentissage.
+    k00 : ndarray, forme (n,)
+        Normes carrées ``<x0, x0>`` des points test.
+    y : array_like, forme (N,)
+        Classes d'apprentissage.
+
+    Returns
+    -------
+    classes : ndarray, forme (K,)
+    D2 : ndarray, forme (n, K)
+    """
+    y = np.asarray(y)
+    classes = np.unique(y)
+    D2 = np.empty((K0.shape[0], len(classes)))
+    for k, c in enumerate(classes):
+        idx = y == c
+        nk = idx.sum()
+        D2[:, k] = k00 - 2 * K0[:, idx].sum(axis=1) / nk + K[np.ix_(idx, idx)].sum() / nk ** 2
+    return classes, D2
