@@ -336,3 +336,16 @@ def tv_denoise(y, lam, n_iter=50000, tol=1e-12):
             break
         u, t = u_new, t_new
     return y - Dt(u)
+
+
+def fused_lasso_signal(y, lam1, lam2, **kw):
+    """Approximateur de signal fused lasso (éq. (18.24), sans ``beta_0``).
+
+    Minimise ``(1/2) sum (y_i - b_i)^2 + lam1 sum |b_i| + lam2 sum |b_{i+1}-b_i|``.
+    On utilise le fait (Friedman et al., 2007) que la solution s'obtient en
+    seuillant doucement (au niveau ``lam1``) la solution à ``lam1 = 0``.
+
+    Note : la constante 1/2 devant les moindres carrés revient à doubler les
+    pénalités par rapport à l'écriture (18.24) du livre.
+    """
+    return soft_threshold(tv_denoise(y, lam2, **kw), lam1)
