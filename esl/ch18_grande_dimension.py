@@ -393,3 +393,21 @@ def kernel_centroid_distances(K, K0, k00, y):
 def kernel_distances(K, K0, k00):
     """Distances carrées ``||x0 - x_i||^2`` à partir des produits scalaires (18.27)."""
     return k00[:, None] + np.diag(K)[None, :] - 2 * K0
+
+
+def kernel_pca(K, n_components):
+    """ACP à partir d'une matrice de produits scalaires non centrée.
+
+    Returns
+    -------
+    Z : ndarray, forme (N, n_components)
+        Variables principales ``Z = U D`` de ``(I-M) K (I-M) = U D^2 U^T``.
+    U, d : ndarray
+        Vecteurs propres et racines des valeurs propres retenus.
+    """
+    Kc = double_center(K)
+    w, U = np.linalg.eigh(Kc)
+    order = np.argsort(w)[::-1][:n_components]
+    w, U = np.clip(w[order], 0, None), U[:, order]
+    d = np.sqrt(w)
+    return U * d, U, d
