@@ -388,3 +388,8 @@ def kernel_centroid_distances(K, K0, k00, y):
         nk = idx.sum()
         D2[:, k] = k00 - 2 * K0[:, idx].sum(axis=1) / nk + K[np.ix_(idx, idx)].sum() / nk ** 2
     return classes, D2
+
+
+def kernel_distances(K, K0, k00):
+    """Distances carrées ``||x0 - x_i||^2`` à partir des produits scalaires (18.27)."""
+    return k00[:, None] + np.diag(K)[None, :] - 2 * K0
