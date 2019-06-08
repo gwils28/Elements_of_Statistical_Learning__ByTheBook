@@ -349,3 +349,13 @@ def fused_lasso_signal(y, lam1, lam2, **kw):
     pénalités par rapport à l'écriture (18.24) du livre.
     """
     return soft_threshold(tv_denoise(y, lam2, **kw), lam1)
+
+
+# ---------------------------------------------------------------------------
+# Méthodes à noyaux (produits scalaires seulement)
+# ---------------------------------------------------------------------------
+
+def double_center(B):
+    """Double centrage ``(I - M) B (I - M)`` avec ``M = 11^T / N`` (éq. (18.31))."""
+    B = np.asarray(B, dtype=float)
+    return B - B.mean(axis=0, keepdims=True) - B.mean(axis=1, keepdims=True) + B.mean()
