@@ -411,3 +411,25 @@ def kernel_pca(K, n_components):
     w, U = np.clip(w[order], 0, None), U[:, order]
     d = np.sqrt(w)
     return U * d, U, d
+
+
+# ---------------------------------------------------------------------------
+# Composantes principales supervisées
+# ---------------------------------------------------------------------------
+
+def univariate_scores(X, y):
+    """Coefficients de régression univariés standardisés ``beta_j / se_j``.
+
+    Pour chaque variable ``j`` on ajuste ``y = a + b x_j`` par moindres carrés
+    et l'on retourne la statistique t de ``b``.
+    """
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float)
+    N = len(y)
+    Xc = X - X.mean(axis=0)
+    yc = y - y.mean()
+    sxx = (Xc ** 2).sum(axis=0)
+    b = Xc.T @ yc / sxx
+    rss = (yc ** 2).sum() - b ** 2 * sxx
+    sigma2 = np.maximum(rss, 1e-300) / (N - 2)
+    return b / np.sqrt(sigma2 / sxx)
