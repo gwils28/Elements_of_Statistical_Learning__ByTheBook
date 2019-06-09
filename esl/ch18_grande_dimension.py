@@ -517,3 +517,16 @@ def t_statistics(X, groups):
     sigma = np.sqrt(np.maximum(ss, 0) / (N - 2))
     t = (m2 - m1) / (sigma * np.sqrt(1 / n1 + 1 / n2))
     return t[0] if np.ndim(groups) == 1 else t
+
+
+def permutation_t(X, groups, n_perm, rng, chunk=200):
+    """Statistiques t pour ``n_perm`` permutations aléatoires des étiquettes, forme (K, M)."""
+    groups = np.asarray(groups, dtype=bool)
+    out = []
+    done = 0
+    while done < n_perm:
+        k = min(chunk, n_perm - done)
+        G = np.array([groups[rng.permutation(len(groups))] for _ in range(k)])
+        out.append(t_statistics(X, G))
+        done += k
+    return np.vstack(out)
