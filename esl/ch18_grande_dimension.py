@@ -433,3 +433,87 @@ def univariate_scores(X, y):
     rss = (yc ** 2).sum() - b ** 2 * sxx
     sigma2 = np.maximum(rss, 1e-300) / (N - 2)
     return b / np.sqrt(sigma2 / sxx)
+
+
+class SupervisedPCA:
+    """Composantes principales supervisées (algorithme 18.1, cas régression).
+
+    Parameters
+    ----------
+    n_features : int ou None
+        Nombre de variables retenues (les plus grands ``|score|``) ; ou
+    threshold : float ou None
+        Seuil ``theta`` sur ``|score|`` (utilisé si ``n_features`` vaut None).
+    n_components : int
+        Nombre ``m`` de composantes principales utilisées.
+    """
+
+    def __init__(self, n_features=None, threshold=None, n_components=1):
+        self.n_features = n_features
+        self.threshold = threshold
+        self.n_components = n_components
+
+    def fit(self, X, y, scores=None):
+        """Ajuste le modèle ; ``scores`` peut être fourni pour éviter un recalcul."""
+        X = np.asarray(X, dtype=float)
+        y = np.asarray(y, dtype=float)
+        self.scores_ = univariate_scores(X, y) if scores is None else scores
+        if self.n_features is not None:
+            sel = np.argsort(-np.abs(self.scores_))[:self.n_features]
+        else:
+            sel = np.flatnonzero(np.abs(self.scores_) > self.threshold)
+        self.selected_ = np.sort(sel)
+        Xs = X[:, self.selected_]
+        self.x_mean_ = Xs.mean(axis=0)
+        U, d, Vt = np.linalg.svd(Xs - self.x_mean_, full_matrices=False)
+        m = self.n_components
+        self.directions_ = Vt[:m].T            # (|P|, m)
+        Z = (Xs - self.x_mean_) @ self.directions_
+        self.y_mean_ = y.mean()
+        self.gamma_ = np.linalg.lstsq(Z, y - self.y_mean_, rcond=None)[0]
+        return self
+
+    def transform(self, X):
+        """Composantes supervisées ``Z`` des observations ``X``."""
+        X = np.asarray(X, dtype=float)
+        return (X[:, self.selected_] - self.x_mean_) @ self.directions_
+
+    def predict(self, X):
+        """Prédiction de la réponse."""
+        return self.y_mean_ + self.transform(X) @ self.gamma_
+
+
+# ---------------------------------------------------------------------------
+# Tests multiples
+# ---------------------------------------------------------------------------
+
+def t_statistics(X, groups):
+    """Statistiques t à deux échantillons (éq. (18.38)-(18.39)), groupe 2 - groupe 1.
+
+    Parameters
+    ----------
+    X : ndarray, forme (N, M)
+        Une ligne par échantillon, une colonne par variable (gène).
+    groups : array_like de booléens, forme (N,) ou (K, N)
+        ``True`` pour le groupe 2. Sous forme (K, N), une étiquette par ligne
+        (permutations) : le résultat est alors de forme (K, M).
+
+    Returns
+    -------
+    ndarray, forme (M,) ou (K, M)
+    """
+    X = np.asarray(X, dtype=float)
+    G = np.atleast_2d(np.asarray(groups, dtype=float))
+    N = X.shape[0]
+    n2 = G.sum(axis=1, keepdims=True)
+    n1 = N - n2
+    s_all = X.sum(axis=0)[None, :]
+    q_all = (X ** 2).sum(axis=0)[None, :]
+    s2 = G @ X
+    q2 = G @ (X ** 2)
+    s1, q1 = s_all - s2, q_all - q2
+    m1, m2 = s1 / n1, s2 / n2
+    ss = (q1 - n1 * m1 ** 2) + (q2 - n2 * m2 ** 2)
+    sigma = np.sqrt(np.maximum(ss, 0) / (N - 2))
+    t = (m2 - m1) / (sigma * np.sqrt(1 / n1 + 1 / n2))
+    return t[0] if np.ndim(groups) == 1 else t
