@@ -537,3 +537,9 @@ def pooled_permutation_pvalues(t, t_perm):
     null = np.sort(np.abs(np.ravel(t_perm)))
     n_greater = len(null) - np.searchsorted(null, np.abs(t), side="right")
     return n_greater / len(null)
+
+
+def bonferroni(pvals, alpha):
+    """Rejets de Bonferroni : ``p_j < alpha / M``."""
+    pvals = np.asarray(pvals)
+    return pvals < alpha / len(pvals)
