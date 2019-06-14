@@ -530,3 +530,10 @@ def permutation_t(X, groups, n_perm, rng, chunk=200):
         out.append(t_statistics(X, G))
         done += k
     return np.vstack(out)
+
+
+def pooled_permutation_pvalues(t, t_perm):
+    """p-valeurs par permutation poolées sur toutes les variables (éq. (18.41))."""
+    null = np.sort(np.abs(np.ravel(t_perm)))
+    n_greater = len(null) - np.searchsorted(null, np.abs(t), side="right")
+    return n_greater / len(null)
