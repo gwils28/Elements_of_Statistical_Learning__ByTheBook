@@ -543,3 +543,32 @@ def bonferroni(pvals, alpha):
     """Rejets de Bonferroni : ``p_j < alpha / M``."""
     pvals = np.asarray(pvals)
     return pvals < alpha / len(pvals)
+
+
+def benjamini_hochberg(pvals, alpha):
+    """Procédure de Benjamini-Hochberg (algorithme 18.2).
+
+    Parameters
+    ----------
+    pvals : array_like, forme (M,)
+    alpha : float
+        Niveau de FDR visé.
+
+    Returns
+    -------
+    reject : ndarray de booléens, forme (M,)
+        Hypothèses rejetées (``p_j <= p_(L)``).
+    L : int
+        Nombre ``L = max{j : p_(j) < alpha j / M}`` (0 si aucun).
+    threshold : float
+        Seuil de rejet ``p_(L)`` (0 si aucun rejet).
+    """
+    p = np.asarray(pvals, dtype=float)
+    M = len(p)
+    ps = np.sort(p)
+    below = np.flatnonzero(ps < alpha * np.arange(1, M + 1) / M)
+    if len(below) == 0:
+        return np.zeros(M, dtype=bool), 0, 0.0
+    L = below[-1] + 1
+    thr = ps[L - 1]
+    return p <= thr, int(L), float(thr)
