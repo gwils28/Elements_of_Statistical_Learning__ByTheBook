@@ -584,3 +584,35 @@ def bh_adjusted(pvals):
     out = np.empty(M)
     out[order] = np.minimum(adj, 1.0)
     return out
+
+
+def plugin_fdr(t, t_perm, cutpoints):
+    """Estimation « plug-in » du FDR (algorithme 18.3).
+
+    Parameters
+    ----------
+    t : ndarray, forme (M,)
+        Statistiques observées.
+    t_perm : ndarray, forme (K, M)
+        Statistiques sous permutations.
+    cutpoints : array_like
+        Seuils ``C`` sur ``|t|``.
+
+    Returns
+    -------
+    fdr : ndarray
+        ``E(V)_hat / R_obs`` pour chaque seuil (``nan`` si ``R_obs = 0``).
+    R_obs : ndarray
+        Nombre de rejets observés.
+    EV : ndarray
+        Nombre moyen de rejets sous permutation.
+    """
+    K = t_perm.shape[0]
+    a = np.sort(np.abs(t))
+    null = np.sort(np.abs(t_perm).ravel())
+    C = np.atleast_1d(cutpoints).astype(float)
+    R = len(a) - np.searchsorted(a, C, side="right")
+    EV = (len(null) - np.searchsorted(null, C, side="right")) / K
+    with np.errstate(divide="ignore", invalid="ignore"):
+        fdr = np.where(R > 0, EV / np.maximum(R, 1), np.nan)
+    return fdr, R, EV
