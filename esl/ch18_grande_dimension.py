@@ -572,3 +572,15 @@ def benjamini_hochberg(pvals, alpha):
     L = below[-1] + 1
     thr = ps[L - 1]
     return p <= thr, int(L), float(thr)
+
+
+def bh_adjusted(pvals):
+    """p-valeurs ajustées de BH (« q-valeurs » de BH) : ``min_{k>=j} M p_(k) / k``."""
+    p = np.asarray(pvals, dtype=float)
+    M = len(p)
+    order = np.argsort(p)
+    adj = p[order] * M / np.arange(1, M + 1)
+    adj = np.minimum.accumulate(adj[::-1])[::-1]
+    out = np.empty(M)
+    out[order] = np.minimum(adj, 1.0)
+    return out
