@@ -616,3 +616,38 @@ def plugin_fdr(t, t_perm, cutpoints):
     with np.errstate(divide="ignore", invalid="ignore"):
         fdr = np.where(R > 0, EV / np.maximum(R, 1), np.nan)
     return fdr, R, EV
+
+
+def sam(t, t_perm, delta):
+    """Procédure SAM simplifiée (section 18.7.2).
+
+    Les statistiques ordonnées ``t_(j)`` sont comparées aux statistiques ordonnées
+    attendues ``tilde t_(j)`` (moyennes des statistiques ordonnées des
+    permutations). En partant du centre, on cherche le premier ``j`` (vers la
+    droite) avec ``t_(j) - tilde t_(j) > delta`` ; toutes les variables au-delà
+    sont déclarées significatives (seuil ``C_hi``). Idem vers la gauche (``C_lo``).
+
+    Returns
+    -------
+    dict
+        ``t_sorted``, ``t_expected``, ``c_hi``, ``c_lo``, ``significant`` (masque
+        sur les variables d'origine), ``fdr`` (plug-in avec les seuils
+        asymétriques).
+    """
+    t = np.asarray(t, dtype=float)
+    M = len(t)
+    order = np.argsort(t)
+    ts = t[order]
+    texp = np.sort(t_perm, axis=1).mean(axis=0)
+    diff = ts - texp
+    j0 = np.searchsorted(texp, 0.0)
+    up = np.flatnonzero(diff[j0:] > delta)
+    c_hi = ts[j0 + up[0]] if len(up) else np.inf
+    lo = np.flatnonzero(diff[:j0] < -delta)
+    c_lo = ts[lo[-1]] if len(lo) else -np.inf
+    sig = (t >= c_hi) | (t <= c_lo)
+    R = sig.sum()
+    EV = ((t_perm >= c_hi) | (t_perm <= c_lo)).sum() / t_perm.shape[0]
+    fdr = EV / R if R > 0 else np.nan
+    return {"t_sorted": ts, "t_expected": texp, "c_hi": c_hi, "c_lo": c_lo,
+            "significant": sig, "fdr": fdr}
