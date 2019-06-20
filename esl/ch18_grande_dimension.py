@@ -706,3 +706,52 @@ def ridge_logistic(X, y, lam, n_iter=100, tol=1e-10):
         if done:
             break
     return w[0], w[1:]
+
+
+def ridge_multinomial(X, y, lam, beta_init=None, maxiter=2000):
+    """Régression multinomiale symétrique pénalisée (éq. (18.10)-(18.11)).
+
+    Maximise ``sum_i log Pr(g_i | x_i) - (lam/2) sum_k ||beta_k||^2`` par L-BFGS ;
+    les intercepts ``beta_k0`` ne sont pas pénalisés.
+
+    Parameters
+    ----------
+    X : ndarray, forme (N, p)
+    y : array_like, forme (N,)
+        Étiquettes de classe.
+    lam : float
+        Pénalité (> 0).
+
+    Returns
+    -------
+    classes : ndarray, forme (K,)
+    B0 : ndarray, forme (K,)
+        Intercepts.
+    B : ndarray, forme (p, K)
+        Coefficients (colonne ``k`` = ``beta_k``).
+    """
+    from scipy.optimize import minimize
+
+    X = np.asarray(X, dtype=float)
+    classes, inv = np.unique(np.asarray(y), return_inverse=True)
+    N, p = X.shape
+    K = len(classes)
+    Y = np.eye(K)[inv]
+    Xt = np.c_[np.ones(N), X]
+
+    def fg(w):
+        W = w.reshape(p + 1, K)
+        E = Xt @ W
+        E -= E.max(axis=1, keepdims=True)
+        lse = np.log(np.exp(E).sum(axis=1))
+        P = np.exp(E - lse[:, None])
+        f = -(Y * E).sum() + lse.sum() + 0.5 * lam * (W[1:] ** 2).sum()
+        G = Xt.T @ (P - Y)
+        G[1:] += lam * W[1:]
+        return f, G.ravel()
+
+    w0 = np.zeros((p + 1) * K) if beta_init is None else beta_init
+    res = minimize(fg, w0, jac=True, method="L-BFGS-B",
+                   options={"maxiter": maxiter, "gtol": 1e-8, "ftol": 1e-14})
+    W = res.x.reshape(p + 1, K)
+    return classes, W[0], W[1:]
