@@ -651,3 +651,58 @@ def sam(t, t_perm, delta):
     fdr = EV / R if R > 0 else np.nan
     return {"t_sorted": ts, "t_expected": texp, "c_hi": c_hi, "c_lo": c_lo,
             "significant": sig, "fdr": fdr}
+
+
+# ---------------------------------------------------------------------------
+# Régressions logistiques à pénalité quadratique
+# ---------------------------------------------------------------------------
+
+def ridge_logistic(X, y, lam, n_iter=100, tol=1e-10):
+    """Régression logistique binaire pénalisée (Newton-Raphson).
+
+    Minimise ``-loglik(beta0, beta) + lam * ||beta||^2`` (forme (18.16) avec la
+    perte ``L`` = moins la log-vraisemblance) ; l'intercept n'est pas pénalisé.
+
+    Parameters
+    ----------
+    X : ndarray, forme (N, p)
+    y : ndarray, forme (N,)
+        Réponses dans {0, 1}.
+    lam : float
+        Pénalité (> 0).
+
+    Returns
+    -------
+    beta0 : float
+    beta : ndarray, forme (p,)
+    """
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float)
+    N, p = X.shape
+    Xt = np.c_[np.ones(N), X]
+    pen = 2 * lam * np.r_[0.0, np.ones(p)]
+    w = np.zeros(p + 1)
+
+    def obj(w):
+        eta = Xt @ w
+        return np.sum(np.logaddexp(0, eta) - y * eta) + 0.5 * np.sum(pen * w ** 2)
+
+    f = obj(w)
+    for _ in range(n_iter):
+        eta = Xt @ w
+        mu = 1 / (1 + np.exp(-eta))
+        grad = -Xt.T @ (y - mu) + pen * w
+        H = (Xt * (mu * (1 - mu))[:, None]).T @ Xt + np.diag(pen)
+        step = np.linalg.solve(H + 1e-12 * np.eye(p + 1), grad)
+        t = 1.0
+        while True:
+            w_new = w - t * step
+            f_new = obj(w_new)
+            if f_new <= f + 1e-12 or t < 1e-10:
+                break
+            t /= 2
+        done = f - f_new < tol * (1 + abs(f))
+        w, f = w_new, f_new
+        if done:
+            break
+    return w[0], w[1:]
