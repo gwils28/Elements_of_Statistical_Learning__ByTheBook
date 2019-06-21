@@ -158,3 +158,8 @@ def ridge_fit(X, y, lam):
     N = X.shape[0]
     beta = Xc.T @ np.linalg.solve(Xc @ Xc.T + lam * np.eye(N), yc)
     return ym - xm @ beta, beta
+
+
+def kfold_indices(N, n_folds, rng):
+    """Attribue aléatoirement chacune des N observations à l'un des n_folds blocs."""
+    return rng.permutation(np.arange(N) % n_folds)
