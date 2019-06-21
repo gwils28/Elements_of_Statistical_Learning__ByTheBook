@@ -88,3 +88,37 @@ def logistic_gradient_ascent(X, y, n_iter=10000, lr=0.5, record=None):
             path.append(np.r_[b0, b])
             ll.append(logistic_loglik(b0, b, X, y))
     return np.array(iters), np.array(path), np.array(ll)
+
+
+def logistic_ridge(X, y, lam, max_iter=100, tol=1e-10):
+    """Régression logistique avec pénalité quadratique (Newton-Raphson).
+
+    Minimise  - sum_i log-vraisemblance_i + lam * ||beta||^2  ; l'ordonnée à
+    l'origine beta0 n'est pas pénalisée (forme (18.16) du livre).
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+    y : ndarray (N,) 0/1
+    lam : float > 0
+
+    Returns
+    -------
+    beta0 : float
+    beta : ndarray (p,)
+    """
+    X = np.asarray(X, dtype=float)
+    N, p = X.shape
+    Xa = np.c_[np.ones(N), X]
+    P = 2.0 * lam * np.eye(p + 1)
+    P[0, 0] = 0.0
+    w = np.zeros(p + 1)
+    for _ in range(max_iter):
+        pr = sigmoid(Xa @ w)
+        grad = -Xa.T @ (y - pr) + P @ w
+        H = Xa.T @ (Xa * (pr * (1 - pr))[:, None]) + P
+        step = np.linalg.solve(H, grad)
+        w -= step
+        if np.max(np.abs(step)) < tol:
+            break
+    return w[0], w[1:]
