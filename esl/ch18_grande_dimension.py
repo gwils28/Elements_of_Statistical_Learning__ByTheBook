@@ -755,3 +755,36 @@ def ridge_multinomial(X, y, lam, beta_init=None, maxiter=2000):
                    options={"maxiter": maxiter, "gtol": 1e-8, "ftol": 1e-14})
     W = res.x.reshape(p + 1, K)
     return classes, W[0], W[1:]
+
+
+# ---------------------------------------------------------------------------
+# Courbes ROC
+# ---------------------------------------------------------------------------
+
+def roc_curve(scores, labels):
+    """Courbe ROC : (taux de faux positifs, taux de vrais positifs) et aire (AUC).
+
+    Parameters
+    ----------
+    scores : array_like
+        Scores (plus grand = plus « positif »).
+    labels : array_like de booléens
+        Vraie classe positive.
+
+    Returns
+    -------
+    fpr, tpr : ndarray
+    auc : float
+        Aire sous la courbe = Pr(score positif > score négatif) (ex aequo : 1/2).
+    """
+    s = np.asarray(scores, dtype=float)
+    l = np.asarray(labels, dtype=bool)
+    order = np.argsort(-s, kind="mergesort")
+    s, l = s[order], l[order]
+    distinct = np.r_[np.flatnonzero(np.diff(s)), len(s) - 1]
+    tp = np.cumsum(l)[distinct]
+    fp = np.cumsum(~l)[distinct]
+    tpr = np.r_[0, tp / l.sum()]
+    fpr = np.r_[0, fp / (~l).sum()]
+    auc = np.trapezoid(tpr, fpr) if hasattr(np, "trapezoid") else np.trapz(tpr, fpr)
+    return fpr, tpr, float(auc)
