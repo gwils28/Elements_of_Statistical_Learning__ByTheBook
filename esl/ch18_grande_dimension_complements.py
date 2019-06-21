@@ -122,3 +122,39 @@ def logistic_ridge(X, y, lam, max_iter=100, tol=1e-10):
         if np.max(np.abs(step)) < tol:
             break
     return w[0], w[1:]
+
+
+# ---------------------------------------------------------------------------
+# Réduction SVD et régression ridge
+# ---------------------------------------------------------------------------
+
+def svd_reduce(X):
+    """Écrit X = R V^T avec R = U D (N x N) et V (p x N) à colonnes orthonormées.
+
+    Returns
+    -------
+    R : ndarray (N, min(N,p))
+    V : ndarray (p, min(N,p))
+    """
+    U, d, Vt = np.linalg.svd(np.asarray(X, dtype=float), full_matrices=False)
+    return U * d, Vt.T
+
+
+def ridge_fit(X, y, lam):
+    """Régression ridge avec ordonnée à l'origine non pénalisée.
+
+    Minimise ||y - beta0 - X beta||^2 + lam ||beta||^2. Le calcul passe par la
+    forme « duale » beta = Xc^T (Xc Xc^T + lam I)^{-1} yc (Xc, yc centrés), qui ne
+    coûte que O(N^2 p).
+
+    Returns
+    -------
+    beta0 : float
+    beta : ndarray (p,)
+    """
+    X = np.asarray(X, dtype=float)
+    xm, ym = X.mean(axis=0), y.mean()
+    Xc, yc = X - xm, y - ym
+    N = X.shape[0]
+    beta = Xc.T @ np.linalg.solve(Xc @ Xc.T + lam * np.eye(N), yc)
+    return ym - xm @ beta, beta
