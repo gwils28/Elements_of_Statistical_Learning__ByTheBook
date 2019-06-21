@@ -27,3 +27,24 @@ def sigmoid(z):
     ez = np.exp(z[~pos])
     out[~pos] = ez / (1.0 + ez)
     return out
+
+
+def logistic_loglik(beta0, beta, X, y):
+    """Log-vraisemblance du modèle logit Pr(Y=1|x) = beta0 + x^T beta.
+
+    Parameters
+    ----------
+    beta0 : float
+        Ordonnée à l'origine.
+    beta : ndarray (p,)
+        Coefficients.
+    X : ndarray (N, p)
+    y : ndarray (N,)  valeurs 0/1.
+
+    Returns
+    -------
+    float
+        sum_i [ y_i eta_i - log(1 + exp(eta_i)) ]  (toujours < 0).
+    """
+    eta = beta0 + X @ np.atleast_1d(beta)
+    return float(np.sum(y * eta - np.logaddexp(0.0, eta)))
