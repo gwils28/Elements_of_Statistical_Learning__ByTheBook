@@ -163,3 +163,38 @@ def ridge_fit(X, y, lam):
 def kfold_indices(N, n_folds, rng):
     """Attribue aléatoirement chacune des N observations à l'un des n_folds blocs."""
     return rng.permutation(np.arange(N) % n_folds)
+
+
+def ridge_cv_errors(X, y, lams, folds):
+    """Erreur quadratique de validation croisée de la ridge pour chaque lambda.
+
+    Parameters
+    ----------
+    X : ndarray (N, p)
+    y : ndarray (N,)
+    lams : array-like
+    folds : ndarray (N,) - numéro de bloc de chaque observation.
+
+    Returns
+    -------
+    ndarray (len(lams),) - erreur quadratique moyenne de validation croisée.
+    """
+    lams = np.asarray(lams, dtype=float)
+    err = np.zeros(len(lams))
+    for f in np.unique(folds):
+        te = folds == f
+        for i, lam in enumerate(lams):
+            b0, b = ridge_fit(X[~te], y[~te], lam)
+            err[i] += np.sum((y[te] - b0 - X[te] @ b) ** 2)
+    return err / len(y)
+
+
+# ---------------------------------------------------------------------------
+# Noyaux
+# ---------------------------------------------------------------------------
+
+def rbf_kernel(A, B, gamma):
+    """Noyau gaussien K(a, b) = exp(-gamma ||a - b||^2)."""
+    sq = (np.sum(A ** 2, axis=1)[:, None] + np.sum(B ** 2, axis=1)[None, :]
+          - 2 * A @ B.T)
+    return np.exp(-gamma * np.maximum(sq, 0.0))
