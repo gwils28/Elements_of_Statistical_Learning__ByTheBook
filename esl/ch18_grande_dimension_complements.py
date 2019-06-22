@@ -198,3 +198,23 @@ def rbf_kernel(A, B, gamma):
     sq = (np.sum(A ** 2, axis=1)[:, None] + np.sum(B ** 2, axis=1)[None, :]
           - 2 * A @ B.T)
     return np.exp(-gamma * np.maximum(sq, 0.0))
+
+
+def kernel_logistic_ridge(K, y, lam, tol_eig=1e-10):
+    """Régression logistique ridge à partir de la seule matrice K (exercice 18.13).
+
+    On diagonalise K = U D^2 U^T, on ajuste la logistique ridge sur R = U D, puis
+    alpha = U D^{-1} beta_R. Les valeurs propres numériquement nulles sont
+    écartées (pseudo-inverse).
+
+    Returns
+    -------
+    theta0 : float
+    alpha : ndarray (N,) - la prédiction en x0 vaut theta0 + k0^T alpha.
+    """
+    ev, U = np.linalg.eigh(K)
+    keep = ev > tol_eig * ev.max()
+    U, d = U[:, keep], np.sqrt(ev[keep])
+    R = U * d
+    theta0, beta_R = logistic_ridge(R, y, lam)
+    return theta0, U @ (beta_R / d)
