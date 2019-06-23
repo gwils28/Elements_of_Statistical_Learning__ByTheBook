@@ -229,3 +229,36 @@ def pairwise_dist(A, B):
     sq = (np.sum(A ** 2, axis=1)[:, None] + np.sum(B ** 2, axis=1)[None, :]
           - 2 * A @ B.T)
     return np.sqrt(np.maximum(sq, 0.0))
+
+
+def dw_knn_score(Xtr, ytr, X0, k=1, priors=None, dim=1):
+    """Score discriminant des k-ppv pondérés par les distances (exercice 18.14).
+
+    delta(x0) = dim * log( d_-^{(k)}(x0) / d_+^{(k)}(x0) )
+                + log( pi_+ N_- / (pi_- N_+) )   (si des a priori sont donnés),
+
+    où d_+^{(k)} est la distance au k-ième plus proche voisin de la classe +1.
+    Avec k = 1, dim = 1 et priors=None on retrouve (18.57).
+
+    Parameters
+    ----------
+    Xtr : ndarray (N, p)
+    ytr : ndarray (N,) à valeurs dans {-1, +1}
+    X0 : ndarray (n0, p)
+    k : int
+    priors : tuple (pi_plus, pi_minus) ou None (a priori empiriques)
+    dim : float
+        Exposant (dimension effective) devant le log du rapport des distances.
+
+    Returns
+    -------
+    ndarray (n0,) - score > 0 : classe +1.
+    """
+    D = pairwise_dist(X0, Xtr)
+    dp = np.sort(D[:, ytr == 1], axis=1)[:, k - 1]
+    dm = np.sort(D[:, ytr == -1], axis=1)[:, k - 1]
+    s = dim * (np.log(dm) - np.log(dp))
+    if priors is not None:
+        Np, Nm = np.sum(ytr == 1), np.sum(ytr == -1)
+        s = s + np.log(priors[0] * Nm / (priors[1] * Np))
+    return s
