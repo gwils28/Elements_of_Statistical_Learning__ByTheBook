@@ -218,3 +218,14 @@ def kernel_logistic_ridge(K, y, lam, tol_eig=1e-10):
     R = U * d
     theta0, beta_R = logistic_ridge(R, y, lam)
     return theta0, U @ (beta_R / d)
+
+
+# ---------------------------------------------------------------------------
+# Plus proches voisins pondérés par les distances
+# ---------------------------------------------------------------------------
+
+def pairwise_dist(A, B):
+    """Distances euclidiennes entre les lignes de A et celles de B."""
+    sq = (np.sum(A ** 2, axis=1)[:, None] + np.sum(B ** 2, axis=1)[None, :]
+          - 2 * A @ B.T)
+    return np.sqrt(np.maximum(sq, 0.0))
