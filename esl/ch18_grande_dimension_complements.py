@@ -284,3 +284,54 @@ def roc_curve(scores, labels):
     fpr = np.r_[0.0, np.cumsum(~lab) / (~lab).sum()]
     auc = float(np.sum(np.diff(fpr) * (tpr[1:] + tpr[:-1]) / 2))
     return fpr, tpr, auc
+
+
+# ---------------------------------------------------------------------------
+# ACP à noyau
+# ---------------------------------------------------------------------------
+
+def kernel_pca(K, n_components=None, tol_eig=1e-10):
+    """ACP à partir d'une matrice de produits scalaires non centrée K.
+
+    On diagonalise (I - M) K (I - M) = U D^2 U^T avec M = 11^T / N.
+
+    Returns
+    -------
+    U : ndarray (N, q)  vecteurs propres (valeurs propres décroissantes > 0)
+    d : ndarray (q,)    racines des valeurs propres
+    Z : ndarray (N, q)  variables principales Z = U D
+    """
+    N = K.shape[0]
+    C = np.eye(N) - np.ones((N, N)) / N
+    ev, U = np.linalg.eigh(C @ K @ C)
+    order = np.argsort(ev)[::-1]
+    ev, U = ev[order], U[:, order]
+    keep = ev > tol_eig * ev[0]
+    ev, U = ev[keep], U[:, keep]
+    if n_components is not None:
+        ev, U = ev[:n_components], U[:, :n_components]
+    d = np.sqrt(ev)
+    return U, d, U * d
+
+
+def kernel_pca_project(K, U, d, k0):
+    """Projection centrée de nouveaux points sur les axes principaux (18.58).
+
+    z0 = D^{-1} U^T (I - M) [k0 - K 1 / N].
+
+    Parameters
+    ----------
+    K : ndarray (N, N) - produits scalaires (non centrés) d'apprentissage
+    U, d : sortie de :func:`kernel_pca`
+    k0 : ndarray (N,) ou (N, n0) - produits scalaires <x0, x_i>
+
+    Returns
+    -------
+    ndarray (q,) ou (q, n0)
+    """
+    N = K.shape[0]
+    k0 = np.asarray(k0, dtype=float)
+    kbar = K.mean(axis=1)
+    v = k0 - (kbar if k0.ndim == 1 else kbar[:, None])
+    v = v - v.mean(axis=0)            # application de (I - M)
+    return (U.T @ v) / (d if k0.ndim == 1 else d[:, None])
