@@ -335,3 +335,35 @@ def kernel_pca_project(K, U, d, k0):
     v = k0 - (kbar if k0.ndim == 1 else kbar[:, None])
     v = v - v.mean(axis=0)            # application de (I - M)
     return (U.T @ v) / (d if k0.ndim == 1 else d[:, None])
+
+
+# ---------------------------------------------------------------------------
+# Tests multiples
+# ---------------------------------------------------------------------------
+
+def two_sample_t(X, group):
+    """t-statistiques à deux échantillons (18.38)-(18.39), gène par gène.
+
+    Parameters
+    ----------
+    X : ndarray (M, N) - un gène par ligne, un échantillon par colonne.
+    group : ndarray (N,) booléen - True pour le groupe 2.
+        Peut aussi être une matrice (K, N) de K étiquetages (permutations).
+
+    Returns
+    -------
+    ndarray (M,) ou (M, K) - t_j = (xbar_2j - xbar_1j) / se_j.
+    """
+    X = np.asarray(X, dtype=float)
+    G = np.atleast_2d(np.asarray(group, dtype=float))      # (K, N)
+    N = X.shape[1]
+    n2 = G.sum(axis=1)
+    n1 = N - n2
+    S = X @ G.T                                            # sommes groupe 2
+    S2 = (X ** 2) @ G.T
+    T, T2 = X.sum(axis=1)[:, None], (X ** 2).sum(axis=1)[:, None]
+    m2, m1 = S / n2, (T - S) / n1
+    ss = (S2 - n2 * m2 ** 2) + (T2 - S2 - n1 * m1 ** 2)
+    sigma = np.sqrt(np.maximum(ss, 0) / (N - 2))
+    t = (m2 - m1) / (sigma * np.sqrt(1 / n1 + 1 / n2))
+    return t[:, 0] if np.ndim(group) == 1 else t
