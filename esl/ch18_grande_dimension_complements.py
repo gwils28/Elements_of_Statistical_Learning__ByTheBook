@@ -262,3 +262,25 @@ def dw_knn_score(Xtr, ytr, X0, k=1, priors=None, dim=1):
         Np, Nm = np.sum(ytr == 1), np.sum(ytr == -1)
         s = s + np.log(priors[0] * Nm / (priors[1] * Np))
     return s
+
+
+def roc_curve(scores, labels):
+    """Courbe ROC d'un score (grand score = classe positive).
+
+    Parameters
+    ----------
+    scores : ndarray (n,)
+    labels : ndarray (n,) booléen ou 0/1 (1 = positif).
+
+    Returns
+    -------
+    fpr, tpr : ndarray - taux de faux positifs / vrais positifs (de 0 à 1).
+    auc : float - aire sous la courbe (règle des trapèzes).
+    """
+    labels = np.asarray(labels).astype(bool)
+    order = np.argsort(-scores, kind="mergesort")
+    lab = labels[order]
+    tpr = np.r_[0.0, np.cumsum(lab) / lab.sum()]
+    fpr = np.r_[0.0, np.cumsum(~lab) / (~lab).sum()]
+    auc = float(np.sum(np.diff(fpr) * (tpr[1:] + tpr[:-1]) / 2))
+    return fpr, tpr, auc
