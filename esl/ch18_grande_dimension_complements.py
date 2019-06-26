@@ -367,3 +367,15 @@ def two_sample_t(X, group):
     sigma = np.sqrt(np.maximum(ss, 0) / (N - 2))
     t = (m2 - m1) / (sigma * np.sqrt(1 / n1 + 1 / n2))
     return t[:, 0] if np.ndim(group) == 1 else t
+
+
+def permutation_t(X, group, K, rng):
+    """t-statistiques sous K permutations aléatoires des étiquettes.
+
+    Returns
+    -------
+    ndarray (M, K)
+    """
+    group = np.asarray(group, dtype=bool)
+    G = np.array([rng.permutation(group) for _ in range(K)])
+    return two_sample_t(X, G)
