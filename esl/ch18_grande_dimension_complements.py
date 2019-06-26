@@ -379,3 +379,14 @@ def permutation_t(X, group, K, rng):
     group = np.asarray(group, dtype=bool)
     G = np.array([rng.permutation(group) for _ in range(K)])
     return two_sample_t(X, G)
+
+
+def pooled_pvalues(t, tperm):
+    """p-valeurs de permutation « mutualisées » (18.41).
+
+    p_j = (1 / (M K)) #{(j', k) : |t_kj'| >= |t_j|}  (convention >= ; sans ex
+    aequo elle coïncide avec (18.41)).
+    """
+    null = np.sort(np.abs(np.ravel(tperm)))
+    n = null.size
+    return (n - np.searchsorted(null, np.abs(t), side="left")) / n
