@@ -414,3 +414,29 @@ def benjamini_hochberg(p, alpha):
         return 0, np.zeros(M, dtype=bool)
     L = int(ok[-1] + 1)
     return L, p <= ps[L - 1]
+
+
+def plugin_fdr(t, tperm, cuts):
+    """Estimation plug-in du FDR (algorithme 18.3), convention |t| >= C.
+
+    Parameters
+    ----------
+    t : ndarray (M,)
+    tperm : ndarray (M, K)
+    cuts : array-like de seuils C
+
+    Returns
+    -------
+    fdr : ndarray - E(V)_hat / R_obs (inf si R_obs = 0)
+    R : ndarray - nombre de rejets observés
+    EV : ndarray - nombre moyen de rejets par permutation
+    """
+    cuts = np.atleast_1d(np.asarray(cuts, dtype=float))
+    a = np.sort(np.abs(t))
+    null = np.sort(np.abs(np.ravel(tperm)))
+    K = tperm.shape[1]
+    R = a.size - np.searchsorted(a, cuts, side="left")
+    EV = (null.size - np.searchsorted(null, cuts, side="left")) / K
+    with np.errstate(divide="ignore", invalid="ignore"):
+        fdr = np.where(R > 0, EV / np.maximum(R, 1), np.inf)
+    return fdr, R, EV
