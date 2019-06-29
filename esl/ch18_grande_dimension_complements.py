@@ -390,3 +390,9 @@ def pooled_pvalues(t, tperm):
     null = np.sort(np.abs(np.ravel(tperm)))
     n = null.size
     return (n - np.searchsorted(null, np.abs(t), side="left")) / n
+
+
+def bonferroni_reject(p, alpha):
+    """Rejets de la méthode de Bonferroni : p_j < alpha / M."""
+    p = np.asarray(p)
+    return p < alpha / p.size
