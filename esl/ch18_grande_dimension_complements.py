@@ -396,3 +396,21 @@ def bonferroni_reject(p, alpha):
     """Rejets de la méthode de Bonferroni : p_j < alpha / M."""
     p = np.asarray(p)
     return p < alpha / p.size
+
+
+def benjamini_hochberg(p, alpha):
+    """Procédure de Benjamini-Hochberg (algorithme 18.2).
+
+    Returns
+    -------
+    L : int - L = max{ j : p_(j) < alpha j / M } (0 si aucun).
+    reject : ndarray booléen - p_j <= p_(L).
+    """
+    p = np.asarray(p, dtype=float)
+    M = p.size
+    ps = np.sort(p)
+    ok = np.nonzero(ps < alpha * np.arange(1, M + 1) / M)[0]
+    if ok.size == 0:
+        return 0, np.zeros(M, dtype=bool)
+    L = int(ok[-1] + 1)
+    return L, p <= ps[L - 1]
