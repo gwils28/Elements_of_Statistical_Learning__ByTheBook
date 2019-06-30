@@ -440,3 +440,14 @@ def plugin_fdr(t, tperm, cuts):
     with np.errstate(divide="ignore", invalid="ignore"):
         fdr = np.where(R > 0, EV / np.maximum(R, 1), np.inf)
     return fdr, R, EV
+
+
+def plugin_reject(t, tperm, alpha):
+    """Rejets « plug-in » : on prend le plus petit seuil C = |t|_(l) observé tel
+    que FDR_hat(C) < alpha, et on rejette |t_j| >= C."""
+    a = np.sort(np.abs(t))[::-1]
+    fdr, _, _ = plugin_fdr(t, tperm, a)
+    ok = np.nonzero(fdr < alpha)[0]
+    if ok.size == 0:
+        return np.zeros(len(t), dtype=bool)
+    return np.abs(t) >= a[ok[-1]]
