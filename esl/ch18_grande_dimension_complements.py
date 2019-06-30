@@ -451,3 +451,14 @@ def plugin_reject(t, tperm, alpha):
     if ok.size == 0:
         return np.zeros(len(t), dtype=bool)
     return np.abs(t) >= a[ok[-1]]
+
+
+def pi0_quartile_estimate(t, tperm):
+    """Estimation de pi0 de l'exercice 18.19(c).
+
+    pi0_hat = min(1, #{t_j in (q_.25, q_.75)} / (0.5 M)), où q sont les
+    quartiles des t-statistiques permutées.
+    """
+    q25, q75 = np.quantile(np.ravel(tperm), [0.25, 0.75])
+    inside = np.sum((t > q25) & (t < q75))
+    return min(1.0, inside / (0.5 * len(t)))
