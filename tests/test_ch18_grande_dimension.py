@@ -39,3 +39,21 @@ def test_nsc_large_delta_removes_all_features():
     # le nombre de gènes actifs décroît avec delta
     counts = [len(m.set_delta(d).active_features_) for d in np.linspace(0, 6, 13)]
     assert all(a >= b for a, b in zip(counts, counts[1:]))
+
+
+def test_nsc_lasso_variant_solves_criterion():
+    """Exercice 18.2 : avec s0 = 0 et m_k = 1/sqrt(N_k), mu_jk minimise le critère."""
+    rng = np.random.RandomState(2)
+    X, y = _classif_data(rng, N=30, p=8)
+    lam = 1.3
+    m = g.NearestShrunkenCentroids(delta=lam, s0=0.0, mk="lasso").fit(X, y)
+    xbar = X.mean(0)
+    for j in range(3):
+        for k in range(3):
+            xk = X[y == k, j]
+            sj = m.s_[j]
+            f = lambda mu: 0.5 * ((xk - xbar[j] - mu) ** 2).sum() / sj ** 2 \
+                + lam * np.sqrt(len(xk)) * abs(mu) / sj
+            res = optimize.minimize_scalar(f, bounds=(-5, 5), method="bounded",
+                                           options={"xatol": 1e-10})
+            assert abs(res.x - (m.shrunken_centroids_[k, j] - xbar[j])) < 1e-5
