@@ -28,3 +28,14 @@ def test_nsc_delta_zero_is_diagonal_lda():
                    for k in range(3)], axis=1)
     np.testing.assert_allclose(m.discriminant(X), sc)
     np.testing.assert_allclose(m.predict_proba(X).sum(1), 1.0)
+
+
+def test_nsc_large_delta_removes_all_features():
+    rng = np.random.RandomState(1)
+    X, y = _classif_data(rng)
+    m = g.NearestShrunkenCentroids(delta=1e6).fit(X, y)
+    assert len(m.active_features_) == 0
+    np.testing.assert_allclose(m.shrunken_centroids_, np.tile(X.mean(0), (3, 1)))
+    # le nombre de gènes actifs décroît avec delta
+    counts = [len(m.set_delta(d).active_features_) for d in np.linspace(0, 6, 13)]
+    assert all(a >= b for a, b in zip(counts, counts[1:]))
