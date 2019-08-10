@@ -57,3 +57,15 @@ def test_nsc_lasso_variant_solves_criterion():
             res = optimize.minimize_scalar(f, bounds=(-5, 5), method="bounded",
                                            options={"xatol": 1e-10})
             assert abs(res.x - (m.shrunken_centroids_[k, j] - xbar[j])) < 1e-5
+
+
+def test_ridge_svd_matches_direct():
+    rng = np.random.RandomState(3)
+    X, y = rng.randn(15, 80), rng.randn(15)
+    for lam in [0.1, 1.0, 50.0]:
+        np.testing.assert_allclose(g.ridge_svd(X, y, lam), g.ridge_direct(X, y, lam), atol=1e-10)
+    path = g.ridge_svd(X, y, [0.1, 1.0])
+    assert path.shape == (2, 80)
+    R, V = g.svd_reduce(X)
+    np.testing.assert_allclose(R @ V.T, X, atol=1e-12)
+    np.testing.assert_allclose(V.T @ V, np.eye(15), atol=1e-12)
