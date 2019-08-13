@@ -69,3 +69,12 @@ def test_ridge_svd_matches_direct():
     R, V = g.svd_reduce(X)
     np.testing.assert_allclose(R @ V.T, X, atol=1e-12)
     np.testing.assert_allclose(V.T @ V, np.eye(15), atol=1e-12)
+
+
+def test_ridge_df_limits():
+    rng = np.random.RandomState(4)
+    X = rng.randn(10, 30)
+    assert abs(g.ridge_df(X, 1e-10) - 10) < 1e-6
+    assert g.ridge_df(X, 1e10) < 1e-6
+    df = g.ridge_df(X, [0.1, 1, 10])
+    assert np.all(np.diff(df) < 0)
