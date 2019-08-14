@@ -78,3 +78,18 @@ def test_ridge_df_limits():
     assert g.ridge_df(X, 1e10) < 1e-6
     df = g.ridge_df(X, [0.1, 1, 10])
     assert np.all(np.diff(df) < 0)
+
+
+def test_lasso_cd_matches_sklearn():
+    from sklearn.linear_model import ElasticNet, Lasso
+    rng = np.random.RandomState(5)
+    X, y = rng.randn(20, 50), rng.randn(20)
+    lam = 2.0
+    b = g.lasso_cd(X, y, lam, tol=1e-12, n_iter=5000)
+    sk = Lasso(alpha=lam / 20, fit_intercept=False, tol=1e-12, max_iter=100000).fit(X, y)
+    np.testing.assert_allclose(b, sk.coef_, atol=1e-6)
+    assert np.count_nonzero(b) <= 20
+    b2 = g.lasso_cd(X, y, lam, alpha=0.5, tol=1e-12, n_iter=5000)
+    sk2 = ElasticNet(alpha=lam / 20, l1_ratio=0.5, fit_intercept=False, tol=1e-12,
+                     max_iter=100000).fit(X, y)
+    np.testing.assert_allclose(b2, sk2.coef_, atol=1e-6)
