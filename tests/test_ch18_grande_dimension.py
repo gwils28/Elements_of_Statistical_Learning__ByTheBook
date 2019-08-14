@@ -93,3 +93,32 @@ def test_lasso_cd_matches_sklearn():
     sk2 = ElasticNet(alpha=lam / 20, l1_ratio=0.5, fit_intercept=False, tol=1e-12,
                      max_iter=100000).fit(X, y)
     np.testing.assert_allclose(b2, sk2.coef_, atol=1e-6)
+
+
+def test_fused_lasso_signal_optimality():
+    rng = np.random.RandomState(6)
+    n = 20
+    y = np.r_[np.zeros(7), 2 * np.ones(6), np.zeros(7)] + 0.3 * rng.randn(n)
+    lam1, lam2 = 0.2, 1.0
+    b = g.fused_lasso_signal(y, lam1, lam2, n_iter=20000, tol=1e-12)
+    obj = lambda v: 0.5 * ((y - v) ** 2).sum() + lam1 * np.abs(v).sum() \
+        + lam2 * np.abs(np.diff(v)).sum()
+    # aucune petite perturbation aléatoire ne diminue l'objectif
+    f0 = obj(b)
+    for _ in range(200):
+        assert obj(b + 1e-3 * rng.randn(n)) >= f0 - 1e-9
+    # comparaison à une reformulation lisse sous contraintes linéaires
+    D = np.diff(np.eye(n), axis=0)
+    def f(z):
+        v, s, t = z[:n], z[n:2 * n], z[2 * n:]
+        return 0.5 * ((y - v) ** 2).sum() + lam1 * s.sum() + lam2 * t.sum()
+    A = np.block([[np.eye(n), np.eye(n), np.zeros((n, n - 1))],
+                  [-np.eye(n), np.eye(n), np.zeros((n, n - 1))],
+                  [D, np.zeros((n - 1, n)), np.eye(n - 1)],
+                  [-D, np.zeros((n - 1, n)), np.eye(n - 1)]])
+    z0 = np.r_[y, np.abs(y) + 1, np.abs(D @ y) + 1]
+    res = optimize.minimize(f, z0, method="SLSQP",
+                            constraints=[{"type": "ineq", "fun": lambda z: A @ z,
+                                          "jac": lambda z: A}],
+                            options={"maxiter": 1000, "ftol": 1e-12})
+    assert f0 <= res.fun + 1e-6
