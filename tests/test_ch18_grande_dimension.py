@@ -122,3 +122,23 @@ def test_fused_lasso_signal_optimality():
                                           "jac": lambda z: A}],
                             options={"maxiter": 1000, "ftol": 1e-12})
     assert f0 <= res.fun + 1e-6
+
+
+def test_kernel_tools():
+    rng = np.random.RandomState(7)
+    X, y = _classif_data(rng, N=30, p=10)
+    X0 = rng.randn(5, 10)
+    K, K0, k00 = X @ X.T, X0 @ X.T, (X0 ** 2).sum(1)
+    classes, D2 = g.kernel_centroid_distances(K, K0, k00, y)
+    direct = np.stack([((X0 - X[y == c].mean(0)) ** 2).sum(1) for c in classes], axis=1)
+    np.testing.assert_allclose(D2, direct, atol=1e-10)
+    np.testing.assert_allclose(g.kernel_distances(K, K0, k00),
+                               ((X0[:, None, :] - X[None]) ** 2).sum(2), atol=1e-10)
+    # double centrage de -Delta^2/2 = produits scalaires centrés
+    Dist2 = ((X[:, None] - X[None]) ** 2).sum(2)
+    Xc = X - X.mean(0)
+    np.testing.assert_allclose(g.double_center(-Dist2 / 2), Xc @ Xc.T, atol=1e-10)
+    # ACP noyau = ACP classique (au signe près)
+    Z, U, d = g.kernel_pca(K, 3)
+    Uc, dc, Vt = np.linalg.svd(Xc, full_matrices=False)
+    np.testing.assert_allclose(np.abs(Z), np.abs(Uc[:, :3] * dc[:3]), atol=1e-8)
