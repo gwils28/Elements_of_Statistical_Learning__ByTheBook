@@ -142,3 +142,21 @@ def test_kernel_tools():
     Z, U, d = g.kernel_pca(K, 3)
     Uc, dc, Vt = np.linalg.svd(Xc, full_matrices=False)
     np.testing.assert_allclose(np.abs(Z), np.abs(Uc[:, :3] * dc[:3]), atol=1e-8)
+
+
+def test_univariate_scores_and_spca():
+    rng = np.random.RandomState(8)
+    X, y = rng.randn(30, 20), rng.randn(30)
+    sc = g.univariate_scores(X, y)
+    for j in range(3):
+        r = stats.linregress(X[:, j], y)
+        assert abs(sc[j] - r.slope / r.stderr) < 1e-8
+    # avec toutes les variables, SPCA = régression sur la 1re composante principale
+    m = g.SupervisedPCA(n_features=20).fit(X, y)
+    Xc = X - X.mean(0)
+    U, d, Vt = np.linalg.svd(Xc, full_matrices=False)
+    z = Xc @ Vt[0]
+    pred = y.mean() + z * (z @ (y - y.mean())) / (z @ z)
+    np.testing.assert_allclose(m.predict(X), pred, atol=1e-10)
+    m2 = g.SupervisedPCA(threshold=1.0).fit(X, y)
+    assert set(m2.selected_) == set(np.flatnonzero(np.abs(sc) > 1.0))
