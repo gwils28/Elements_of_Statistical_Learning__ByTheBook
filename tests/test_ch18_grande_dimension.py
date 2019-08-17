@@ -160,3 +160,15 @@ def test_univariate_scores_and_spca():
     np.testing.assert_allclose(m.predict(X), pred, atol=1e-10)
     m2 = g.SupervisedPCA(threshold=1.0).fit(X, y)
     assert set(m2.selected_) == set(np.flatnonzero(np.abs(sc) > 1.0))
+
+
+def test_t_statistics_match_scipy():
+    rng = np.random.RandomState(9)
+    X = rng.randn(25, 40)
+    grp = np.zeros(25, bool)
+    grp[:8] = True
+    t = g.t_statistics(X, grp)
+    ref = stats.ttest_ind(X[grp], X[~grp], axis=0).statistic
+    np.testing.assert_allclose(t, ref, atol=1e-10)
+    tp = g.permutation_t(X, grp, 30, np.random.RandomState(0), chunk=7)
+    assert tp.shape == (30, 40)
