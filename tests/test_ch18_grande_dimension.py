@@ -172,3 +172,17 @@ def test_t_statistics_match_scipy():
     np.testing.assert_allclose(t, ref, atol=1e-10)
     tp = g.permutation_t(X, grp, 30, np.random.RandomState(0), chunk=7)
     assert tp.shape == (30, 40)
+
+
+def test_benjamini_hochberg_and_bonferroni():
+    p = np.array([0.001, 0.008, 0.039, 0.041, 0.042, 0.06, 0.074, 0.205, 0.212, 0.216])
+    rej, L, thr = g.benjamini_hochberg(p, 0.05)
+    # p_(j) < 0.05 j / 10 : vrai pour j = 1, 2 seulement
+    assert L == 2 and thr == 0.008 and rej.sum() == 2
+    assert g.bonferroni(p, 0.05).sum() == 1
+    # cohérence avec les p-valeurs ajustées
+    adj = g.bh_adjusted(p)
+    np.testing.assert_array_equal(adj <= 0.05, rej)
+    np.testing.assert_allclose(adj[:2], [0.01, 0.04])
+    rej0, L0, _ = g.benjamini_hochberg(np.ones(5), 0.1)
+    assert L0 == 0 and not rej0.any()
