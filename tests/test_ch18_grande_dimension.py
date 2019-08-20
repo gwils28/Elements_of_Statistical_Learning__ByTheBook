@@ -199,3 +199,22 @@ def test_bh_controls_fdr_by_simulation():
         rej, _, _ = g.benjamini_hochberg(p, alpha)
         fdp.append(rej[M1:].sum() / max(rej.sum(), 1))
     assert np.mean(fdp) <= alpha * (M - M1) / M + 0.03
+
+
+def test_plugin_fdr_equivalent_to_bh():
+    """Exercice 18.17 / section 18.7.1 : BH avec p-valeurs poolées = plug-in."""
+    rng = np.random.RandomState(11)
+    X = rng.randn(30, 300)
+    grp = np.zeros(30, bool)
+    grp[:10] = True
+    X[grp, :20] += 1.5
+    t = g.t_statistics(X, grp)
+    tp = g.permutation_t(X, grp, 100, rng)
+    p = g.pooled_permutation_pvalues(t, tp)
+    alpha = 0.15
+    rej, L, thr = g.benjamini_hochberg(p, alpha)
+    assert L > 0
+    C = np.sort(np.abs(t))[::-1][L - 1]  # L-ième plus grande valeur de |t|
+    fdr, R, EV = g.plugin_fdr(t, tp, C - 1e-12)
+    assert R[0] == L
+    assert fdr[0] <= alpha + 1e-12
