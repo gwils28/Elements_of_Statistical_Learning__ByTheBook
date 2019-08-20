@@ -186,3 +186,16 @@ def test_benjamini_hochberg_and_bonferroni():
     np.testing.assert_allclose(adj[:2], [0.01, 0.04])
     rej0, L0, _ = g.benjamini_hochberg(np.ones(5), 0.1)
     assert L0 == 0 and not rej0.any()
+
+
+def test_bh_controls_fdr_by_simulation():
+    rng = np.random.RandomState(10)
+    M, M1, alpha = 500, 50, 0.2
+    fdp = []
+    for _ in range(200):
+        z = rng.randn(M)
+        z[:M1] += 3
+        p = 2 * stats.norm.sf(np.abs(z))
+        rej, _, _ = g.benjamini_hochberg(p, alpha)
+        fdp.append(rej[M1:].sum() / max(rej.sum(), 1))
+    assert np.mean(fdp) <= alpha * (M - M1) / M + 0.03
