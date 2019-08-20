@@ -218,3 +218,17 @@ def test_plugin_fdr_equivalent_to_bh():
     fdr, R, EV = g.plugin_fdr(t, tp, C - 1e-12)
     assert R[0] == L
     assert fdr[0] <= alpha + 1e-12
+
+
+def test_sam_symmetric_null():
+    rng = np.random.RandomState(12)
+    X = rng.randn(20, 200)
+    grp = np.zeros(20, bool)
+    grp[:10] = True
+    X[grp, :10] += 3.0
+    t = g.t_statistics(X, grp)
+    tp = g.permutation_t(X, grp, 50, rng)
+    out = g.sam(t, tp, 1.0)
+    assert out["c_lo"] == -np.inf  # les effets sont tous positifs
+    assert out["significant"][:10].sum() >= 8
+    assert np.all(np.diff(out["t_expected"]) >= 0)
