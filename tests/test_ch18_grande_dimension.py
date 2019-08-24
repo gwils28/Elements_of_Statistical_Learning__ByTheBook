@@ -232,3 +232,19 @@ def test_sam_symmetric_null():
     assert out["c_lo"] == -np.inf  # les effets sont tous positifs
     assert out["significant"][:10].sum() >= 8
     assert np.all(np.diff(out["t_expected"]) >= 0)
+
+
+def test_ridge_logistic_svd_theorem():
+    """Théorème (18.16)-(18.17) : ajuster dans l'espace des r_i puis beta = V theta."""
+    rng = np.random.RandomState(13)
+    X = rng.randn(15, 60)
+    y = (X[:, 0] + 0.5 * rng.randn(15) > 0).astype(float)
+    b0, b = g.ridge_logistic(X, y, 0.7)
+    R, V = g.svd_reduce(X)
+    t0, th = g.ridge_logistic(R, y, 0.7)
+    assert abs(b0 - t0) < 1e-7
+    np.testing.assert_allclose(b, V @ th, atol=1e-7)
+    # comparaison à sklearn (C = 1 / (2 lam))
+    from sklearn.linear_model import LogisticRegression
+    sk = LogisticRegression(C=1 / (2 * 0.7), tol=1e-12, max_iter=10000).fit(X, y)
+    np.testing.assert_allclose(b, sk.coef_[0], atol=1e-5)
