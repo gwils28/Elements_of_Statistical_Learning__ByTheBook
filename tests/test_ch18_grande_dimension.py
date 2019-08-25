@@ -248,3 +248,10 @@ def test_ridge_logistic_svd_theorem():
     from sklearn.linear_model import LogisticRegression
     sk = LogisticRegression(C=1 / (2 * 0.7), tol=1e-12, max_iter=10000).fit(X, y)
     np.testing.assert_allclose(b, sk.coef_[0], atol=1e-5)
+
+
+def test_ridge_multinomial_sum_to_zero():
+    rng = np.random.RandomState(14)
+    X, y = _classif_data(rng, N=30, p=20)
+    classes, B0, B = g.ridge_multinomial(X, y, 2.0)
+    np.testing.assert_allclose(B.sum(axis=1), 0, atol=1e-5)
