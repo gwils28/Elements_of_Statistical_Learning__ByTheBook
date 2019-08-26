@@ -255,3 +255,12 @@ def test_ridge_multinomial_sum_to_zero():
     X, y = _classif_data(rng, N=30, p=20)
     classes, B0, B = g.ridge_multinomial(X, y, 2.0)
     np.testing.assert_allclose(B.sum(axis=1), 0, atol=1e-5)
+
+
+def test_roc_auc():
+    s = np.array([0.9, 0.8, 0.7, 0.6, 0.5])
+    l = np.array([1, 1, 0, 1, 0], bool)
+    fpr, tpr, auc = g.roc_curve(s, l)
+    assert abs(auc - 5 / 6) < 1e-12
+    _, _, auc2 = g.roc_curve(np.ones(4), np.array([1, 0, 1, 0], bool))
+    assert abs(auc2 - 0.5) < 1e-12
