@@ -52,3 +52,28 @@ def test_ridge_via_R_and_cv_identical():
     lams = [0.1, 1.0, 10.0]
     assert np.allclose(m.ridge_cv_errors(X, y, lams, folds),
                        m.ridge_cv_errors(R, y, lams, folds))
+
+
+def test_kernel_logistic_equals_primal():
+    rng = np.random.RandomState(1)
+    N, p = 25, 60
+    X = rng.randn(N, p)
+    y = (X[:, 0] > 0).astype(int)
+    lam = 0.5
+    b0, b = m.logistic_ridge(X, y, lam)
+    t0, alpha = m.kernel_logistic_ridge(X @ X.T, y, lam)
+    X0 = rng.randn(7, p)
+    assert np.isclose(b0, t0, atol=1e-6)
+    assert np.allclose(X0 @ b + b0, (X0 @ X.T) @ alpha + t0, atol=1e-6)
+
+
+def test_dw_knn_score():
+    Xtr = np.array([[0.0], [1.0], [3.0], [4.0]])
+    ytr = np.array([1, 1, -1, -1])
+    s = m.dw_knn_score(Xtr, ytr, np.array([[0.5], [2.0], [3.5]]))
+    assert s[0] > 0 and np.isclose(s[1], 0) and s[2] < 0
+    assert np.isclose(s[0], np.log(2.5 / 0.5))
+    s2 = m.dw_knn_score(Xtr, ytr, np.array([[2.0]]), priors=(0.8, 0.2))
+    assert np.isclose(s2[0], np.log(0.8 / 0.2))
+    s3 = m.dw_knn_score(Xtr, ytr, np.array([[0.5]]), k=2, dim=3)
+    assert np.isclose(s3[0], 3 * np.log(3.5 / 0.5))
