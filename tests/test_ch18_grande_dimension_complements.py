@@ -33,3 +33,22 @@ def test_logistic_ridge_matches_sklearn():
     sk = LogisticRegression(C=1 / (2 * lam), tol=1e-12, max_iter=10000).fit(X, y)
     assert np.allclose(b, sk.coef_[0], atol=1e-5)
     assert np.isclose(b0, sk.intercept_[0], atol=1e-5)
+
+
+def test_ridge_via_R_and_cv_identical():
+    rng = np.random.RandomState(0)
+    N, p = 30, 200
+    X = rng.randn(N, p)
+    y = X[:, :3].sum(axis=1) + rng.randn(N)
+    R, V = m.svd_reduce(X)
+    assert np.allclose(R @ V.T, X)
+    b0, b = m.ridge_fit(X, y, 2.0)
+    c0, th = m.ridge_fit(R, y, 2.0)
+    assert np.isclose(b0, c0) and np.allclose(b, V @ th)
+    # comparaison à la formule primale
+    Xc, yc = X - X.mean(0), y - y.mean()
+    assert np.allclose(b, np.linalg.solve(Xc.T @ Xc + 2.0 * np.eye(p), Xc.T @ yc))
+    folds = m.kfold_indices(N, 5, rng)
+    lams = [0.1, 1.0, 10.0]
+    assert np.allclose(m.ridge_cv_errors(X, y, lams, folds),
+                       m.ridge_cv_errors(R, y, lams, folds))
