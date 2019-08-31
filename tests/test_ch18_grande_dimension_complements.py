@@ -21,3 +21,15 @@ def test_separable_loglik_tends_to_zero():
     it, path, ll = m.logistic_gradient_ascent(x, y, n_iter=2000)
     assert np.all(np.diff(path[:, 1]) > 0)        # beta croît sans cesse
     assert np.all(np.diff(ll) > 0)
+
+
+def test_logistic_ridge_matches_sklearn():
+    from sklearn.linear_model import LogisticRegression
+    rng = np.random.RandomState(0)
+    X = rng.randn(80, 5)
+    y = (X[:, 0] + rng.randn(80) > 0).astype(int)
+    lam = 0.7
+    b0, b = m.logistic_ridge(X, y, lam)
+    sk = LogisticRegression(C=1 / (2 * lam), tol=1e-12, max_iter=10000).fit(X, y)
+    assert np.allclose(b, sk.coef_[0], atol=1e-5)
+    assert np.isclose(b0, sk.intercept_[0], atol=1e-5)
