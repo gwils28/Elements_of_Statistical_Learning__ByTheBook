@@ -86,3 +86,20 @@ def test_roc_auc_matches_mann_whitney():
     _, _, auc = m.roc_curve(s, lab)
     U = stats.mannwhitneyu(s[:50], s[50:]).statistic
     assert np.isclose(auc, U / (50 * 60))
+
+
+def test_kernel_pca_matches_linear_pca():
+    rng = np.random.RandomState(0)
+    X = rng.randn(20, 50) + 3.0
+    X0 = rng.randn(4, 50) + 3.0
+    U, d, Z = m.kernel_pca(X @ X.T, n_components=5)
+    xm = X.mean(0)
+    _, s, Vt = np.linalg.svd(X - xm, full_matrices=False)
+    Zlin = (X - xm) @ Vt[:5].T
+    sign = np.sign(np.sum(Z * Zlin, axis=0))
+    assert np.allclose(Z * sign, Zlin, atol=1e-8)
+    z0 = m.kernel_pca_project(X @ X.T, U, d, X @ X0.T)
+    assert np.allclose(z0.T * sign, (X0 - xm) @ Vt[:5].T, atol=1e-8)
+    # un point d'apprentissage est projeté sur sa propre ligne de Z
+    z1 = m.kernel_pca_project(X @ X.T, U, d, X @ X[2])
+    assert np.allclose(z1, Z[2])
