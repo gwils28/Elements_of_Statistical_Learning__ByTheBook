@@ -77,3 +77,12 @@ def test_dw_knn_score():
     assert np.isclose(s2[0], np.log(0.8 / 0.2))
     s3 = m.dw_knn_score(Xtr, ytr, np.array([[0.5]]), k=2, dim=3)
     assert np.isclose(s3[0], 3 * np.log(3.5 / 0.5))
+
+
+def test_roc_auc_matches_mann_whitney():
+    rng = np.random.RandomState(0)
+    s = np.r_[rng.randn(50) + 1, rng.randn(60)]
+    lab = np.r_[np.ones(50), np.zeros(60)]
+    _, _, auc = m.roc_curve(s, lab)
+    U = stats.mannwhitneyu(s[:50], s[50:]).statistic
+    assert np.isclose(auc, U / (50 * 60))
