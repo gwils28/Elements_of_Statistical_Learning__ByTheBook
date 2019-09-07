@@ -103,3 +103,14 @@ def test_kernel_pca_matches_linear_pca():
     # un point d'apprentissage est projeté sur sa propre ligne de Z
     z1 = m.kernel_pca_project(X @ X.T, U, d, X @ X[2])
     assert np.allclose(z1, Z[2])
+
+
+def test_two_sample_t_matches_scipy():
+    rng = np.random.RandomState(0)
+    X = rng.randn(30, 20)
+    g = np.r_[np.zeros(12, bool), np.ones(8, bool)]
+    t = m.two_sample_t(X, g)
+    ref = stats.ttest_ind(X[:, g], X[:, ~g], axis=1).statistic
+    assert np.allclose(t, ref)
+    tp = m.permutation_t(X, g, 5, rng)
+    assert tp.shape == (30, 5)
