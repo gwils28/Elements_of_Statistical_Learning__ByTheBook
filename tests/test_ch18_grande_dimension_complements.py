@@ -114,3 +114,25 @@ def test_two_sample_t_matches_scipy():
     assert np.allclose(t, ref)
     tp = m.permutation_t(X, g, 5, rng)
     assert tp.shape == (30, 5)
+
+
+def test_bh_equals_plugin_and_bonferroni():
+    rng = np.random.RandomState(0)
+    M, N = 400, 20
+    X = rng.randn(M, N)
+    g = np.r_[np.zeros(10, bool), np.ones(10, bool)]
+    X[:40, g] += 2.0
+    t = m.two_sample_t(X, g)
+    tp = m.permutation_t(X, g, 50, rng)
+    p = m.pooled_pvalues(t, tp)
+    for alpha in (0.05, 0.1, 0.2, 0.4):
+        L, rej = m.benjamini_hochberg(p, alpha)
+        assert rej.sum() == L
+        assert np.array_equal(rej, m.plugin_reject(t, tp, alpha))
+    # FDR plug-in au seuil |t|_(l) = M p_(l) / l
+    a = np.sort(np.abs(t))[::-1]
+    fdr, R, _ = m.plugin_fdr(t, tp, a[:10])
+    assert np.array_equal(R, np.arange(1, 11))
+    assert np.allclose(fdr, M * np.sort(p)[:10] / np.arange(1, 11))
+    assert m.bonferroni_reject(p, 0.05).sum() <= m.benjamini_hochberg(p, 0.05)[0]
+    assert 0.5 < m.pi0_quartile_estimate(t, tp) <= 1.0
