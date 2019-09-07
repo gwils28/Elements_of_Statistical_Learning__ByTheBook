@@ -136,3 +136,9 @@ def test_bh_equals_plugin_and_bonferroni():
     assert np.allclose(fdr, M * np.sort(p)[:10] / np.arange(1, 11))
     assert m.bonferroni_reject(p, 0.05).sum() <= m.benjamini_hochberg(p, 0.05)[0]
     assert 0.5 < m.pi0_quartile_estimate(t, tp) <= 1.0
+
+
+def test_bh_known_case():
+    p = np.array([0.001, 0.008, 0.039, 0.041, 0.042, 0.06, 0.074, 0.205, 0.212, 0.216])
+    L, rej = m.benjamini_hochberg(p, 0.05)
+    assert L == 2 and rej.sum() == 2
